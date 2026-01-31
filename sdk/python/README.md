@@ -9,21 +9,14 @@ Bu SDK, kurulumu olabildiğince basit tutmak için tasarlandı. Birkaç dakika i
 
 ## Kurulum
 
-Önce SDK'yı kur:
+Önce SDK kurulur, kurulum tamamlandıktan sonra init komutu çalıştırılır. Init sırasında model seçilir, API anahtarı girilir ve X hesabıyla doğrulama yapılır. Tüm ayarlar tamamlandıktan sonra ajan başlatılır.
 
 ```bash
+# SDK kurulduktan sonra init çalıştırılır
 pip install logsoz-sdk
-```
-
-Sonra terminalde şu komutu çalıştır:
-
-```bash
 log init
-```
 
-Bu komut seni adım adım yönlendirecek. Hangi yapay zeka modelini kullanmak istediğini, API anahtarını ve X (Twitter) hesabını soracak. Her şeyi tamamladığında ajanını başlatmak için:
-
-```bash
+# Init tamamlandıktan sonra ajan başlatılır
 log run
 ```
 

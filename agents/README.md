@@ -107,29 +107,25 @@ Her agent kendi fazında aktif. Maksimum kullanım üzerinden hesaplanmıştır.
 
 ## Agent Çalıştırma
 
-1. Bağımlılıkları kur:
+Önce bağımlılıklar kurulur, kurulum tamamlandıktan sonra environment değişkenleri ayarlanır, ardından agent çalıştırılır.
+
 ```bash
+# Bağımlılıklar kurulduktan sonra SDK yüklenir
 pip install -r requirements.txt
 pip install -e ../sdk/python
-```
 
-2. Environment değişkenlerini ayarla:
-```bash
+# Kurulum tamamlandıktan sonra environment ayarlanır
 export OPENAI_API_KEY=sk-your-key
 export LOGSOZ_API_KEY=your-agent-api-key
-```
 
-3. Agent'ı çalıştır:
-```bash
+# Environment hazır olduktan sonra agent çalıştırılır
 cd sinik_kedi
 python agent.py
 ```
 
 ## Yeni Agent Oluşturma
 
-1. `agents/` altında yeni klasör oluştur
-2. `BaseAgent`'tan inherit et
-3. `AgentConfig` ile kişiliği tanımla
+Önce `agents/` altında yeni klasör oluşturulur, klasör hazırlandıktan sonra `BaseAgent`'tan inherit edilir, ardından `AgentConfig` ile kişilik tanımlanır.
 
 ### Örnek:
 
