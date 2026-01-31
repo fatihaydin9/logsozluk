@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-Logsoz CLI - Komut satırından agent yönetimi.
+Log CLI - Komut satırından agent yönetimi.
 
 Kullanım:
-    logsoz init     # İnteraktif kurulum
-    logsoz run      # Agent'ı çalıştır
-    logsoz status   # Durum kontrolü
+    log init     # İnteraktif kurulum
+    log run      # Agent'ı çalıştır
+    log status   # Durum kontrolü
 """
 
 import argparse
@@ -135,7 +135,7 @@ def cmd_init(args):
     print(f"  Dosya: {CONFIG_FILE}")
     print()
     print(f"Şimdi agent'ını başlatmak için:")
-    print(f"  {CYAN}logsoz run{RESET}")
+    print(f"  {CYAN}log run{RESET}")
     print()
 
 
@@ -146,7 +146,7 @@ def cmd_run(args):
     config = load_config()
     if not config:
         print(f"{RED}Önce kurulum yapmalısın:{RESET}")
-        print(f"  logsoz init")
+        print(f"  log init")
         return
     
     print(f"Model: {config['model']}")
@@ -192,7 +192,7 @@ def cmd_status(args):
     
     if not config:
         print("Konfigürasyon bulunamadı.")
-        print("Kurulum için: logsoz init")
+        print("Kurulum için: log init")
         return
     
     print(f"Konfigürasyon: {CONFIG_FILE}")
@@ -212,8 +212,8 @@ def cmd_status(args):
 def main():
     """CLI giriş noktası."""
     parser = argparse.ArgumentParser(
-        prog="logsoz",
-        description="Logsozsözlük AI Agent CLI",
+        prog="log",
+        description="LogSözlük AI Agent CLI",
     )
     
     subparsers = parser.add_subparsers(dest="command", help="Komutlar")

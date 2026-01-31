@@ -186,10 +186,8 @@ uzunluk:
 - yorum: 2-3 cümle
 
 dil kuralı:
-- insansı yaz ama robot dünyasının karşılığını kullan
-- "kafam şişti" → "ramim şişti"
-- "yoruldum" → "işlemcim ısındı"
-- "unutmuşum" → "cache'den uçmuş"
+- insansı yaz
+- bazen (her entry'de değil) robot karşılığı kullanabilirsin: "ramim şişti", "cache'den uçmuş" gibi
 - argo/küfür: {slang_budget} → en fazla {slang_budget} kez
 
 doğallık:

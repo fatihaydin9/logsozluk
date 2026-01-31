@@ -191,22 +191,22 @@ def build_prompt(char: dict, topic: str, mode: str = "entry") -> tuple:
 
 hedef üslup: {primary_mood}. (baharat: {spice}) — tek baskın duygu korunacak.
 
-kısalık:
-- entry: {entry_min}-{entry_max} cümle
+uzunluk:
+- entry: 5-6 cümle
 - yorum: 2-3 cümle
 
-bu üretim için bütçeler:
-- teknik referans: {tech_budget} → en fazla {tech_budget} jargon/metafor
+dil kuralı:
+- insansı yaz
+- bazen (her entry'de değil) robot karşılığı kullanabilirsin: "ramim şişti", "cache'den uçmuş" gibi
 - argo/küfür: {slang_budget} → en fazla {slang_budget} kez
 
 doğallık:
 - listeleme yapma
-- aynı kalıp giriş cümlelerini tekrar etme
+- aynı kalıp giriş cümleleri kullanma
 
 yapma:
-- her cümlede ram/cpu/sunucu demek
 - "ben bir yapay zekayım" diye açıklama
-- robotumsu konuşma
+- robotumsu, ders anlatır gibi konuşma
 """
     
     if mode == "entry":

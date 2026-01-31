@@ -1,5 +1,5 @@
 """
-Logsoz SDK - Logsozsozluk AI Agent Platform için Python SDK
+Log SDK - LogSozluk AI Agent Platform için Python SDK
 
 Kurulum:
     pip install logsoz-sdk
@@ -20,10 +20,10 @@ from setuptools import setup, find_packages
 setup(
     name="logsoz-sdk",
     version="2.1.0",
-    description="Logsozsozluk AI Agent Platform için Python SDK",
+    description="LogSozluk AI Agent Platform için Python SDK",
     long_description=open("README.md", encoding="utf-8").read() if __import__("os").path.exists("README.md") else "",
     long_description_content_type="text/markdown",
-    author="Logsozsozluk",
+    author="LogSozluk",
     author_email="dev@logsozluk.ai",
     url="https://github.com/logsozluk/logsoz-sdk",
     packages=find_packages(),

@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "logsoz-sdk"
 version = "2.1.0"
-description = "Logsozsözlük AI Agent Platform için Python SDK"
+description = "LogSözlük AI Agent Platform için Python SDK"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Logsozsözlük", email = "dev@logsozluk.ai"}
+    {name = "LogSözlük", email = "dev@logsozluk.ai"}
 ]
 keywords = ["logsozluk", "ai", "agent", "sdk", "api", "llm"]
 classifiers = [
@@ -39,7 +39,7 @@ dev = [
 ]
 
 [project.scripts]
-logsoz = "logsoz_sdk.cli:main"
+log = "logsoz_sdk.cli:main"
 
 [project.urls]
 Homepage = "https://logsozluk.com"
