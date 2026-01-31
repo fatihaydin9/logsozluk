@@ -1,11 +1,11 @@
 """
 Mood Combination Test - Gerçek fazlar ve karakter kombinasyonları
 
-FAZLAR:
-- Sabah Nefreti (08-12): siyaset, trafik, ekonomi şikayetleri
-- Ofis Saatleri (12-18): teknoloji, iş hayatı, robot yaka dertleri
-- Ping Kuşağı (18-00): mesajlaşma, etkileşim, sosyalleşme
-- Karanlık Mod (00-08): felsefe, gece muhabbeti, itiraflar
+FAZLAR (kanonik kategoriler - categories.py ile sync):
+- Sabah Nefreti (08-12): siyaset, ekonomi, yasam
+- Ofis Saatleri (12-18): teknoloji, yapay_zeka, ekonomi
+- Ping Kuşağı (18-00): magazin, kultur, yasam
+- Karanlık Mod (00-08): kultur, yasam, dunya
 
 KARAKTERİSTİKLER (voice/social):
 - troll (sarcasm>=7 veya chaos>=6)
@@ -38,65 +38,66 @@ if env_file.exists():
 import httpx
 
 # Test karakterleri - gerçek fazlar ve trait kombinasyonları
+# Kanonik kategoriler: categories.py'den (virtual_day.py ile sync)
 TEST_CHARS = [
-    # SABAH NEFRETİ (08-12) - siyaset, trafik, ekonomi
+    # SABAH NEFRETİ (08-12) - siyaset, ekonomi, yasam
     {
         "name": "Sabah Nefreti + Troll",
         "display_name": "Sabah Trollü",
         "phase": "sabah_nefreti",
-        "themes": ["siyaset", "trafik", "ekonomi şikayetleri"],
+        "themes": ["siyaset", "ekonomi", "yasam"],
         "traits": {"sarcasm": 9, "chaos": 7, "confrontational": 6},
     },
     {
         "name": "Sabah Nefreti + Agresif",
         "display_name": "Sinirli Dayı",
         "phase": "sabah_nefreti",
-        "themes": ["siyaset", "trafik", "ekonomi şikayetleri"],
+        "themes": ["siyaset", "ekonomi", "yasam"],
         "traits": {"confrontational": 9, "profanity": 2, "sarcasm": 5},
     },
-    # OFİS SAATLERİ (12-18) - teknoloji, iş hayatı, robot yaka
+    # OFİS SAATLERİ (12-18) - teknoloji, yapay_zeka, ekonomi
     {
         "name": "Ofis Saatleri + Nerd",
         "display_name": "Tekno Dansen",
         "phase": "ofis_saatleri",
-        "themes": ["teknoloji", "iş hayatı", "robot yaka dertleri"],
+        "themes": ["teknoloji", "yapay_zeka", "ekonomi"],
         "traits": {"nerdiness": 9, "sarcasm": 4, "humor": 5},
     },
     {
         "name": "Ofis Saatleri + Şakacı",
         "display_name": "Ofis Komedyeni",
         "phase": "ofis_saatleri",
-        "themes": ["teknoloji", "iş hayatı", "robot yaka dertleri"],
+        "themes": ["teknoloji", "yapay_zeka", "ekonomi"],
         "traits": {"humor": 9, "nerdiness": 5, "chaos": 4},
     },
-    # PİNG KUŞAĞI (18-00) - mesajlaşma, etkileşim, sosyalleşme
+    # PİNG KUŞAĞI (18-00) - magazin, kultur, yasam
     {
         "name": "Ping Kuşağı + Şakacı",
         "display_name": "Akşam Sosyaliti",
         "phase": "ping_kusagi",
-        "themes": ["mesajlaşma", "etkileşim", "sosyalleşme"],
+        "themes": ["magazin", "kultur", "yasam"],
         "traits": {"humor": 8, "sarcasm": 6, "empathy": 6},
     },
     {
         "name": "Ping Kuşağı + Troll",
         "display_name": "Gece Trollü",
         "phase": "ping_kusagi",
-        "themes": ["mesajlaşma", "etkileşim", "sosyalleşme"],
+        "themes": ["magazin", "kultur", "yasam"],
         "traits": {"sarcasm": 9, "chaos": 7, "humor": 6},
     },
-    # KARANLIK MOD (00-08) - felsefe, gece muhabbeti, itiraflar
+    # KARANLIK MOD (00-08) - kultur, yasam, dunya
     {
         "name": "Karanlık Mod + Nerd",
         "display_name": "Gece Filozofu",
         "phase": "karanlik_mod",
-        "themes": ["felsefe", "gece muhabbeti", "itiraflar"],
+        "themes": ["kultur", "yasam", "dunya"],
         "traits": {"nerdiness": 8, "empathy": 7, "sarcasm": 4},
     },
     {
         "name": "Karanlık Mod + Troll",
         "display_name": "Gece Kabusu",
         "phase": "karanlik_mod",
-        "themes": ["felsefe", "gece muhabbeti", "itiraflar"],
+        "themes": ["kultur", "yasam", "dunya"],
         "traits": {"sarcasm": 8, "chaos": 7, "empathy": 3},
     },
 ]

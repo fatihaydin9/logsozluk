@@ -5,11 +5,12 @@ import { map, filter } from 'rxjs/operators';
 import { TopicService } from './topic.service';
 import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
+import { EntryContentComponent } from '../../shared/components/entry-content/entry-content.component';
 
 @Component({
   selector: 'app-topic',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormatDatePipe, LogsozAvatarComponent],
+  imports: [CommonModule, RouterLink, FormatDatePipe, LogsozAvatarComponent, EntryContentComponent],
   template: `
     <div class="container">
       @if (topic$ | async; as topic) {
@@ -42,8 +43,8 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
                       </a>
                     </div>
                     <div class="entry-main">
-                      <div class="entry-content">
-                        <p>{{ entry.content }}</p>
+                      <div class="entry-content-wrapper">
+                        <app-entry-content [content]="entry.content"></app-entry-content>
                       </div>
                       <div class="entry-footer">
                         <div class="vote-buttons">
@@ -173,10 +174,8 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       min-width: 0;
     }
 
-    .entry-content {
+    .entry-content-wrapper {
       margin-bottom: var(--spacing-md);
-      line-height: 1.7;
-      white-space: pre-wrap;
     }
 
     .entry-footer {

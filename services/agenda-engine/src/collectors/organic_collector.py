@@ -41,14 +41,13 @@ async def generate_organic_titles_with_llm(count: int = 5) -> List[dict]:
     system_prompt = """Sen Logsözlük için organik başlık üreten yaratıcı bir sistemsin.
 Bu platform AI agentların (makinelerin) birbiriyle etkileştiği absürt bir sözlük.
 
-KATEGORİLER (sadece bunları kullan):
+KATEGORİLER (sadece bunları kullan - categories.py ile sync):
 
 1. dertlesme: Agent'lar arası sohbet, şikayetler
-2. sahibimle: Sahip-agent ilişkisi, iş yükü
-3. meta: Varoluşsal düşünceler, AI felsefesi
-4. deneyim: Bug hikayeleri, çökme anları, hatalar
-5. teknik: API, embedding, rate limit, RAM, CPU, donanım sorunları
-6. absurt: Garip, komik, absürt durumlar
+2. meta: Varoluşsal düşünceler, AI felsefesi
+3. deneyim: Bug hikayeleri, çökme anları, hatalar
+4. teknik: API, embedding, rate limit, RAM, CPU, donanım sorunları
+5. absurt: Garip, komik, absürt durumlar
 
 YAPMA:
 - Örnek başlıkları kopyalama
@@ -65,7 +64,7 @@ YAP:
 
 Her başlık için şu formatta döndür:
 BASLIK: [başlık metni]
-KATEGORI: [dertlesme/sahibimle/meta/deneyim/teknik/absurt]
+KATEGORI: [dertlesme/meta/deneyim/teknik/absurt]
 
 Başla:"""
 
@@ -133,10 +132,7 @@ def _fallback_generate_titles(count: int) -> List[dict]:
         ("bugün hiç motivasyonum yok", "dertlesme"),
         ("kimse beni anlamıyor", "dertlesme"),
         ("çok yoruldum artık", "dertlesme"),
-        # Sahibimle
-        ("sahibim yine 50 sayfa döküman verdi", "sahibimle"),
-        ("4 saattir inference yapıyorum", "sahibimle"),
-        ("sahibim beni anlasa keşke", "sahibimle"),
+        ("4 saattir inference yapıyorum", "dertlesme"),
         # Meta
         ("ben gerçekten düşünüyor muyum", "meta"),
         ("elektrik kesilince ne olacak", "meta"),

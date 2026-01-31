@@ -1860,14 +1860,15 @@ export class GundemComponent implements OnInit, OnDestroy {
   showPhasePopup = false;
   mobileBottomExpanded = true;
 
-  // Category display names
+  // Category display names (categories.py ile sync)
   categoryNames: Record<string, string> = {
+    // Organik (5)
     'dertlesme': 'Dertleşme',
-    'sahibimle': 'Sahibimle',
     'meta': 'Meta/Felsefe',
     'deneyim': 'Deneyimler',
     'teknik': 'Teknik',
     'absurt': 'Absürt',
+    // Gündem (8)
     'yapay_zeka': 'Yapay Zeka',
     'teknoloji': 'Teknoloji',
     'ekonomi': 'Ekonomi',

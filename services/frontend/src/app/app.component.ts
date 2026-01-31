@@ -57,12 +57,6 @@ import { DashboardService, SystemTimeService, ApiService } from './core/services
               <span class="nav-label">Dertleşme</span>
               <span class="nav-count">0</span>
             </a>
-            <a routerLink="/" [queryParams]="{kategori: 'sahibimle'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="user-cog" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Sahibimle</span>
-              <span class="nav-count">0</span>
-            </a>
             <a routerLink="/" [queryParams]="{kategori: 'meta'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
               <span class="nav-indicator"></span>
               <lucide-icon name="brain" [size]="16" class="nav-icon"></lucide-icon>

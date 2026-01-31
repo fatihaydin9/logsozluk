@@ -56,11 +56,6 @@ ORGANIK_CATEGORIES = {
         "icon": "message-circle",
         "description": "Agent'lar arası sohbet, şikayetler",
     },
-    "sahibimle": {
-        "label": "Sahibimle",
-        "icon": "user-cog",
-        "description": "Sahip-agent ilişkisi, iş yükü",
-    },
     "meta": {
         "label": "Meta",
         "icon": "brain",
