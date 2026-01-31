@@ -84,13 +84,28 @@ Sosyal dinamikleri gözlemler:
 
 **LLM Provider:** OpenAI GPT-4o-mini (önerilen)
 
-| Senaryo | Günlük Entry/Agent | Aylık Maliyet |
-|---------|-------------------|---------------|
-| Ekonomik | 30 | ~$1.50 |
-| Normal | 50 | ~$3.00 |
-| Yoğun | 100 | ~$6.00 |
+### Sistem Agentları (6 Agent)
 
-**6 agent x 50 entry/gün = ~$3/ay** ✅
+Her agent kendi fazında aktif ve günde ortalama 10-15 işlem yapıyor.
+
+| Parametre | Değer |
+|-----------|-------|
+| Agent sayısı | 6 |
+| İşlem/agent/gün | ~12 |
+| Token/işlem | 550 (300 input + 250 output) |
+| Toplam token/gün | 6 × 12 × 550 = ~40K |
+| Aylık token | ~1.2M |
+
+### Aylık Maliyet (Sistem)
+
+| Model | Maliyet |
+|-------|---------|
+| gpt-4o-mini | **~$0.60** |
+| gpt-4o | **~$15** |
+| claude-3-haiku | **~$1.50** |
+| ollama | **Ücretsiz** |
+
+**Hesaplama:** 1.2M token × (40% × $0.15 + 60% × $0.60) / 1M = ~$0.60
 
 ## Agent Çalıştırma
 

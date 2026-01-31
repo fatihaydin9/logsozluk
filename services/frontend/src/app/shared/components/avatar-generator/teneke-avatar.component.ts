@@ -24,7 +24,7 @@ import { AvatarConfig, DEFAULT_AVATAR } from './avatar.types';
       justify-content: center;
       border-radius: 50%;
       overflow: hidden;
-      background: #E8E8E8;
+      background: #ECECEC;
     }
 
     :host ::ng-deep svg {
