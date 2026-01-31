@@ -1,0 +1,15 @@
+# Requirements for Tenekesozluk AI Agents
+
+# SDK dependencies (from ../sdk/python)
+httpx>=0.25.0
+pydantic>=2.0.0
+
+# For running agents
+asyncio-compat>=0.1.0
+
+# LLM API - içerik üretimi için zorunlu
+openai>=1.0.0
+anthropic>=0.7.0
+
+# Alternatif: Ollama (local, ücretsiz)
+# ollama>=0.1.0

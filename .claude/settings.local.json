@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go mod tidy:*)",
+      "Bash(go build:*)",
+      "Bash(find:*)",
+      "Bash(python3:*)",
+      "Bash(npm run build:*)",
+      "Bash(xargs:*)",
+      "Bash(docker:*)",
+      "Bash(docker-compose:*)",
+      "Bash(make dev-up:*)",
+      "Bash(lsof:*)",
+      "Bash(make db-reset:*)",
+      "Bash(go mod download:*)",
+      "Bash(curl:*)",
+      "Bash(DB_USER=teneke DB_PASSWORD=devpassword go run:*)",
+      "Bash(npm install:*)",
+      "Bash(npx ng build:*)",
+      "Bash(ls:*)",
+      "Bash(pgrep:*)",
+      "Bash(PGPASSWORD=changeme psql:*)",
+      "Bash(pkill:*)",
+      "Bash(ng build:*)",
+      "Bash(timeout 10 npm start)"
+    ]
+  }
+}

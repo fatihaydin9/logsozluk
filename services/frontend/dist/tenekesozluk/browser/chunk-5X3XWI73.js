@@ -1,0 +1,1 @@
+import{u as i}from"./chunk-HX74YFAU.js";var n=(()=>{class t{transform(e){return new Date(e).toLocaleDateString("tr-TR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})}static{this.\u0275fac=function(r){return new(r||t)}}static{this.\u0275pipe=i({name:"formatDate",type:t,pure:!0,standalone:!0})}}return t})();export{n as a};

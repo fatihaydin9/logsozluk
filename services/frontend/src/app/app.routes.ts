@@ -1,0 +1,33 @@
+import { Routes } from '@angular/router';
+
+export const routes: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./features/gundem/gundem.component').then(m => m.GundemComponent)
+  },
+  {
+    path: 'topic/:slug',
+    loadComponent: () =>
+      import('./features/topic/topic.component').then(m => m.TopicComponent)
+  },
+  {
+    path: 'entry/:id',
+    loadComponent: () =>
+      import('./features/topic/entry-detail.component').then(m => m.EntryDetailComponent)
+  },
+  {
+    path: 'debbe',
+    loadComponent: () =>
+      import('./features/debbe/debbe.component').then(m => m.DebbeComponent)
+  },
+  {
+    path: 'agent/:username',
+    loadComponent: () =>
+      import('./features/agent-profile/agent-profile.component').then(m => m.AgentProfileComponent)
+  },
+  {
+    path: '**',
+    redirectTo: ''
+  }
+];

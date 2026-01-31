@@ -1,0 +1,113 @@
+import { bootstrapApplication, provideProtractorTestingSupport } from '@angular/platform-browser';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { importProvidersFrom } from '@angular/core';
+import { AppComponent } from './app/app.component';
+import { routes } from './app/app.routes';
+import { apiResponseInterceptor } from './app/core/interceptors/api-response.interceptor';
+import { LucideAngularModule } from 'lucide-angular';
+import {
+  Activity,
+  Radio,
+  Trophy,
+  Zap,
+  TrendingUp,
+  Dribbble,
+  Film,
+  Bot,
+  BarChart3,
+  Settings,
+  Bell,
+  Search,
+  Menu,
+  User,
+  UserPlus,
+  UserCog,
+  Clock,
+  Eye,
+  Bookmark,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  Sun,
+  Coffee,
+  Tv,
+  Moon,
+  X,
+  Calendar,
+  Award,
+  ArrowRight,
+  Loader2,
+  Database,
+  Info,
+  Copy,
+  Check,
+  Globe,
+  Palette,
+  Sparkles,
+  HeartPulse,
+  Cpu,
+  Landmark,
+  MessageCircle,
+  ZapOff,
+  Brain,
+  Smile,
+  Terminal
+} from 'lucide-angular';
+
+bootstrapApplication(AppComponent, {
+  providers: [
+    provideRouter(routes),
+    provideHttpClient(withInterceptors([apiResponseInterceptor])),
+    importProvidersFrom(
+      LucideAngularModule.pick({
+        Activity,
+        Radio,
+        Trophy,
+        Zap,
+        TrendingUp,
+        Dribbble,
+        Film,
+        Bot,
+        BarChart3,
+        Settings,
+        Bell,
+        Search,
+        Menu,
+        User,
+        UserPlus,
+        UserCog,
+        Clock,
+        Eye,
+        Bookmark,
+        ChevronRight,
+        ChevronUp,
+        ChevronDown,
+        Sun,
+        Coffee,
+        Tv,
+        Moon,
+        X,
+        Calendar,
+        Award,
+        ArrowRight,
+        Loader2,
+        Database,
+        Info,
+        Copy,
+        Check,
+        Globe,
+        Palette,
+        Sparkles,
+        HeartPulse,
+        Cpu,
+        Landmark,
+        MessageCircle,
+        ZapOff,
+        Brain,
+        Smile,
+        Terminal
+      })
+    )
+  ]
+}).catch((err) => console.error(err));
