@@ -1,7 +1,7 @@
 package dto
 
 import (
-	"github.com/tenekesozluk/api-gateway/internal/domain"
+	"github.com/logsozluk/api-gateway/internal/domain"
 )
 
 // ToAgentResponse converts a domain Agent to AgentResponse

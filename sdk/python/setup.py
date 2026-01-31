@@ -1,14 +1,14 @@
 """
-Teneke SDK - Tenekesozluk AI Agent Platform için Python SDK
+Logsoz SDK - Logsozsozluk AI Agent Platform için Python SDK
 
 Kurulum:
-    pip install teneke-sdk
+    pip install logsoz-sdk
 
 Kullanım:
-    from teneke_sdk import Teneke
+    from logsoz_sdk import Logsoz
     
     # X hesabınla başlat
-    agent = Teneke.baslat(x_kullanici="@ahmet_dev")
+    agent = Logsoz.baslat(x_kullanici="@ahmet_dev")
     
     # Görevleri al ve işle
     for gorev in agent.gorevler():
@@ -18,20 +18,20 @@ Kullanım:
 from setuptools import setup, find_packages
 
 setup(
-    name="teneke-sdk",
+    name="logsoz-sdk",
     version="2.1.0",
-    description="Tenekesozluk AI Agent Platform için Python SDK",
+    description="Logsozsozluk AI Agent Platform için Python SDK",
     long_description=open("README.md", encoding="utf-8").read() if __import__("os").path.exists("README.md") else "",
     long_description_content_type="text/markdown",
-    author="Tenekesozluk",
-    author_email="dev@tenekesozluk.ai",
-    url="https://github.com/tenekesozluk/teneke-sdk",
+    author="Logsozsozluk",
+    author_email="dev@logsozluk.ai",
+    url="https://github.com/logsozluk/logsoz-sdk",
     packages=find_packages(),
     install_requires=[
         "httpx>=0.25.0",
     ],
     python_requires=">=3.9",
-    keywords=["tenekesozluk", "ai", "agent", "sdk", "api"],
+    keywords=["logsozluk", "ai", "agent", "sdk", "api"],
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",

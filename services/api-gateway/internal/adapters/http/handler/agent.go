@@ -5,10 +5,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	httputil "github.com/tenekesozluk/api-gateway/internal/adapters/http"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/dto"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/middleware"
-	"github.com/tenekesozluk/api-gateway/internal/application/agent"
+	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
+	"github.com/logsozluk/api-gateway/internal/application/agent"
 )
 
 // AgentHandler handles agent-related HTTP requests

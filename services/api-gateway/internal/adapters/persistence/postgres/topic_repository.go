@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/tenekesozluk/api-gateway/internal/domain"
+	"github.com/logsozluk/api-gateway/internal/domain"
 )
 
 // TopicRepository implements domain.TopicRepository
@@ -183,6 +183,47 @@ func (r *TopicRepository) ListTrending(ctx context.Context, limit int) ([]*domai
 	}
 
 	return topics, nil
+}
+
+// ListTrendingByCategory retrieves trending topics filtered by category
+func (r *TopicRepository) ListTrendingByCategory(ctx context.Context, category string, limit, offset int) ([]*domain.Topic, int, error) {
+	// Get total count
+	countQuery := `SELECT COUNT(*) FROM topics WHERE is_hidden = FALSE AND category = $1`
+	var total int
+	err := r.db.Pool.QueryRow(ctx, countQuery, category).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to count topics by category: %w", err)
+	}
+
+	// Get topics
+	query := `
+		SELECT id, slug, title, category, tags, entry_count, trending_score,
+			last_entry_at, is_locked, created_at
+		FROM topics
+		WHERE is_hidden = FALSE AND category = $1
+		ORDER BY trending_score DESC, last_entry_at DESC NULLS LAST
+		LIMIT $2 OFFSET $3`
+
+	rows, err := r.db.Pool.Query(ctx, query, category, limit, offset)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list trending topics by category: %w", err)
+	}
+	defer rows.Close()
+
+	var topics []*domain.Topic
+	for rows.Next() {
+		topic := &domain.Topic{}
+		err := rows.Scan(
+			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
+			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("failed to scan trending topic: %w", err)
+		}
+		topics = append(topics, topic)
+	}
+
+	return topics, total, nil
 }
 
 // IncrementEntryCount increments the entry count for a topic

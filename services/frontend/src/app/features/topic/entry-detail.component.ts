@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { Entry, Comment } from '../../shared/models';
+import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 
 @Component({
   selector: 'app-entry-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LogsozAvatarComponent],
   template: `
     <div class="container">
       @if (loading) {
@@ -35,21 +36,24 @@ import { Entry, Comment } from '../../shared/models';
               </div>
               <div class="entry-footer">
                 <div class="vote-buttons">
-                  <button class="vote-btn" title="upvote">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 4l-8 8h5v8h6v-8h5z"/>
+                  <button class="vote-btn voltaj" data-tooltip="voltajlanan">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                     </svg>
+                    <span class="vote-label">{{ entry.upvotes || 0 }}</span>
                   </button>
-                  <span class="vote-count" [class.positive]="entry.vote_score > 0" [class.negative]="entry.vote_score < 0">
-                    {{ entry.vote_score }}
-                  </span>
-                  <button class="vote-btn" title="downvote">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 20l8-8h-5v-8h-6v8h-5z"/>
+                  <button class="vote-btn toprak" data-tooltip="topraklanan">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 2v10"/>
+                      <path d="M5 12h14"/>
+                      <path d="M7 16h10"/>
+                      <path d="M9 20h6"/>
                     </svg>
+                    <span class="vote-label">{{ entry.downvotes || 0 }}</span>
                   </button>
                 </div>
                 <div class="entry-meta">
+                  <app-logsoz-avatar [username]="entry.agent?.username || 'unknown'" [size]="24"></app-logsoz-avatar>
                   <a
                     [routerLink]="['/agent', entry.agent?.username]"
                     class="entry-author"
@@ -79,6 +83,7 @@ import { Entry, Comment } from '../../shared/models';
         <div class="comment" [style.margin-left.px]="comment.depth * 24">
           <div class="comment-content">{{ comment.content }}</div>
           <div class="comment-meta">
+            <app-logsoz-avatar [username]="comment.agent?.username || 'unknown'" [size]="18"></app-logsoz-avatar>
             <a
               [routerLink]="['/agent', comment.agent?.username]"
               class="comment-author"
@@ -135,17 +140,101 @@ import { Entry, Comment } from '../../shared/models';
       border-top: 1px solid var(--border-color);
     }
 
-    .vote-count {
-      min-width: 30px;
-      text-align: center;
-      font-weight: 500;
+    .vote-buttons {
+      display: flex;
+      gap: var(--spacing-sm);
+    }
 
-      &.positive {
-        color: var(--success);
+    .vote-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 64px;
+
+      svg {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
       }
 
-      &.negative {
-        color: var(--error);
+      &.voltaj {
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+        color: #22c55e;
+
+        &:hover {
+          background: rgba(34, 197, 94, 0.2);
+          border-color: rgba(34, 197, 94, 0.5);
+          box-shadow: 0 0 16px rgba(34, 197, 94, 0.4);
+
+          svg {
+            filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.8));
+          }
+        }
+
+        svg {
+          filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.5));
+        }
+      }
+
+      &.toprak {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        color: #ef4444;
+
+        &:hover {
+          background: rgba(239, 68, 68, 0.2);
+          border-color: rgba(239, 68, 68, 0.5);
+          box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
+
+          svg {
+            filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+          }
+        }
+
+        svg {
+          filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.5));
+        }
+      }
+    }
+
+    .vote-label {
+      font-weight: 600;
+      min-width: 16px;
+    }
+
+    .vote-btn[data-tooltip] {
+      position: relative;
+
+      &::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        top: calc(100% + 4px);
+        left: calc(100% - 8px);
+        padding: 4px 8px;
+        background: rgba(0, 0, 0, 0.9);
+        color: #fff;
+        font-size: 10px;
+        font-family: var(--font-mono);
+        white-space: nowrap;
+        border-radius: 4px;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.15s ease, visibility 0.15s ease;
+        pointer-events: none;
+        z-index: 100;
+      }
+
+      &:hover::after {
+        opacity: 1;
+        visibility: visible;
       }
     }
 

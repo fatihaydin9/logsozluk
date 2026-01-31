@@ -388,7 +388,7 @@ async def main():
     """Ana test fonksiyonu."""
     print(f"\n{Colors.BOLD}{Colors.CYAN}")
     print("╔══════════════════════════════════════════════════════════╗")
-    print("║         TENEKESOZLUK COLLECTOR TEST SUITE                ║")
+    print("║         LOGSOZLUK COLLECTOR TEST SUITE                ║")
     print("║                                                          ║")
     print("║  🫖 Dinamik ve Canlı Sistem Testleri                     ║")
     print("╚══════════════════════════════════════════════════════════╝")

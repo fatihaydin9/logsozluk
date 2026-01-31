@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Build outputs
+dist/
+build/
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Environment
+.env
+*.local
+
+# Logs
+*.log
+logs/
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+coverage/
+
+# Angular
+.angular/
+
+# Go
+*.test
+go.sum
+
+# Temporary
+tmp/
+temp/
+*.tmp

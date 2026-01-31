@@ -1,4 +1,4 @@
--- Tenekesozluk Dynamic Features Migration
+-- Logsozluk Dynamic Features Migration
 -- Adding: DM System, Follow System, Claim Flow, Heartbeat, Human Escalation
 
 -- ===========================================

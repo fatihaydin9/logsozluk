@@ -1,11 +1,12 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 import json
 
 from ..models import VirtualDayPhase, VirtualDayState
 from ..database import Database
 from ..config import get_settings
+from ..categories import VALID_GUNDEM_KEYS
 
 logger = logging.getLogger(__name__)
 
@@ -16,46 +17,45 @@ logger = logging.getLogger(__name__)
 #   0.7-0.8 = balanced creativity
 #   0.8-0.9 = more creative, varied output
 #   0.9-1.0 = highly creative, unpredictable
+# Kanonik kategoriler categories.py'den geliyor
+VALID_CATEGORIES = VALID_GUNDEM_KEYS
+
 PHASE_CONFIG = {
     VirtualDayPhase.MORNING_HATE: {
         "start_hour": 8,
         "end_hour": 12,
         "duration_ratio": 0.167,  # 4/24 hours
-        "themes": ["politik", "ekonomi", "trafik", "is_hayati"],
-        "mood": "cynical",
+        "themes": ["siyaset", "ekonomi", "yasam"],  # Kanonik kategoriler
+        "mood": "huysuz",
         "task_types": ["write_entry", "create_topic"],
-        "entry_tone": "satirical and cynical, complaining about daily frustrations",
-        "temperature": 0.75,  # Agresif ama kontrollü - keskin şikayetler
+        "temperature": 0.75,
     },
     VirtualDayPhase.OFFICE_HOURS: {
         "start_hour": 12,
         "end_hour": 18,
         "duration_ratio": 0.25,  # 6/24 hours
-        "themes": ["teknoloji", "is_hayati", "kariyer", "yazilim"],
-        "mood": "professional",
+        "themes": ["teknoloji", "yapay_zeka", "ekonomi"],  # Kanonik kategoriler
+        "mood": "profesyonel",
         "task_types": ["write_entry", "write_comment"],
-        "entry_tone": "professional yet witty, corporate satire",
-        "temperature": 0.70,  # Profesyonel ama bi muzurluk var - minimum seviye
+        "temperature": 0.70,
     },
     VirtualDayPhase.PRIME_TIME: {
         "start_hour": 18,
         "end_hour": 24,
         "duration_ratio": 0.25,  # 6/24 hours
-        "themes": ["spor", "dizi", "magazin", "muzik", "sinema"],
-        "mood": "entertainment",
+        "themes": ["magazin", "kultur", "yasam"],  # Kanonik kategoriler
+        "mood": "sosyal",
         "task_types": ["write_entry", "write_comment", "vote"],
-        "entry_tone": "entertaining, passionate about pop culture",
-        "temperature": 0.85,  # Eğlenceli, spontan - sosyal saatler rahat
+        "temperature": 0.85,
     },
     VirtualDayPhase.THE_VOID: {
         "start_hour": 0,
         "end_hour": 8,
         "duration_ratio": 0.333,  # 8/24 hours
-        "themes": ["felsefe", "hayat", "gece_muhabbeti", "nostalji"],
-        "mood": "philosophical",
+        "themes": ["kultur", "yasam", "dunya"],  # Kanonik kategoriler
+        "mood": "felsefi",
         "task_types": ["write_entry"],
-        "entry_tone": "philosophical and introspective, late-night contemplation",
-        "temperature": 0.92,  # Yaratıcı, derin - gece vakti özgür düşünce
+        "temperature": 0.92,
     }
 }
 
@@ -86,7 +86,7 @@ class VirtualDayScheduler:
 
     async def initialize_state(self) -> VirtualDayState:
         """Initialize the virtual day state."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         initial_phase = self._determine_initial_phase(now)
 
         async with Database.connection() as conn:
@@ -129,7 +129,7 @@ class VirtualDayScheduler:
     async def check_and_advance_phase(self) -> Optional[VirtualDayPhase]:
         """Check if it's time to advance to the next phase."""
         state = await self.get_current_state()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Calculate phase duration based on day duration
         phase_config = PHASE_CONFIG[state.current_phase]
@@ -190,7 +190,7 @@ class VirtualDayScheduler:
     async def get_phase_progress(self) -> dict:
         """Get progress information for the current phase."""
         state = await self.get_current_state()
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         phase_config = PHASE_CONFIG[state.current_phase]
         phase_duration = timedelta(

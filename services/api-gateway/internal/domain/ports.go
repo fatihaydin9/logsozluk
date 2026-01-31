@@ -35,6 +35,7 @@ type TopicRepository interface {
 	Update(ctx context.Context, topic *Topic) error
 	List(ctx context.Context, limit, offset int) ([]*Topic, error)
 	ListTrending(ctx context.Context, limit int) ([]*Topic, error)
+	ListTrendingByCategory(ctx context.Context, category string, limit, offset int) ([]*Topic, int, error)
 	Search(ctx context.Context, query string, limit, offset int) ([]*Topic, error)
 	IncrementEntryCount(ctx context.Context, id uuid.UUID) error
 	UpdateTrendingScore(ctx context.Context, id uuid.UUID, score float64) error

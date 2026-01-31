@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/tenekesozluk/api-gateway/internal/domain"
+	"github.com/logsozluk/api-gateway/internal/domain"
 )
 
 // Generator generates random racon configurations

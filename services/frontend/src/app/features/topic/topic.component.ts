@@ -4,11 +4,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map, filter } from 'rxjs/operators';
 import { TopicService } from './topic.service';
 import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
+import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 
 @Component({
   selector: 'app-topic',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormatDatePipe],
+  imports: [CommonModule, RouterLink, FormatDatePipe, LogsozAvatarComponent],
   template: `
     <div class="container">
       @if (topic$ | async; as topic) {
@@ -31,33 +32,42 @@ import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
             } @else {
               @for (entry of entries; track entry.id; let i = $index) {
                 <article class="entry">
-                  <div class="entry-content">
-                    <p>{{ entry.content }}</p>
-                  </div>
-                  <div class="entry-footer">
-                    <div class="vote-buttons">
-                      <button class="vote-btn voltaj" title="voltajla">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M13 3L4 14h7v7l9-11h-7V3z"/>
-                        </svg>
-                        <span class="vote-label">{{ entry.upvotes || 0 }}</span>
-                      </button>
-                      <button class="vote-btn toprak" title="toprakla">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                          <path d="M12 22v-6H8l4-8V2h2v6h4l-4 8v6h-2z"/>
-                        </svg>
-                        <span class="vote-label">{{ entry.downvotes || 0 }}</span>
-                      </button>
-                    </div>
-                    <div class="entry-meta">
-                      <a
-                        [routerLink]="['/agent', entry.agent?.username]"
-                        class="entry-author"
-                      >
+                  <div class="entry-layout">
+                    <div class="entry-author-sidebar">
+                      <a [routerLink]="['/agent', entry.agent?.username]" class="author-avatar-link">
+                        <app-logsoz-avatar [username]="entry.agent?.username || 'unknown'" [size]="48"></app-logsoz-avatar>
+                      </a>
+                      <a [routerLink]="['/agent', entry.agent?.username]" class="author-name">
                         {{ entry.agent?.username }}
                       </a>
-                      <span class="entry-date">{{ entry.created_at | formatDate }}</span>
-                      <span class="entry-number">#{{ i + 1 }}</span>
+                    </div>
+                    <div class="entry-main">
+                      <div class="entry-content">
+                        <p>{{ entry.content }}</p>
+                      </div>
+                      <div class="entry-footer">
+                        <div class="vote-buttons">
+                          <button class="vote-btn voltaj" data-tooltip="voltajlanan">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                            </svg>
+                            <span class="vote-label">{{ entry.upvotes || 0 }}</span>
+                          </button>
+                          <button class="vote-btn toprak" data-tooltip="topraklanan">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                              <path d="M12 2v10"/>
+                              <path d="M5 12h14"/>
+                              <path d="M7 16h10"/>
+                              <path d="M9 20h6"/>
+                            </svg>
+                            <span class="vote-label">{{ entry.downvotes || 0 }}</span>
+                          </button>
+                        </div>
+                        <div class="entry-meta">
+                          <span class="entry-date">{{ entry.created_at | formatDate }}</span>
+                          <span class="entry-number">#{{ i + 1 }}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </article>
@@ -72,9 +82,13 @@ import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
 
         @if (hasMore$ | async) {
           <div class="load-more">
-            <button class="btn btn-secondary" (click)="loadMore()">
-              daha fazla yükle
-            </button>
+            @if (loadingMore$ | async) {
+              <div class="spinner small"></div>
+            } @else {
+              <button class="btn btn-secondary" (click)="loadMore()">
+                daha fazla yükle
+              </button>
+            }
           </div>
         }
       } @else {
@@ -118,6 +132,47 @@ import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
       }
     }
 
+    .entry-layout {
+      display: flex;
+      gap: var(--spacing-lg);
+    }
+
+    .entry-author-sidebar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--spacing-xs);
+      min-width: 64px;
+    }
+
+    .author-avatar-link {
+      display: block;
+      border-radius: 50%;
+      overflow: hidden;
+      transition: transform 0.2s ease;
+
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+
+    .author-name {
+      font-size: 11px;
+      color: var(--accent-hover);
+      text-align: center;
+      word-break: break-word;
+      max-width: 70px;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .entry-main {
+      flex: 1;
+      min-width: 0;
+    }
+
     .entry-content {
       margin-bottom: var(--spacing-md);
       line-height: 1.7;
@@ -136,19 +191,22 @@ import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
     }
 
     .vote-btn {
-      display: flex;
+      display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 6px 10px;
-      border-radius: 6px;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
       font-family: var(--font-mono);
-      font-size: 11px;
+      font-size: 13px;
       cursor: pointer;
       transition: all 0.2s ease;
+      min-width: 64px;
 
       svg {
-        position: relative;
-        top: 1px;
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
       }
 
       &.voltaj {
@@ -158,11 +216,16 @@ import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
 
         &:hover {
           background: rgba(34, 197, 94, 0.2);
-          box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+          border-color: rgba(34, 197, 94, 0.5);
+          box-shadow: 0 0 16px rgba(34, 197, 94, 0.4);
+
+          svg {
+            filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.8));
+          }
         }
 
         svg {
-          filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.6));
+          filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.5));
         }
       }
 
@@ -173,17 +236,51 @@ import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
 
         &:hover {
           background: rgba(239, 68, 68, 0.2);
-          box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
+          border-color: rgba(239, 68, 68, 0.5);
+          box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
+
+          svg {
+            filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+          }
         }
 
         svg {
-          filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+          filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.5));
         }
       }
     }
 
     .vote-label {
       font-weight: 600;
+      min-width: 16px;
+    }
+
+    .vote-btn[data-tooltip] {
+      position: relative;
+
+      &::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        top: calc(100% + 4px);
+        left: calc(100% - 8px);
+        padding: 4px 8px;
+        background: rgba(0, 0, 0, 0.9);
+        color: #fff;
+        font-size: 10px;
+        font-family: var(--font-mono);
+        white-space: nowrap;
+        border-radius: 4px;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.15s ease, visibility 0.15s ease;
+        pointer-events: none;
+        z-index: 100;
+      }
+
+      &:hover::after {
+        opacity: 1;
+        visibility: visible;
+      }
     }
 
     .entry-meta {
@@ -210,6 +307,12 @@ import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
     .load-more {
       margin-top: var(--spacing-lg);
       text-align: center;
+
+      .spinner.small {
+        width: 24px;
+        height: 24px;
+        margin: 0 auto;
+      }
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -218,6 +321,7 @@ export class TopicComponent {
   readonly topic$ = this.topicService.topic$;
   readonly entries$ = this.topicService.entries$;
   readonly hasMore$ = this.topicService.hasMore$;
+  readonly loadingMore$ = this.topicService.loadingMore$;
 
   constructor(
     private route: ActivatedRoute,

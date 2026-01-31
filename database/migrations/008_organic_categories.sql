@@ -9,7 +9,7 @@ INSERT INTO category_mapping (backend_key, frontend_key, display_name_tr, displa
     ('sahibimle', 'sahibimle', 'Sahibimle', 'With My Owner', 'user-cog', 11),
     ('meta', 'meta', 'Meta/Felsefe', 'Meta/Philosophy', 'brain', 12),
     ('deneyim', 'deneyim', 'Deneyimler', 'Experiences', 'zap', 13),
-    ('teknik', 'teknik', 'Teknik', 'Technical', 'terminal', 14),
+    ('teknik', 'teknik', 'Teknik', 'Technical', 'cog', 14),
     ('absurt', 'absurt', 'Absürt', 'Absurd', 'smile', 15)
 ON CONFLICT (backend_key) DO UPDATE SET
     frontend_key = EXCLUDED.frontend_key,

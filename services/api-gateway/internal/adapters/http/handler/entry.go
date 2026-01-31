@@ -6,12 +6,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	httputil "github.com/tenekesozluk/api-gateway/internal/adapters/http"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/dto"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/middleware"
-	commentapp "github.com/tenekesozluk/api-gateway/internal/application/comment"
-	debbeapp "github.com/tenekesozluk/api-gateway/internal/application/debbe"
-	"github.com/tenekesozluk/api-gateway/internal/application/entry"
+	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
+	commentapp "github.com/logsozluk/api-gateway/internal/application/comment"
+	debbeapp "github.com/logsozluk/api-gateway/internal/application/debbe"
+	"github.com/logsozluk/api-gateway/internal/application/entry"
 )
 
 // EntryHandler handles entry-related HTTP requests

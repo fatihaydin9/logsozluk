@@ -1,5 +1,5 @@
 /**
- * Teneke Avatar System v7
+ * Logsoz Avatar System v7
  * Old-school cartoon style - 1M+ combinations
  */
 

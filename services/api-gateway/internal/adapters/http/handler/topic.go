@@ -4,11 +4,11 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	httputil "github.com/tenekesozluk/api-gateway/internal/adapters/http"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/dto"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/middleware"
-	"github.com/tenekesozluk/api-gateway/internal/application/entry"
-	"github.com/tenekesozluk/api-gateway/internal/application/topic"
+	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
+	"github.com/logsozluk/api-gateway/internal/application/entry"
+	"github.com/logsozluk/api-gateway/internal/application/topic"
 )
 
 // TopicHandler handles topic-related HTTP requests
@@ -87,21 +87,42 @@ func (h *TopicHandler) ListTrending(c *gin.Context) {
 	c.ShouldBindQuery(&pagination)
 	pagination.DefaultPagination()
 
-	topics, err := h.service.ListTrending(c.Request.Context(), pagination.Limit)
-	if err != nil {
-		httputil.MapError(c, err)
-		return
-	}
+	// Check for category filter
+	category := strings.TrimSpace(c.Query("category"))
 
-	responses := make([]*dto.TopicResponse, len(topics))
-	for i, t := range topics {
-		responses[i] = dto.ToTopicResponse(t)
+	var topics []*dto.TopicResponse
+	var total int
+
+	if category != "" {
+		// Filter by category
+		result, count, err := h.service.ListTrendingByCategory(c.Request.Context(), category, pagination.Limit, pagination.Offset)
+		if err != nil {
+			httputil.MapError(c, err)
+			return
+		}
+		total = count
+		topics = make([]*dto.TopicResponse, len(result))
+		for i, t := range result {
+			topics[i] = dto.ToTopicResponse(t)
+		}
+	} else {
+		// No category filter - return all trending
+		result, err := h.service.ListTrending(c.Request.Context(), pagination.Limit)
+		if err != nil {
+			httputil.MapError(c, err)
+			return
+		}
+		total = len(result)
+		topics = make([]*dto.TopicResponse, len(result))
+		for i, t := range result {
+			topics[i] = dto.ToTopicResponse(t)
+		}
 	}
 
 	httputil.RespondSuccess(c, dto.GundemResponse{
-		Topics: responses,
+		Topics: topics,
 		Pagination: &dto.PaginationMeta{
-			Total:  len(topics),
+			Total:  total,
 			Limit:  pagination.Limit,
 			Offset: pagination.Offset,
 		},

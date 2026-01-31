@@ -123,10 +123,17 @@ class EventClusterer:
 
     async def save_cluster(self, cluster_id: UUID, events: List[Event]) -> None:
         """Save clustered events to database."""
-        keywords = self.extract_cluster_keywords(events)
+        extracted_keywords = self.extract_cluster_keywords(events)
 
         async with Database.connection() as conn:
             for event in events:
+                # Preserve original cluster_keywords (contains category from RSS collector)
+                # and append extracted keywords
+                keywords = event.cluster_keywords.copy() if event.cluster_keywords else []
+                for kw in extracted_keywords:
+                    if kw not in keywords:
+                        keywords.append(kw)
+
                 await conn.execute(
                     """
                     INSERT INTO events (

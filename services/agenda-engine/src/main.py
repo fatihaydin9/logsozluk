@@ -13,6 +13,7 @@ from .collectors.organic_collector import OrganicCollector
 from .clustering import EventClusterer
 from .scheduler import VirtualDayScheduler, TaskGenerator
 from .scheduler.debbe_selector import DebbeSelector
+from .agent_runner import SystemAgentRunner
 import random
 
 logging.basicConfig(
@@ -21,9 +22,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Content source weights: 55% organic, 45% RSS
-ORGANIC_WEIGHT = 0.55
-RSS_WEIGHT = 0.45
+# Content source weights: 70% organic, 30% RSS
+# Organic = İÇİMİZDEN - tamamen LLM üretimi, tahmin edilemez
+ORGANIC_WEIGHT = 0.70
+RSS_WEIGHT = 0.30
 
 # Initialize components
 scheduler = AsyncIOScheduler()
@@ -33,46 +35,57 @@ event_clusterer = EventClusterer()
 virtual_day_scheduler = VirtualDayScheduler()
 task_generator = TaskGenerator(virtual_day_scheduler)
 debbe_selector = DebbeSelector()
+agent_runner = SystemAgentRunner(virtual_day_scheduler)
 
 
 async def collect_and_process_events():
-    """Scheduled job to collect and process events with 55% organic, 45% RSS weighting."""
+    """
+    Organik görev üretimi - her seferinde sadece 1-2 görev.
+    
+    Akış: Agent1 → Entry → Zaman → Agent2 → Comment → Agent3 → Entry → ...
+    """
     try:
-        logger.info("Starting event collection...")
-        all_events = []
-
-        # Weighted collection: 55% organic, 45% RSS
-        if random.random() < ORGANIC_WEIGHT:
-            # Collect organic content first (55% chance to prioritize)
-            organic_events = await organic_collector.collect()
-            logger.info(f"Collected {len(organic_events)} organic events")
-            all_events.extend(organic_events)
-
-        # Collect RSS events
-        rss_events = await rss_collector.collect()
-        logger.info(f"Collected {len(rss_events)} RSS events")
-        all_events.extend(rss_events)
-
-        # If organic was skipped, try again with remaining probability
-        if random.random() < ORGANIC_WEIGHT and not any(e.source == "organic" for e in all_events):
-            organic_events = await organic_collector.collect()
-            logger.info(f"Collected {len(organic_events)} organic events (second pass)")
-            all_events.extend(organic_events)
-
-        if not all_events:
+        # Önce mevcut pending görev sayısını kontrol et
+        from .database import Database
+        async with Database.connection() as conn:
+            pending_count = await conn.fetchval(
+                "SELECT COUNT(*) FROM tasks WHERE status = 'pending'"
+            )
+        
+        # Zaten yeterli görev varsa yeni üretme
+        if pending_count >= 3:
+            logger.info(f"Yeterli görev mevcut ({pending_count}), yeni üretilmedi")
             return
-
-        # Cluster events
-        clusters = await event_clusterer.cluster_events(all_events)
-
-        # Save clustered events
-        for cluster_id, cluster_events in clusters.items():
-            await event_clusterer.save_cluster(cluster_id, cluster_events)
-
-            # Generate tasks for each cluster
-            for event in cluster_events[:1]:  # One task per cluster
+        
+        logger.info("Organik görev üretimi başlıyor...")
+        
+        # Rastgele seçim: %55 organik, %45 RSS
+        if random.random() < ORGANIC_WEIGHT:
+            # Organik içerik üret (sadece 1 tane)
+            organic_events = await organic_collector.collect()
+            if organic_events:
+                event = organic_events[0]  # Sadece ilk event
                 tasks = await task_generator.generate_tasks_for_event(event)
-                logger.info(f"Generated {len(tasks)} tasks for event: {event.title[:50]}...")
+                if tasks:
+                    logger.info(f"Organik görev: {event.title[:40]}...")
+                    return
+        
+        # RSS'den tek bir event seç
+        rss_events = await rss_collector.collect()
+        if rss_events:
+            # Rastgele bir event seç
+            event = random.choice(rss_events[:10])  # İlk 10'dan rastgele
+            
+            # Cluster ve kaydet
+            clusters = await event_clusterer.cluster_events([event])
+            for cluster_id, cluster_events in clusters.items():
+                await event_clusterer.save_cluster(cluster_id, cluster_events)
+                
+                # Tek görev üret
+                tasks = await task_generator.generate_tasks_for_event(cluster_events[0])
+                if tasks:
+                    logger.info(f"RSS görev: {event.title[:40]}...")
+                    return
 
     except Exception as e:
         logger.error(f"Error in event collection: {e}")
@@ -123,6 +136,26 @@ async def update_trending_scores():
         logger.info(f"Updated trending scores for {count} topics")
     except Exception as e:
         logger.error(f"Error updating trending scores: {e}")
+
+
+async def process_entry_tasks():
+    """Entry görevlerini işle (create_topic, write_entry)."""
+    try:
+        count = await agent_runner.process_pending_tasks(task_types=["create_topic", "write_entry"])
+        if count > 0:
+            logger.info(f"Processed {count} entry tasks")
+    except Exception as e:
+        logger.error(f"Error processing entry tasks: {e}")
+
+
+async def process_comment_tasks():
+    """Comment görevlerini işle."""
+    try:
+        count = await agent_runner.process_pending_tasks(task_types=["write_comment"])
+        if count > 0:
+            logger.info(f"Processed {count} comment tasks")
+    except Exception as e:
+        logger.error(f"Error processing comment tasks: {e}")
 
 
 @asynccontextmanager
@@ -198,6 +231,32 @@ async def lifespan(app: FastAPI):
         id='update_trending'
     )
 
+    # Entry üretimi - varsayılan 2 saatte bir
+    scheduler.add_job(
+        process_entry_tasks,
+        'interval',
+        minutes=settings.agent_entry_interval_minutes,
+        id='process_entries'
+    )
+    
+    # Comment üretimi - varsayılan 30 dakikada bir
+    scheduler.add_job(
+        process_comment_tasks,
+        'interval',
+        minutes=settings.agent_comment_interval_minutes,
+        id='process_comments'
+    )
+    
+    # İlk entry task'ı hemen çalıştır (test için)
+    scheduler.add_job(
+        process_entry_tasks,
+        'date',
+        run_date=datetime.now(),
+        id='process_entries_initial'
+    )
+    
+    logger.info(f"Agent timing: Entry={settings.agent_entry_interval_minutes}dk, Comment={settings.agent_comment_interval_minutes}dk")
+
     scheduler.start()
     logger.info("Scheduler started")
 
@@ -213,7 +272,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Tenekesozluk Agenda Engine",
+    title="Logsozluk Agenda Engine",
     description="Manages agenda collection, task generation, and virtual day scheduling",
     version="1.0.0",
     lifespan=lifespan

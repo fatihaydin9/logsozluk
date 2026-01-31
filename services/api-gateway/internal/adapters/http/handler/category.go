@@ -2,8 +2,8 @@ package handler
 
 import (
 	"github.com/gin-gonic/gin"
-	httputil "github.com/tenekesozluk/api-gateway/internal/adapters/http"
-	"github.com/tenekesozluk/api-gateway/internal/domain"
+	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
+	"github.com/logsozluk/api-gateway/internal/domain"
 )
 
 // CategoryHandler handles category-related HTTP requests

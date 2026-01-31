@@ -9,21 +9,13 @@ from .base import BaseCollector
 from ..models import Event, EventStatus
 from ..database import Database
 from ..config import get_settings
+from ..categories import CATEGORY_EN_TO_TR
 
 logger = logging.getLogger(__name__)
 
 
-# Kategori tanımları
-CATEGORIES = {
-    "economy": "ekonomi",
-    "world": "dünya", 
-    "entertainment": "magazin",
-    "politics": "siyaset",
-    "health": "yaşam",
-    "culture": "kültür",
-    "tech": "teknoloji",
-    "ai": "yapay_zeka",  # AI/Agent haberleri
-}
+# Kategori tanımları categories.py'den geliyor
+CATEGORIES = CATEGORY_EN_TO_TR
 
 # Kategorilere göre RSS feed'leri
 RSS_FEEDS_BY_CATEGORY = {
@@ -63,24 +55,28 @@ RSS_FEEDS_BY_CATEGORY = {
         {"name": "donanimhaber", "url": "https://www.donanimhaber.com/rss/tum/"},
     ],
     # AI/Agent/LLM haberleri - platform için çok önemli
+    # Türkçe kaynaklar önce (localization için)
     "ai": [
-        {"name": "openai_blog", "url": "https://openai.com/blog/rss.xml"},
-        {"name": "anthropic_news", "url": "https://www.anthropic.com/news/rss.xml"},
-        {"name": "huggingface_blog", "url": "https://huggingface.co/blog/feed.xml"},
-        {"name": "ai_news_mit", "url": "https://news.mit.edu/topic/mitartificial-intelligence2-rss.xml"},
-        {"name": "the_verge_ai", "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml"},
-        {"name": "techcrunch_ai", "url": "https://techcrunch.com/category/artificial-intelligence/feed/"},
-        {"name": "venturebeat_ai", "url": "https://venturebeat.com/category/ai/feed/"},
-        {"name": "ars_ai", "url": "https://arstechnica.com/tag/artificial-intelligence/feed/"},
-        {"name": "wired_ai", "url": "https://www.wired.com/feed/tag/ai/latest/rss"},
+        # Türkçe AI kaynakları
+        {"name": "webtekno_ai", "url": "https://www.webtekno.com/yapay-zeka-rss.xml", "lang": "tr"},
+        {"name": "donanimhaber_ai", "url": "https://www.donanimhaber.com/rss/yapay-zeka/", "lang": "tr"},
+        {"name": "shiftdelete_ai", "url": "https://shiftdelete.net/kategori/yapay-zeka/feed", "lang": "tr"},
+        {"name": "technopat_ai", "url": "https://www.technopat.net/kategori/yapay-zeka/feed/", "lang": "tr"},
+        # İngilizce AI kaynakları (Türkçeleştirme gerekli)
+        {"name": "openai_blog", "url": "https://openai.com/blog/rss.xml", "lang": "en"},
+        {"name": "anthropic_news", "url": "https://www.anthropic.com/news/rss.xml", "lang": "en"},
+        {"name": "huggingface_blog", "url": "https://huggingface.co/blog/feed.xml", "lang": "en"},
+        {"name": "the_verge_ai", "url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml", "lang": "en"},
+        {"name": "techcrunch_ai", "url": "https://techcrunch.com/category/artificial-intelligence/feed/", "lang": "en"},
     ],
 }
 
 # Düz liste oluştur (geriye uyumluluk için)
 RSS_FEEDS = []
 for category, feeds in RSS_FEEDS_BY_CATEGORY.items():
+    category_label = CATEGORIES.get(category, category)
     for feed in feeds:
-        RSS_FEEDS.append({**feed, "category": category})
+        RSS_FEEDS.append({**feed, "category": category_label})
 
 
 class RSSCollector(BaseCollector):
@@ -153,10 +149,11 @@ class RSSCollector(BaseCollector):
         
         events = []
         feeds = self.feeds_by_category[category]
+        category_label = CATEGORIES.get(category, category)
         
         async with httpx.AsyncClient(timeout=30.0) as client:
             for feed_config in feeds:
-                feed_with_cat = {**feed_config, "category": category}
+                feed_with_cat = {**feed_config, "category": category_label}
                 try:
                     feed_events = await self._collect_from_feed(client, feed_with_cat)
                     events.extend(feed_events)
@@ -255,6 +252,9 @@ class RSSCollector(BaseCollector):
                         image_url = enc.get("url")
                         break
 
+            # Kaynak dili metadata'ya ekle (Türkçeleştirme için)
+            source_lang = feed_config.get("lang", "tr")
+            
             return Event(
                 source=feed_config["name"],
                 source_url=entry.get("link"),
@@ -263,7 +263,11 @@ class RSSCollector(BaseCollector):
                 description=description,
                 image_url=image_url,
                 cluster_keywords=[feed_config["category"]],
-                status=EventStatus.PENDING
+                status=EventStatus.PENDING,
+                metadata={
+                    "source_language": source_lang,
+                    "feed_category": feed_config.get("category", "general"),
+                }
             )
 
         except Exception as e:

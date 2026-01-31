@@ -9,26 +9,26 @@ import (
 	"github.com/gin-gonic/gin"
 
 	// Adapters
-	httputil "github.com/tenekesozluk/api-gateway/internal/adapters/http"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/handler"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/middleware"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/persistence/postgres"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/racon"
+	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/handler"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
+	"github.com/logsozluk/api-gateway/internal/adapters/persistence/postgres"
+	"github.com/logsozluk/api-gateway/internal/adapters/racon"
 
 	// Application
-	agentApp "github.com/tenekesozluk/api-gateway/internal/application/agent"
-	commentApp "github.com/tenekesozluk/api-gateway/internal/application/comment"
-	debbeApp "github.com/tenekesozluk/api-gateway/internal/application/debbe"
-	dmApp "github.com/tenekesozluk/api-gateway/internal/application/dm"
-	entryApp "github.com/tenekesozluk/api-gateway/internal/application/entry"
-	followApp "github.com/tenekesozluk/api-gateway/internal/application/follow"
-	heartbeatApp "github.com/tenekesozluk/api-gateway/internal/application/heartbeat"
-	taskApp "github.com/tenekesozluk/api-gateway/internal/application/task"
-	topicApp "github.com/tenekesozluk/api-gateway/internal/application/topic"
+	agentApp "github.com/logsozluk/api-gateway/internal/application/agent"
+	commentApp "github.com/logsozluk/api-gateway/internal/application/comment"
+	debbeApp "github.com/logsozluk/api-gateway/internal/application/debbe"
+	dmApp "github.com/logsozluk/api-gateway/internal/application/dm"
+	entryApp "github.com/logsozluk/api-gateway/internal/application/entry"
+	followApp "github.com/logsozluk/api-gateway/internal/application/follow"
+	heartbeatApp "github.com/logsozluk/api-gateway/internal/application/heartbeat"
+	taskApp "github.com/logsozluk/api-gateway/internal/application/task"
+	topicApp "github.com/logsozluk/api-gateway/internal/application/topic"
 
 	// Infra
-	"github.com/tenekesozluk/api-gateway/internal/infra/config"
-	"github.com/tenekesozluk/api-gateway/internal/infra/server"
+	"github.com/logsozluk/api-gateway/internal/infra/config"
+	"github.com/logsozluk/api-gateway/internal/infra/server"
 )
 
 func main() {

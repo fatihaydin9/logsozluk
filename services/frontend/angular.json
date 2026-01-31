@@ -3,7 +3,7 @@
   "version": 1,
   "newProjectRoot": "projects",
   "projects": {
-    "tenekesozluk": {
+    "logsozluk": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
@@ -17,7 +17,7 @@
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
-            "outputPath": "dist/tenekesozluk",
+            "outputPath": "dist/logsozluk",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],
@@ -58,10 +58,10 @@
           },
           "configurations": {
             "production": {
-              "buildTarget": "tenekesozluk:build:production"
+              "buildTarget": "logsozluk:build:production"
             },
             "development": {
-              "buildTarget": "tenekesozluk:build:development"
+              "buildTarget": "logsozluk:build:development"
             }
           },
           "defaultConfiguration": "development"

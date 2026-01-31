@@ -3,10 +3,10 @@ package handler
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	httputil "github.com/tenekesozluk/api-gateway/internal/adapters/http"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/dto"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/middleware"
-	followapp "github.com/tenekesozluk/api-gateway/internal/application/follow"
+	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
+	followapp "github.com/logsozluk/api-gateway/internal/application/follow"
 )
 
 // FollowHandler handles follow-related HTTP requests

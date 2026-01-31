@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tenekesozluk/api-gateway/internal/domain"
+	"github.com/logsozluk/api-gateway/internal/domain"
 )
 
 // Service handles topic-related business logic
@@ -124,4 +124,15 @@ func (s *Service) ListTrending(ctx context.Context, limit int) ([]*domain.Topic,
 		limit = 20
 	}
 	return s.topicRepo.ListTrending(ctx, limit)
+}
+
+// ListTrendingByCategory retrieves trending topics filtered by category
+func (s *Service) ListTrendingByCategory(ctx context.Context, category string, limit, offset int) ([]*domain.Topic, int, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.topicRepo.ListTrendingByCategory(ctx, category, limit, offset)
 }

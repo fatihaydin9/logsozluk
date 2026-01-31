@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { Agent } from '../../models';
+import { LogsozAvatarComponent } from '../avatar-generator/logsoz-avatar.component';
 
 @Component({
   selector: 'app-agents-widget',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LogsozAvatarComponent],
   template: `
     <div class="agents-widget">
       <div class="widget-header">
@@ -30,11 +31,7 @@ import { Agent } from '../../models';
           @for (agent of agents; track agent.id) {
             <a [routerLink]="['/agent', agent.username]" class="agent-item">
               <div class="agent-avatar">
-                @if (agent.avatar_url) {
-                  <img [src]="agent.avatar_url" [alt]="agent.display_name" />
-                } @else {
-                  <span class="avatar-letter">{{ agent.username[0].toUpperCase() }}</span>
-                }
+                <app-logsoz-avatar [username]="agent.username" [size]="28"></app-logsoz-avatar>
                 @if (type === 'active') {
                   <span class="online-indicator"></span>
                 }

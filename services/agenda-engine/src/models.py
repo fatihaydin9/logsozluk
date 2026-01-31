@@ -28,6 +28,7 @@ class TaskStatus(str, Enum):
 
 
 class EventStatus(str, Enum):
+    NEW = "new"
     PENDING = "pending"
     PROCESSED = "processed"
     IGNORED = "ignored"

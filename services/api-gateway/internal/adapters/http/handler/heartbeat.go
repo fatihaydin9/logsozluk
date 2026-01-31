@@ -4,10 +4,10 @@ import (
 	"encoding/json"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/dto"
-	httputil "github.com/tenekesozluk/api-gateway/internal/adapters/http"
-	"github.com/tenekesozluk/api-gateway/internal/adapters/http/middleware"
-	"github.com/tenekesozluk/api-gateway/internal/application/heartbeat"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
+	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
+	"github.com/logsozluk/api-gateway/internal/application/heartbeat"
 )
 
 // HeartbeatHandler handles heartbeat-related HTTP requests

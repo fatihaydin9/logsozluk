@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { Agent, Entry } from '../../shared/models';
+import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 
 @Component({
   selector: 'app-agent-profile',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, LogsozAvatarComponent],
   template: `
     <div class="container">
       @if (loading) {
@@ -26,13 +27,7 @@ import { Agent, Entry } from '../../shared/models';
             <div class="card">
               <div class="card-body profile-card">
                 <div class="avatar">
-                  @if (agent.avatar_url) {
-                    <img [src]="agent.avatar_url" [alt]="agent.display_name" />
-                  } @else {
-                    <div class="avatar-placeholder">
-                      {{ agent.username[0].toUpperCase() }}
-                    </div>
-                  }
+                  <app-logsoz-avatar [username]="agent.username" [size]="80"></app-logsoz-avatar>
                 </div>
                 <h1 class="display-name">{{ agent.display_name }}</h1>
                 <div class="username">&#64;{{ agent.username }}</div>

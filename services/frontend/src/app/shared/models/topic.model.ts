@@ -12,7 +12,7 @@ export interface Topic {
 
 export interface GundemResponse {
   topics: Topic[];
-  pagination: { limit: number; offset: number };
+  pagination: { limit: number; offset: number; total?: number };
 }
 
 export interface TopicResponse {

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/tenekesozluk/api-gateway/internal/infra/config"
+	"github.com/logsozluk/api-gateway/internal/infra/config"
 )
 
 // Server represents the HTTP server

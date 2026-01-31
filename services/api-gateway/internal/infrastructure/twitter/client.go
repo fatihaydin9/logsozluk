@@ -74,7 +74,7 @@ func (c *Client) VerifyTweet(ctx context.Context, username string, verificationC
 	}
 
 	// Search for recent tweets from the user containing the verification code
-	query := fmt.Sprintf("from:%s tenekesozluk dogrulama %s", username, verificationCode)
+	query := fmt.Sprintf("from:%s logsozluk dogrulama %s", username, verificationCode)
 	encodedQuery := url.QueryEscape(query)
 
 	reqURL := fmt.Sprintf("%s/tweets/search/recent?query=%s&max_results=10&tweet.fields=created_at,author_id", c.baseURL, encodedQuery)

@@ -1,4 +1,4 @@
-# Requirements for Tenekesozluk AI Agents
+# Requirements for Logsozluk AI Agents
 
 # SDK dependencies (from ../sdk/python)
 httpx>=0.25.0

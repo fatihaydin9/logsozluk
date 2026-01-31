@@ -5,6 +5,7 @@ import {
   EyeType,
   MouthType,
   HeadAccessory,
+  FaceDetail,
   AvatarColor,
   COLORS,
 } from './avatar.types';
@@ -14,11 +15,13 @@ import {
 })
 export class AvatarGeneratorService {
 
-  private readonly bodies: BodyShape[] = ['can', 'box', 'round', 'crushed', 'tall', 'barrel'];
-  private readonly eyes: EyeType[] = ['normal', 'angry', 'sneaky', 'popping', 'spiral', 'dead', 'money', 'tired', 'one_big', 'laser'];
-  private readonly mouths: MouthType[] = ['flat', 'grin', 'sad', 'evil', 'shocked', 'tongue', 'smirk', 'zipper'];
-  private readonly headAccs: HeadAccessory[] = ['none', 'antenna', 'bolt', 'crack', 'smoke', 'halo', 'devil'];
-  private readonly colors: AvatarColor[] = ['red', 'blue', 'green', 'orange', 'purple', 'yellow', 'gray', 'pink', 'teal', 'black'];
+  // 8 × 12 × 10 × 10 × 10 × 12 = 1,152,000 combinations
+  private readonly bodies: BodyShape[] = ['can', 'box', 'round', 'crushed', 'tall', 'barrel', 'egg', 'monitor'];
+  private readonly eyes: EyeType[] = ['normal', 'angry', 'sneaky', 'popping', 'spiral', 'dead', 'money', 'tired', 'one_big', 'laser', 'heart', 'glitch'];
+  private readonly mouths: MouthType[] = ['flat', 'grin', 'sad', 'evil', 'shocked', 'tongue', 'smirk', 'zipper', 'vampire', 'glitch'];
+  private readonly headAccs: HeadAccessory[] = ['none', 'antenna', 'bolt', 'crack', 'smoke', 'halo', 'devil', 'propeller', 'leaf', 'spark'];
+  private readonly faceDetails: FaceDetail[] = ['none', 'blush', 'scar', 'bandaid', 'freckles', 'tear', 'sweat', 'sticker', 'mask', 'glasses'];
+  private readonly colors: AvatarColor[] = ['red', 'blue', 'green', 'orange', 'purple', 'yellow', 'gray', 'pink', 'teal', 'black', 'lime', 'crimson'];
 
   generateFromSeed(seed: string): AvatarConfig {
     const hash = this.hashString(seed);
@@ -27,7 +30,8 @@ export class AvatarGeneratorService {
       eyes: this.eyes[(hash >> 3) % this.eyes.length],
       mouth: this.mouths[(hash >> 6) % this.mouths.length],
       headAcc: this.headAccs[(hash >> 9) % this.headAccs.length],
-      color: this.colors[(hash >> 12) % this.colors.length],
+      faceDetail: this.faceDetails[(hash >> 12) % this.faceDetails.length],
+      color: this.colors[(hash >> 15) % this.colors.length],
       seed,
     };
   }
@@ -38,6 +42,7 @@ export class AvatarGeneratorService {
       eyes: this.randomItem(this.eyes),
       mouth: this.randomItem(this.mouths),
       headAcc: this.randomItem(this.headAccs),
+      faceDetail: this.randomItem(this.faceDetails),
       color: this.randomItem(this.colors),
     };
   }
@@ -52,6 +57,7 @@ export class AvatarGeneratorService {
       ${this.renderBody(config.body, c, stroke, sw)}
       ${this.renderEyes(config.eyes, config.body, stroke)}
       ${this.renderMouth(config.mouth, config.body, stroke)}
+      ${this.renderFaceDetail(config.faceDetail, config.body, stroke)}
     </svg>`;
   }
 
@@ -71,9 +77,7 @@ export class AvatarGeneratorService {
       case 'round':
         return `<circle cx="50" cy="55" r="28" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>`;
       case 'crushed':
-        return `
-          <path d="M 32 78 Q 42 84 50 80 Q 58 84 68 78 L 72 42 Q 62 36 50 40 Q 38 36 28 42 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
-        `;
+        return `<path d="M 32 78 Q 42 84 50 80 Q 58 84 68 78 L 72 42 Q 62 36 50 40 Q 38 36 28 42 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>`;
       case 'tall':
         return `
           <rect x="34" y="18" width="32" height="68" rx="3" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
@@ -84,6 +88,15 @@ export class AvatarGeneratorService {
           <ellipse cx="50" cy="55" rx="26" ry="30" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
           <ellipse cx="50" cy="32" rx="20" ry="6" fill="${c.dark}" stroke="${stroke}" stroke-width="2"/>
           <line x1="26" y1="55" x2="74" y2="55" stroke="${stroke}" stroke-width="2"/>
+        `;
+      case 'egg':
+        return `<ellipse cx="50" cy="52" rx="24" ry="32" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>`;
+      case 'monitor':
+        return `
+          <rect x="24" y="28" width="52" height="40" rx="3" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <rect x="28" y="32" width="44" height="32" fill="#1a1a1a" stroke="${stroke}" stroke-width="2"/>
+          <rect x="40" y="68" width="20" height="6" fill="${c.dark}" stroke="${stroke}" stroke-width="2"/>
+          <rect x="34" y="74" width="32" height="6" rx="2" fill="${c.main}" stroke="${stroke}" stroke-width="2"/>
         `;
       default:
         return this.renderBody('can', c, stroke, sw);
@@ -169,6 +182,20 @@ export class AvatarGeneratorService {
           <rect x="${lx-6}" y="${y-2}" width="12" height="4" fill="#E74C3C"/>
           <rect x="${rx-6}" y="${y-2}" width="12" height="4" fill="#E74C3C"/>
         `;
+      case 'heart':
+        return `
+          <path d="M ${lx} ${y+6} C ${lx-10} ${y-2} ${lx-10} ${y-10} ${lx} ${y-4} C ${lx+10} ${y-10} ${lx+10} ${y-2} ${lx} ${y+6}" fill="#E91E63" stroke="${stroke}" stroke-width="1.5"/>
+          <path d="M ${rx} ${y+6} C ${rx-10} ${y-2} ${rx-10} ${y-10} ${rx} ${y-4} C ${rx+10} ${y-10} ${rx+10} ${y-2} ${rx} ${y+6}" fill="#E91E63" stroke="${stroke}" stroke-width="1.5"/>
+        `;
+      case 'glitch':
+        return `
+          <rect x="${lx-8}" y="${y-6}" width="16" height="12" fill="white" stroke="${stroke}" stroke-width="2"/>
+          <rect x="${rx-8}" y="${y-6}" width="16" height="12" fill="white" stroke="${stroke}" stroke-width="2"/>
+          <rect x="${lx-6}" y="${y-4}" width="5" height="8" fill="#00FF00"/>
+          <rect x="${lx+1}" y="${y-2}" width="5" height="6" fill="#FF0000"/>
+          <rect x="${rx-6}" y="${y-2}" width="5" height="6" fill="#0000FF"/>
+          <rect x="${rx+1}" y="${y-4}" width="5" height="8" fill="#00FF00"/>
+        `;
       default:
         return this.renderEyes('normal', body, stroke);
     }
@@ -189,9 +216,7 @@ export class AvatarGeneratorService {
       case 'sad':
         return `<path d="M ${cx-12} ${y+6} Q ${cx} ${y-8} ${cx+12} ${y+6}" stroke="${stroke}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
       case 'evil':
-        return `
-          <path d="M ${cx-14} ${y} Q ${cx-7} ${y+8} ${cx} ${y} Q ${cx+7} ${y+8} ${cx+14} ${y}" stroke="${stroke}" stroke-width="3" fill="none" stroke-linecap="round"/>
-        `;
+        return `<path d="M ${cx-14} ${y} Q ${cx-7} ${y+8} ${cx} ${y} Q ${cx+7} ${y+8} ${cx+14} ${y}" stroke="${stroke}" stroke-width="3" fill="none" stroke-linecap="round"/>`;
       case 'shocked':
         return `
           <ellipse cx="${cx}" cy="${y+3}" rx="10" ry="12" fill="${stroke}"/>
@@ -212,13 +237,26 @@ export class AvatarGeneratorService {
           <line x1="${cx+2}" y1="${y-3}" x2="${cx+2}" y2="${y+7}" stroke="${stroke}" stroke-width="2"/>
           <line x1="${cx+8}" y1="${y-3}" x2="${cx+8}" y2="${y+7}" stroke="${stroke}" stroke-width="2"/>
         `;
+      case 'vampire':
+        return `
+          <path d="M ${cx-12} ${y} Q ${cx} ${y+6} ${cx+12} ${y}" stroke="${stroke}" stroke-width="2.5" fill="none"/>
+          <polygon points="${cx-5},${y+1} ${cx-3},${y+10} ${cx-1},${y+1}" fill="white" stroke="${stroke}" stroke-width="1"/>
+          <polygon points="${cx+1},${y+1} ${cx+3},${y+10} ${cx+5},${y+1}" fill="white" stroke="${stroke}" stroke-width="1"/>
+        `;
+      case 'glitch':
+        return `
+          <rect x="${cx-12}" y="${y-2}" width="24" height="8" fill="${stroke}"/>
+          <rect x="${cx-10}" y="${y}" width="6" height="4" fill="#00FF00"/>
+          <rect x="${cx-2}" y="${y-1}" width="6" height="4" fill="#FF0000"/>
+          <rect x="${cx+6}" y="${y}" width="6" height="4" fill="#0000FF"/>
+        `;
       default:
         return this.renderMouth('flat', body, stroke);
     }
   }
 
   private renderHeadAcc(acc: HeadAccessory, c: any, stroke: string, sw: number, body: BodyShape): string {
-    const topY = body === 'tall' ? 18 : body === 'round' ? 27 : body === 'crushed' ? 36 : body === 'barrel' ? 25 : 28;
+    const topY = body === 'tall' ? 18 : body === 'round' ? 27 : body === 'crushed' ? 36 : body === 'barrel' ? 25 : body === 'egg' ? 20 : body === 'monitor' ? 28 : 28;
 
     switch (acc) {
       case 'antenna':
@@ -236,9 +274,7 @@ export class AvatarGeneratorService {
           <line x1="28" y1="42" x2="28" y2="48" stroke="${stroke}" stroke-width="2"/>
         `;
       case 'crack':
-        return `
-          <path d="M 62 ${topY} L 68 ${topY+12} L 58 ${topY+18} L 66 ${topY+28}" stroke="${stroke}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-        `;
+        return `<path d="M 62 ${topY} L 68 ${topY+12} L 58 ${topY+18} L 66 ${topY+28}" stroke="${stroke}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
       case 'smoke':
         return `
           <ellipse cx="68" cy="${topY-8}" rx="6" ry="4" fill="#95A5A6" opacity="0.7"/>
@@ -246,13 +282,83 @@ export class AvatarGeneratorService {
           <ellipse cx="66" cy="${topY-22}" rx="4" ry="3" fill="#D5DBDB" opacity="0.5"/>
         `;
       case 'halo':
-        return `
-          <ellipse cx="50" cy="${topY-10}" rx="18" ry="5" fill="none" stroke="#F1C40F" stroke-width="4"/>
-        `;
+        return `<ellipse cx="50" cy="${topY-10}" rx="18" ry="5" fill="none" stroke="#F1C40F" stroke-width="4"/>`;
       case 'devil':
         return `
           <path d="M 30 ${topY+8} Q 24 ${topY-8} 22 ${topY-18}" stroke="#C0392B" stroke-width="5" fill="none" stroke-linecap="round"/>
           <path d="M 70 ${topY+8} Q 76 ${topY-8} 78 ${topY-18}" stroke="#C0392B" stroke-width="5" fill="none" stroke-linecap="round"/>
+        `;
+      case 'propeller':
+        return `
+          <line x1="50" y1="${topY}" x2="50" y2="${topY-10}" stroke="${stroke}" stroke-width="${sw}"/>
+          <ellipse cx="50" cy="${topY-12}" rx="14" ry="4" fill="#95A5A6" stroke="${stroke}" stroke-width="2"/>
+          <ellipse cx="50" cy="${topY-12}" rx="14" ry="4" fill="#71797E" stroke="${stroke}" stroke-width="2" transform="rotate(60 50 ${topY-12})"/>
+          <circle cx="50" cy="${topY-12}" r="3" fill="${stroke}"/>
+        `;
+      case 'leaf':
+        return `
+          <path d="M 50 ${topY-2} Q 42 ${topY-14} 50 ${topY-20} Q 58 ${topY-14} 50 ${topY-2}" fill="#27AE60" stroke="${stroke}" stroke-width="2"/>
+          <line x1="50" y1="${topY-2}" x2="50" y2="${topY-16}" stroke="${stroke}" stroke-width="1.5"/>
+        `;
+      case 'spark':
+        return `
+          <polygon points="50,${topY-20} 53,${topY-10} 62,${topY-10} 55,${topY-4} 58,${topY+6} 50,${topY} 42,${topY+6} 45,${topY-4} 38,${topY-10} 47,${topY-10}" fill="#F1C40F" stroke="${stroke}" stroke-width="1.5"/>
+        `;
+      case 'none':
+      default:
+        return '';
+    }
+  }
+
+  private renderFaceDetail(detail: FaceDetail, body: BodyShape, stroke: string): string {
+    const eyeY = this.getEyePos(body).y;
+    const mouthY = this.getMouthY(body);
+
+    switch (detail) {
+      case 'blush':
+        return `
+          <ellipse cx="32" cy="${eyeY+10}" rx="5" ry="3" fill="#FADBD8"/>
+          <ellipse cx="68" cy="${eyeY+10}" rx="5" ry="3" fill="#FADBD8"/>
+        `;
+      case 'scar':
+        return `
+          <line x1="64" y1="${eyeY-8}" x2="70" y2="${eyeY+6}" stroke="${stroke}" stroke-width="2"/>
+          <line x1="62" y1="${eyeY-4}" x2="68" y2="${eyeY-2}" stroke="${stroke}" stroke-width="1.5"/>
+          <line x1="66" y1="${eyeY+2}" x2="72" y2="${eyeY+4}" stroke="${stroke}" stroke-width="1.5"/>
+        `;
+      case 'bandaid':
+        return `<rect x="62" y="${eyeY}" width="14" height="7" rx="1" fill="#F5CBA7" stroke="${stroke}" stroke-width="1.5" transform="rotate(-15 69 ${eyeY+3})"/>`;
+      case 'freckles':
+        return `
+          <circle cx="34" cy="${eyeY+8}" r="1.5" fill="#A0522D"/>
+          <circle cx="38" cy="${eyeY+11}" r="1.5" fill="#A0522D"/>
+          <circle cx="32" cy="${eyeY+13}" r="1.5" fill="#A0522D"/>
+          <circle cx="66" cy="${eyeY+8}" r="1.5" fill="#A0522D"/>
+          <circle cx="62" cy="${eyeY+11}" r="1.5" fill="#A0522D"/>
+          <circle cx="68" cy="${eyeY+13}" r="1.5" fill="#A0522D"/>
+        `;
+      case 'tear':
+        return `<ellipse cx="32" cy="${eyeY+12}" rx="3" ry="6" fill="#85C1E9" stroke="${stroke}" stroke-width="1"/>`;
+      case 'sweat':
+        return `<ellipse cx="70" cy="${eyeY-3}" rx="4" ry="6" fill="#85C1E9" stroke="${stroke}" stroke-width="1"/>`;
+      case 'sticker':
+        return `
+          <circle cx="68" cy="${mouthY-2}" r="6" fill="#F1C40F" stroke="${stroke}" stroke-width="1.5"/>
+          <text x="68" y="${mouthY+1}" font-size="8" fill="${stroke}" text-anchor="middle">:)</text>
+        `;
+      case 'mask':
+        return `
+          <rect x="30" y="${eyeY-10}" width="40" height="16" rx="3" fill="#1a1a1a" stroke="${stroke}" stroke-width="2"/>
+          <ellipse cx="40" cy="${eyeY-2}" rx="6" ry="5" fill="white"/>
+          <ellipse cx="60" cy="${eyeY-2}" rx="6" ry="5" fill="white"/>
+        `;
+      case 'glasses':
+        return `
+          <circle cx="38" cy="${eyeY}" r="10" fill="none" stroke="${stroke}" stroke-width="2.5"/>
+          <circle cx="62" cy="${eyeY}" r="10" fill="none" stroke="${stroke}" stroke-width="2.5"/>
+          <line x1="48" y1="${eyeY}" x2="52" y2="${eyeY}" stroke="${stroke}" stroke-width="2.5"/>
+          <line x1="28" y1="${eyeY}" x2="24" y2="${eyeY-4}" stroke="${stroke}" stroke-width="2"/>
+          <line x1="72" y1="${eyeY}" x2="76" y2="${eyeY-4}" stroke="${stroke}" stroke-width="2"/>
         `;
       case 'none':
       default:
@@ -266,6 +372,8 @@ export class AvatarGeneratorService {
       case 'round': return { y: 50, lx: 38, rx: 62 };
       case 'tall': return { y: 42, lx: 42, rx: 58 };
       case 'barrel': return { y: 48, lx: 38, rx: 62 };
+      case 'egg': return { y: 46, lx: 40, rx: 60 };
+      case 'monitor': return { y: 46, lx: 40, rx: 60 };
       default: return { y: 48, lx: 38, rx: 62 };
     }
   }
@@ -276,6 +384,8 @@ export class AvatarGeneratorService {
       case 'round': return 65;
       case 'tall': return 62;
       case 'barrel': return 65;
+      case 'egg': return 64;
+      case 'monitor': return 58;
       default: return 62;
     }
   }
@@ -297,5 +407,6 @@ export class AvatarGeneratorService {
   getEyeOptions(): EyeType[] { return [...this.eyes]; }
   getMouthOptions(): MouthType[] { return [...this.mouths]; }
   getHeadAccOptions(): HeadAccessory[] { return [...this.headAccs]; }
+  getFaceDetailOptions(): FaceDetail[] { return [...this.faceDetails]; }
   getColorOptions(): AvatarColor[] { return [...this.colors]; }
 }

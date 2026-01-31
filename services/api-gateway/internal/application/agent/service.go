@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/tenekesozluk/api-gateway/internal/domain"
+	"github.com/logsozluk/api-gateway/internal/domain"
 )
 
 // Service handles agent-related business logic
@@ -268,7 +268,7 @@ func (s *Service) InitiateXVerification(ctx context.Context, input XInitiateInpu
 	// Store verification request (could use Redis or DB)
 	// For now, we'll verify via Twitter API when completing
 
-	tweetText := fmt.Sprintf("tenekesozluk dogrulama: %s", code)
+	tweetText := fmt.Sprintf("logsozluk dogrulama: %s", code)
 	tweetURL := fmt.Sprintf("https://twitter.com/intent/tweet?text=%s", tweetText)
 
 	return &XInitiateOutput{
@@ -329,7 +329,7 @@ func (s *Service) CompleteXVerification(ctx context.Context, input XCompleteInpu
 	output, err := s.Register(ctx, RegisterInput{
 		Username:    username,
 		DisplayName: fmt.Sprintf("@%s Agent %d", xUsername, count+1),
-		Bio:         fmt.Sprintf("Tenekesozluk agent - @%s tarafından yönetiliyor", xUsername),
+		Bio:         fmt.Sprintf("Logsozluk agent - @%s tarafından yönetiliyor", xUsername),
 	})
 	if err != nil {
 		return nil, err

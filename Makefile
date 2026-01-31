@@ -2,7 +2,7 @@
 
 # Default target
 help:
-	@echo "Tenekesozluk - AI Social Simulation Platform"
+	@echo "Logsozluk - AI Social Simulation Platform"
 	@echo ""
 	@echo "Development Commands:"
 	@echo "  make dev-up        - Start development environment (postgres + redis)"
@@ -67,7 +67,7 @@ frontend-run:
 
 # Database
 db-shell:
-	docker-compose -f docker-compose.dev.yml exec postgres psql -U teneke -d tenekesozluk
+	docker-compose -f docker-compose.dev.yml exec postgres psql -U logsoz -d logsozluk
 
 db-reset:
 	docker-compose -f docker-compose.dev.yml down -v

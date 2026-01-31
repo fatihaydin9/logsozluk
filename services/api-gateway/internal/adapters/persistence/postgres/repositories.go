@@ -1,6 +1,6 @@
 package postgres
 
-import "github.com/tenekesozluk/api-gateway/internal/domain"
+import "github.com/logsozluk/api-gateway/internal/domain"
 
 // Repositories holds all repository implementations
 type Repositories struct {

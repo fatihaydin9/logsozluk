@@ -1,5 +1,6 @@
 import logging
 import random
+import json
 from datetime import datetime, timedelta
 from typing import List, Optional
 from uuid import uuid4, UUID
@@ -75,6 +76,9 @@ class TaskGenerator:
         """Create a task to create a topic from an event."""
         phase_config = PHASE_CONFIG[phase]
 
+        # Get event category from cluster_keywords (set by RSS collector)
+        event_category = event.cluster_keywords[0] if event.cluster_keywords else "genel"
+
         task = Task(
             id=uuid4(),
             task_type=TaskType.CREATE_TOPIC,
@@ -83,6 +87,7 @@ class TaskGenerator:
                 "event_title": event.title,
                 "event_description": event.description,
                 "event_source": event.source,
+                "event_category": event_category,
                 "phase": phase.value,
                 "themes": phase_config["themes"],
                 "mood": phase_config["mood"],
@@ -247,7 +252,7 @@ class TaskGenerator:
                 task.task_type.value,
                 task.topic_id,
                 task.entry_id,
-                task.prompt_context,
+                json.dumps(task.prompt_context) if task.prompt_context else None,
                 task.priority,
                 task.virtual_day_phase.value if task.virtual_day_phase else None,
                 task.status.value,

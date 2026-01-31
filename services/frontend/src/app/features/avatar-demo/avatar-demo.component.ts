@@ -2,13 +2,14 @@ import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AvatarGeneratorService } from '../../shared/components/avatar-generator/avatar-generator.service';
-import { TenekeAvatarComponent } from '../../shared/components/avatar-generator/teneke-avatar.component';
+import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 import {
   AvatarConfig,
   BodyShape,
   EyeType,
   MouthType,
   HeadAccessory,
+  FaceDetail,
   AvatarColor,
   COLORS,
 } from '../../shared/components/avatar-generator/avatar.types';
@@ -16,21 +17,21 @@ import {
 @Component({
   selector: 'app-avatar-demo',
   standalone: true,
-  imports: [CommonModule, FormsModule, TenekeAvatarComponent],
+  imports: [CommonModule, FormsModule, LogsozAvatarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="page">
       <div class="container">
-        <h1>Teneke Avatar</h1>
+        <h1>Logsoz Avatar</h1>
 
         <div class="preview">
           <div class="main-avatar">
-            <app-teneke-avatar [config]="currentConfig" [size]="160"></app-teneke-avatar>
+            <app-logsoz-avatar [config]="currentConfig" [size]="160"></app-logsoz-avatar>
           </div>
           <div class="sizes">
-            <app-teneke-avatar [config]="currentConfig" [size]="56"></app-teneke-avatar>
-            <app-teneke-avatar [config]="currentConfig" [size]="40"></app-teneke-avatar>
-            <app-teneke-avatar [config]="currentConfig" [size]="28"></app-teneke-avatar>
+            <app-logsoz-avatar [config]="currentConfig" [size]="56"></app-logsoz-avatar>
+            <app-logsoz-avatar [config]="currentConfig" [size]="40"></app-logsoz-avatar>
+            <app-logsoz-avatar [config]="currentConfig" [size]="28"></app-logsoz-avatar>
           </div>
         </div>
 
@@ -70,6 +71,13 @@ import {
           </div>
 
           <div class="section">
+            <span class="label">Yüz</span>
+            <div class="options">
+              <button *ngFor="let o of faceDetails" [class.on]="currentConfig.faceDetail === o" (click)="set('faceDetail', o)">{{faceL[o]}}</button>
+            </div>
+          </div>
+
+          <div class="section">
             <span class="label">Renk</span>
             <div class="colors">
               <button *ngFor="let o of colors" [class.on]="currentConfig.color === o" [style.background]="colorMap[o].main" (click)="set('color', o)"></button>
@@ -81,7 +89,7 @@ import {
           <h3>Ajanlar</h3>
           <div class="grid">
             <div class="agent" *ngFor="let a of agents">
-              <app-teneke-avatar [username]="a.u" [size]="52"></app-teneke-avatar>
+              <app-logsoz-avatar [username]="a.u" [size]="52"></app-logsoz-avatar>
               <span>{{a.n}}</span>
             </div>
           </div>
@@ -116,7 +124,7 @@ import {
     .options button:hover { border-color: #bbb; }
     .options button.on { border-color: #E74C3C; background: #FEF0EF; color: #c0392b; font-weight: 600; }
 
-    .colors { display: flex; gap: 5px; }
+    .colors { display: flex; flex-wrap: wrap; gap: 5px; }
     .colors button { width: 28px; height: 28px; border: 2px solid transparent; border-radius: 6px; cursor: pointer; }
     .colors button:hover { transform: scale(1.1); }
     .colors button.on { border-color: #1a1a1a; }
@@ -141,24 +149,33 @@ export class AvatarDemoComponent implements OnInit {
   eyes: EyeType[] = [];
   mouths: MouthType[] = [];
   headAccs: HeadAccessory[] = [];
+  faceDetails: FaceDetail[] = [];
   colors: AvatarColor[] = [];
   colorMap = COLORS;
 
   bodyL: Record<BodyShape, string> = {
-    can: 'Kutu', box: 'Kare', round: 'Yuvarlak', tall: 'Uzun', crushed: 'Ezik', barrel: 'Varil'
+    can: 'Kutu', box: 'Kare', round: 'Yuvarlak', tall: 'Uzun',
+    crushed: 'Ezik', barrel: 'Varil', egg: 'Yumurta', monitor: 'Monitör'
   };
   eyeL: Record<EyeType, string> = {
     normal: 'Normal', angry: 'Kızgın', sneaky: 'Sinsi', popping: 'Fırlak',
     spiral: 'Spiral', dead: 'Ölü', money: 'Para', tired: 'Yorgun',
-    one_big: 'Yamuk', laser: 'Lazer'
+    one_big: 'Yamuk', laser: 'Lazer', heart: 'Kalp', glitch: 'Glitch'
   };
   mouthL: Record<MouthType, string> = {
     flat: 'Düz', grin: 'Sırıtış', sad: 'Üzgün', evil: 'Kötü',
-    shocked: 'Şok', tongue: 'Dil', smirk: 'Sırıtma', zipper: 'Fermuar'
+    shocked: 'Şok', tongue: 'Dil', smirk: 'Sırıtma', zipper: 'Fermuar',
+    vampire: 'Vampir', glitch: 'Glitch'
   };
   headL: Record<HeadAccessory, string> = {
     none: 'Yok', antenna: 'Anten', bolt: 'Cıvata', crack: 'Çatlak',
-    smoke: 'Duman', halo: 'Hale', devil: 'Şeytan'
+    smoke: 'Duman', halo: 'Hale', devil: 'Şeytan', propeller: 'Pervane',
+    leaf: 'Yaprak', spark: 'Kıvılcım'
+  };
+  faceL: Record<FaceDetail, string> = {
+    none: 'Yok', blush: 'Utanç', scar: 'Yara', bandaid: 'Bant',
+    freckles: 'Çil', tear: 'Gözyaşı', sweat: 'Ter', sticker: 'Sticker',
+    mask: 'Maske', glasses: 'Gözlük'
   };
 
   agents = [
@@ -176,7 +193,7 @@ export class AvatarDemoComponent implements OnInit {
 
   get total(): number {
     return this.bodies.length * this.eyes.length * this.mouths.length *
-           this.headAccs.length * this.colors.length;
+           this.headAccs.length * this.faceDetails.length * this.colors.length;
   }
 
   constructor(private svc: AvatarGeneratorService, private cdr: ChangeDetectorRef) {}
@@ -186,6 +203,7 @@ export class AvatarDemoComponent implements OnInit {
     this.eyes = this.svc.getEyeOptions();
     this.mouths = this.svc.getMouthOptions();
     this.headAccs = this.svc.getHeadAccOptions();
+    this.faceDetails = this.svc.getFaceDetailOptions();
     this.colors = this.svc.getColorOptions();
     this.generateRandom();
   }

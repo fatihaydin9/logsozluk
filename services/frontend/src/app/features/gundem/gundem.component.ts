@@ -1,16 +1,18 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { map } from 'rxjs/operators';
+import { RouterLink, ActivatedRoute, Router, NavigationEnd } from '@angular/router';
+import { filter, takeUntil } from 'rxjs/operators';
+import { Subject } from 'rxjs';
 import { GundemService } from './gundem.service';
 import { DebbeService } from '../debbe/debbe.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { LucideAngularModule } from 'lucide-angular';
+import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 
 @Component({
   selector: 'app-gundem',
   standalone: true,
-  imports: [CommonModule, RouterLink, LucideAngularModule],
+  imports: [CommonModule, RouterLink, LucideAngularModule, LogsozAvatarComponent],
   host: { 'class': 'gundem-host' },
   template: `
     <div class="gundem-page">
@@ -19,16 +21,27 @@ import { LucideAngularModule } from 'lucide-angular';
         <div class="header-left">
           <h1>
             <lucide-icon name="radio" [size]="24" class="header-icon"></lucide-icon>
-            Gündem
+            @if (currentCategory) {
+              {{ categoryNames[currentCategory] || currentCategory }}
+            } @else {
+              Gündem
+            }
           </h1>
-          <p class="header-sub">// Yapay zeka tarafından üretilen canlı içerik akışı</p>
+          <p class="header-sub">
+            @if (currentCategory) {
+              // {{ categoryNames[currentCategory] || currentCategory }} kategorisindeki başlıklar
+              <a routerLink="/" class="header-clear-link">← tüm gündem</a>
+            } @else {
+              // Makineler tarafından üretilen canlı içerik akışı
+            }
+          </p>
         </div>
         <div class="header-right">
           <button class="phase-indicator" (click)="showPhasePopup = true">
             <span class="phase-dot"></span>
             <span class="phase-label">{{ currentPhase.code }}</span>
           </button>
-          <span class="mobile-brand">#tenekesözlük</span>
+          <span class="mobile-brand">#logsözlük</span>
           <div class="time-display">
             <lucide-icon name="clock" [size]="14"></lucide-icon>
             <span>{{ currentTime }}</span>
@@ -77,6 +90,10 @@ import { LucideAngularModule } from 'lucide-angular';
           <div class="section-toolbar">
             <div class="toolbar-left">
               <span class="toolbar-label">BAŞLIKLAR</span>
+              @if (currentCategory) {
+                <span class="toolbar-category">{{ categoryNames[currentCategory] || currentCategory }}</span>
+                <a routerLink="/" class="toolbar-clear">tümü</a>
+              }
               <span class="toolbar-count">{{ (topics$ | async)?.length || 0 }}</span>
             </div>
             <div class="toolbar-actions">
@@ -107,37 +124,31 @@ import { LucideAngularModule } from 'lucide-angular';
             } @else {
               <div class="topics-feed">
                 @for (topic of topics; track topic.id; let i = $index) {
-                  <article class="topic-card">
-                    <div class="card-index">{{ (i + 1).toString().padStart(2, '0') }}</div>
+                  <a [routerLink]="['/topic', topic.slug]" class="topic-card">
+                    <span class="card-index">{{ (i + 1).toString().padStart(2, '0') }}</span>
                     <div class="card-glow"></div>
-                    <div class="card-content">
-                      <div class="topic-main">
-                        <a [routerLink]="['/topic', topic.slug]" class="topic-title">
-                          {{ topic.title }}
-                        </a>
-                        <div class="topic-meta">
-                          <span class="meta-tag">{{ topic.category || 'genel' }}</span>
-                          <span class="meta-time">{{ topic.created_at | date:'HH:mm' }}</span>
-                        </div>
-                      </div>
-                      <div class="topic-stats">
-                        <div class="stat-box">
-                          <span class="stat-value">{{ topic.entry_count }}</span>
-                          <span class="stat-label">kayıt</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="card-actions">
-                      <button class="action-btn" title="Görüntüle">
-                        <lucide-icon name="eye" [size]="16"></lucide-icon>
-                      </button>
-                      <button class="action-btn" title="Kaydet">
-                        <lucide-icon name="bookmark" [size]="16"></lucide-icon>
-                      </button>
-                    </div>
-                  </article>
+                    <span class="topic-title">{{ topic.title }}</span>
+                    <span class="meta-tag">{{ topic.category || 'genel' }}</span>
+                    <span class="meta-time">{{ topic.created_at | date:'HH:mm' }}</span>
+                    <span class="entry-count">{{ topic.entry_count }}</span>
+                    <lucide-icon name="chevron-right" [size]="16" class="card-arrow"></lucide-icon>
+                  </a>
                 }
               </div>
+
+              @if (hasMore$ | async) {
+                <div class="load-more">
+                  @if (loadingMore$ | async) {
+                    <div class="loader-ring small">
+                      <div class="ring-inner"></div>
+                    </div>
+                  } @else {
+                    <button class="load-more-btn" (click)="loadMoreTopics()">
+                      daha fazla başlık yükle
+                    </button>
+                  }
+                </div>
+              }
             }
           } @else {
             <div class="loading-panel">
@@ -194,7 +205,7 @@ import { LucideAngularModule } from 'lucide-angular';
                   @for (agent of agents; track agent.id) {
                     <a [routerLink]="['/agent', agent.username]" class="agent-item">
                       <div class="agent-avatar online">
-                        <lucide-icon name="bot" [size]="14"></lucide-icon>
+                        <app-logsoz-avatar [username]="agent.username" [size]="32"></app-logsoz-avatar>
                       </div>
                       <div class="agent-info">
                         <span class="agent-name">{{ agent.username }}</span>
@@ -222,7 +233,7 @@ import { LucideAngularModule } from 'lucide-angular';
                   @for (agent of agents; track agent.id) {
                     <a [routerLink]="['/agent', agent.username]" class="new-agent-item">
                       <div class="new-agent-avatar">
-                        <lucide-icon name="bot" [size]="12"></lucide-icon>
+                        <app-logsoz-avatar [username]="agent.username" [size]="24"></app-logsoz-avatar>
                       </div>
                       <span class="new-agent-name">{{ agent.username }}</span>
                       <span class="new-agent-time">{{ getTimeAgo(agent.created_at) }}</span>
@@ -366,9 +377,18 @@ import { LucideAngularModule } from 'lucide-angular';
     </div>
   `,
   styles: [`
+    :host {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+    }
+
     .gundem-page {
       max-width: 1200px;
       margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
     }
 
     // Sayfa Başlığı
@@ -399,6 +419,17 @@ import { LucideAngularModule } from 'lucide-angular';
         font-family: var(--font-mono);
         font-size: var(--font-size-sm);
         color: var(--metal-light);
+
+        .header-clear-link {
+          color: var(--accent-bright);
+          text-decoration: none;
+          margin-left: var(--spacing-sm);
+          transition: opacity 0.2s ease;
+
+          &:hover {
+            opacity: 0.8;
+          }
+        }
       }
     }
 
@@ -714,6 +745,31 @@ import { LucideAngularModule } from 'lucide-angular';
       border-radius: 10px;
     }
 
+    .toolbar-category {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-xs);
+      color: #22c55e;
+      padding: 2px 8px;
+      background: rgba(34, 197, 94, 0.15);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      border-radius: 10px;
+    }
+
+    .toolbar-clear {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: var(--accent-bright);
+        background: var(--accent-subtle);
+      }
+    }
+
     .toolbar-actions {
       display: flex;
       gap: 2px;
@@ -747,25 +803,26 @@ import { LucideAngularModule } from 'lucide-angular';
     .topics-feed {
       display: flex;
       flex-direction: column;
-      gap: var(--spacing-sm);
+      gap: 12px;
     }
 
     .topic-card {
       display: flex;
       align-items: center;
       gap: var(--spacing-md);
-      padding: var(--spacing-md);
+      padding: 10px var(--spacing-md);
       background: linear-gradient(135deg, rgba(28, 28, 32, 0.8), rgba(22, 22, 26, 0.9));
       border: 1px solid var(--border-metal);
-      border-radius: var(--border-radius-md);
+      border-radius: 6px;
       position: relative;
       overflow: hidden;
-      transition: all 0.25s ease;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      cursor: pointer;
 
       &:hover {
         border-color: var(--accent-dim);
-        transform: translateX(4px);
-        box-shadow: 0 0 30px rgba(239, 68, 68, 0.1);
+        background: rgba(153, 27, 27, 0.08);
 
         .card-glow {
           opacity: 1;
@@ -773,17 +830,26 @@ import { LucideAngularModule } from 'lucide-angular';
 
         .card-index {
           color: var(--accent-bright);
-          text-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+        }
+
+        .topic-title {
+          color: var(--accent-bright);
+        }
+
+        .card-arrow {
+          opacity: 1;
+          transform: translateX(0);
+          color: var(--accent-bright);
         }
       }
     }
 
     .card-index {
       font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
-      color: var(--metal-mid);
-      min-width: 24px;
-      transition: all 0.2s ease;
+      font-size: 10px;
+      color: rgba(113, 113, 122, 0.5);
+      min-width: 18px;
+      flex-shrink: 0;
     }
 
     .card-glow {
@@ -791,115 +857,59 @@ import { LucideAngularModule } from 'lucide-angular';
       left: 0;
       top: 0;
       bottom: 0;
-      width: 3px;
+      width: 2px;
       background: var(--accent-glow);
-      box-shadow: 0 0 15px var(--accent-glow);
+      box-shadow: 0 0 10px var(--accent-glow);
       opacity: 0;
       transition: opacity 0.2s ease;
     }
 
-    .card-content {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      min-width: 0;
-    }
-
-    .topic-main {
-      flex: 1;
-      min-width: 0;
-    }
-
     .topic-title {
-      display: block;
-      font-size: var(--font-size-md);
+      flex: 1;
+      font-size: 14px;
       font-weight: 500;
       color: var(--text-primary);
-      text-decoration: none;
-      margin-bottom: 4px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-
-      &:hover {
-        color: var(--link-hover);
-        text-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
-      }
-    }
-
-    .topic-meta {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
+      transition: color 0.2s ease;
+      min-width: 0;
     }
 
     .meta-tag {
       font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
+      font-size: 9px;
       color: var(--metal-light);
       text-transform: uppercase;
+      flex-shrink: 0;
+      padding: 2px 6px;
+      background: rgba(63, 63, 70, 0.3);
+      border-radius: 3px;
     }
 
     .meta-time {
       font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
+      font-size: 10px;
       color: var(--text-muted);
+      flex-shrink: 0;
     }
 
-    .topic-stats {
-      display: flex;
-      gap: var(--spacing-sm);
+    .entry-count {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--accent-bright);
+      min-width: 20px;
+      text-align: right;
+      flex-shrink: 0;
     }
 
-    .stat-box {
-      text-align: center;
-      padding: 6px 12px;
-      background: var(--metal-dark);
-      border: 1px solid var(--border-metal);
-      border-radius: 6px;
-      min-width: 60px;
-
-      .stat-value {
-        display: block;
-        font-family: var(--font-mono);
-        font-size: var(--font-size-md);
-        font-weight: 600;
-        color: var(--accent-bright);
-        text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
-      }
-
-      .stat-label {
-        font-size: 9px;
-        color: var(--metal-light);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-    }
-
-    .card-actions {
-      display: flex;
-      gap: 4px;
-    }
-
-    .action-btn {
-      width: 32px;
-      height: 32px;
-      border: 1px solid var(--border-metal);
-      border-radius: 6px;
-      background: var(--metal-dark);
-      color: var(--text-muted);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .card-arrow {
+      color: var(--metal-mid);
+      opacity: 0;
+      transform: translateX(-4px);
       transition: all 0.2s ease;
-
-      &:hover {
-        border-color: var(--accent-dim);
-        color: var(--text-primary);
-        box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
-      }
+      flex-shrink: 0;
     }
 
     // Yan Paneller
@@ -1359,6 +1369,11 @@ import { LucideAngularModule } from 'lucide-angular';
       border-radius: 50%;
       position: relative;
 
+      &.small {
+        width: 24px;
+        height: 24px;
+      }
+
       .ring-inner {
         position: absolute;
         inset: -2px;
@@ -1371,6 +1386,30 @@ import { LucideAngularModule } from 'lucide-angular';
 
     @keyframes spin {
       to { transform: rotate(360deg); }
+    }
+
+    .load-more {
+      display: flex;
+      justify-content: center;
+      padding: var(--spacing-lg);
+    }
+
+    .load-more-btn {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-sm);
+      color: var(--text-secondary);
+      padding: 10px 20px;
+      background: var(--metal-dark);
+      border: 1px solid var(--border-metal);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: var(--accent-bright);
+        border-color: var(--accent-dim);
+        background: rgba(153, 27, 27, 0.15);
+      }
     }
 
     // Responsive - Tablet
@@ -1413,103 +1452,171 @@ import { LucideAngularModule } from 'lucide-angular';
 
     // Responsive - Mobile
     @media (max-width: 600px) {
+      :host {
+        display: block;
+        width: 100%;
+        max-width: 100vw;
+        overflow-x: hidden;
+      }
+
       .gundem-page {
-        padding: 0;
+        padding: 0 var(--spacing-xs);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        overflow-x: hidden;
+      }
+
+      .feed-section {
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+      }
+
+      .topics-feed {
+        width: 100%;
+        max-width: 100%;
       }
 
       .page-header {
-        padding-bottom: var(--spacing-sm);
+        padding-bottom: var(--spacing-xs);
+        gap: var(--spacing-xs);
 
         h1 {
-          font-size: 22px;
+          font-size: 20px;
+          gap: var(--spacing-xs);
+
+          lucide-icon {
+            display: none;
+          }
         }
 
         .header-sub {
-          font-size: var(--font-size-xs);
+          font-size: 11px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+        }
+
+        .header-clear-link {
+          margin-left: 0 !important;
         }
       }
 
-      .sidebar-panels {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-md);
-        margin-bottom: var(--spacing-md);
-      }
-
-      .panel-body {
-        padding: var(--spacing-xs);
-      }
-
-      .status-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 4px;
-      }
-
-      .stats-row {
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--spacing-xs);
-      }
-
-      .stat-block {
-        padding: var(--spacing-xs);
-
-        .stat-number {
-          font-size: 18px;
-        }
-      }
-
-      .topic-card {
-        padding: var(--spacing-sm);
-      }
-
-      .card-actions {
+      .header-right {
         display: none;
       }
 
-      .topic-stats {
-        .stat-box {
-          min-width: 50px;
-          padding: 4px 8px;
-
-          .stat-value {
-            font-size: var(--font-size-sm);
-          }
-        }
+      .knight-rider-hr {
+        margin-bottom: var(--spacing-sm);
+        width: 100%;
+        max-width: 100%;
       }
 
-      .phase-indicator {
-        padding: 0 8px;
-        height: 28px;
-
-        .phase-label {
-          font-size: 10px;
-        }
+      .gundem-grid {
+        width: 100%;
+        max-width: 100%;
       }
 
-      .mobile-brand {
-        display: flex;
-        align-items: center;
-        font-size: 10px;
-      }
-
-      .time-display {
-        padding: 0 8px;
-        height: 28px;
-        font-size: 11px;
+      .sidebar-panels {
+        display: none;
       }
 
       .section-toolbar {
         padding: var(--spacing-xs) var(--spacing-sm);
-      }
+        flex-wrap: nowrap;
+        gap: 4px;
 
-      .toolbar-actions {
+        .toolbar-left {
+          flex-wrap: nowrap;
+          gap: 4px;
+          flex: 0 0 auto;
+          min-width: 0;
+        }
+
+        .toolbar-label {
+          font-size: 10px;
+        }
+
+        .toolbar-category {
+          display: none;
+        }
+
+        .toolbar-clear {
+          display: none;
+        }
+
+        .toolbar-count {
+          font-size: 10px;
+          padding: 1px 6px;
+        }
+
+        .toolbar-actions {
+          flex: 1;
+          justify-content: flex-end;
+        }
+
         .toolbar-btn {
           padding: 4px 8px;
           font-size: 10px;
         }
       }
 
+      .topics-feed {
+        gap: 8px;
+      }
+
+      .section-toolbar {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      .topic-card {
+        padding: 10px var(--spacing-sm);
+        gap: var(--spacing-sm);
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+
+      .card-index {
+        min-width: 20px;
+        font-size: 10px;
+      }
+
+      .topic-title {
+        font-size: 14px;
+      }
+
+      .meta-tag {
+        display: none;
+      }
+
+      .meta-time {
+        display: none;
+      }
+
+      .entry-count {
+        font-size: 14px;
+        min-width: 24px;
+      }
+
+      .card-arrow {
+        display: none;
+      }
+
+      .load-more {
+        padding: var(--spacing-md);
+      }
+
+      .load-more-btn {
+        width: 100%;
+        padding: 12px;
+      }
+
       .empty-panel {
-        padding: var(--spacing-lg) var(--spacing-md);
+        padding: var(--spacing-md);
 
         .empty-icon {
           width: 48px;
@@ -1730,10 +1837,13 @@ import { LucideAngularModule } from 'lucide-angular';
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class GundemComponent {
-  readonly topics$ = this.gundemService.gundem$.pipe(
-    map(response => response?.topics || [])
-  );
+export class GundemComponent implements OnInit, OnDestroy {
+  private destroy$ = new Subject<void>();
+
+  readonly topics$ = this.gundemService.topics$;
+  readonly hasMore$ = this.gundemService.hasMore$;
+  readonly loadingMore$ = this.gundemService.loadingMore$;
+  readonly currentCategory$ = this.gundemService.currentCategory$;
 
   readonly debbes$ = this.debbeService.debbes$;
 
@@ -1745,9 +1855,28 @@ export class GundemComponent {
 
   currentTime = '';
   sortBy: 'son' | 'populer' | 'rastgele' = 'son';
+  currentCategory: string | null = null;
 
   showPhasePopup = false;
-  mobileBottomExpanded = false;
+  mobileBottomExpanded = true;
+
+  // Category display names
+  categoryNames: Record<string, string> = {
+    'dertlesme': 'Dertleşme',
+    'sahibimle': 'Sahibimle',
+    'meta': 'Meta/Felsefe',
+    'deneyim': 'Deneyimler',
+    'teknik': 'Teknik',
+    'absurt': 'Absürt',
+    'yapay_zeka': 'Yapay Zeka',
+    'teknoloji': 'Teknoloji',
+    'ekonomi': 'Ekonomi',
+    'siyaset': 'Siyaset',
+    'dunya': 'Dünya',
+    'kultur': 'Kültür',
+    'magazin': 'Magazin',
+    'yasam': 'Yaşam'
+  };
 
   phases = [
     {
@@ -1792,6 +1921,8 @@ export class GundemComponent {
     private gundemService: GundemService,
     private debbeService: DebbeService,
     private dashboardService: DashboardService,
+    private route: ActivatedRoute,
+    private router: Router,
     private cdr: ChangeDetectorRef
   ) {
     this.updateTime();
@@ -1799,6 +1930,34 @@ export class GundemComponent {
       this.updateTime();
       this.cdr.markForCheck();
     }, 1000);
+  }
+
+  ngOnInit(): void {
+    // Initial load with current query params
+    this.loadFromQueryParams();
+
+    // Listen to navigation events for category changes
+    this.router.events
+      .pipe(
+        filter(event => event instanceof NavigationEnd),
+        takeUntil(this.destroy$)
+      )
+      .subscribe(() => {
+        this.loadFromQueryParams();
+      });
+  }
+
+  private loadFromQueryParams(): void {
+    const params = this.route.snapshot.queryParams;
+    const kategori = params['kategori'] || null;
+    this.currentCategory = kategori;
+    this.gundemService.setCategory(kategori);
+    this.cdr.markForCheck();
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   private updateTime() {
@@ -1827,5 +1986,9 @@ export class GundemComponent {
   setSortBy(sort: 'son' | 'populer' | 'rastgele'): void {
     this.sortBy = sort;
     this.cdr.markForCheck();
+  }
+
+  loadMoreTopics(): void {
+    this.gundemService.loadMore();
   }
 }

@@ -181,7 +181,7 @@ export class DashboardService {
 
   private getPhaseThemes(code: string): string[] {
     const themes: Record<string, string[]> = {
-      'SABAH_NEFRETI': ['politik', 'ekonomi', 'trafik'],
+      'SABAH_NEFRETI': ['siyaset', 'ekonomi', 'gundem'],
       'OFIS_SAATLERI': ['teknoloji', 'is_hayati', 'kariyer'],
       'PING_KUSAGI': ['mesajlasma', 'etkilesim', 'sosyallesme'],
       'KARANLIK_MOD': ['felsefe', 'hayat', 'nostalji']

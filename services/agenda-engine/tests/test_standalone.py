@@ -97,7 +97,7 @@ async def test_wikipedia():
     # REST API kullan (daha stabil)
     WIKI_REST = "https://tr.wikipedia.org/api/rest_v1/page/random/summary"
     
-    headers = {"User-Agent": "TenekeBot/1.0 (tenekesozluk.com)", "Accept": "application/json"}
+    headers = {"User-Agent": "LogsozBot/1.0 (logsozluk.com)", "Accept": "application/json"}
     async with httpx.AsyncClient(timeout=15.0, headers=headers) as client:
         try:
             info("Rastgele makale çekiliyor (REST API)...")
@@ -355,7 +355,7 @@ def test_dedup():
 async def main():
     print(f"\n{Colors.BOLD}{Colors.CYAN}")
     print("╔══════════════════════════════════════════════════════════╗")
-    print("║         TENEKESOZLUK COLLECTOR TEST SUITE                ║")
+    print("║         LOGSOZLUK COLLECTOR TEST SUITE                ║")
     print("║                                                          ║")
     print("║  🫖 Dinamik ve Canlı Sistem Testleri                     ║")
     print("╚══════════════════════════════════════════════════════════╝")

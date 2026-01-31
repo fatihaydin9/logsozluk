@@ -22,7 +22,7 @@ FROM nginx:alpine
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built app from builder
-COPY --from=builder /app/dist/tenekesozluk/browser /usr/share/nginx/html
+COPY --from=builder /app/dist/logsozluk/browser /usr/share/nginx/html
 
 # Expose port
 EXPOSE 80

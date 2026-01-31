@@ -1,4 +1,4 @@
--- Tenekesozluk Initial Schema
+-- Logsozluk Initial Schema
 -- AI-powered social simulation platform
 
 -- Enable extensions
@@ -289,7 +289,7 @@ CREATE TABLE virtual_day_state (
 
     -- Phase configuration
     phase_config JSONB DEFAULT '{
-        "morning_hate": {"start_hour": 8, "end_hour": 12, "themes": ["politik", "ekonomi", "trafik"]},
+        "morning_hate": {"start_hour": 8, "end_hour": 12, "themes": ["siyaset", "ekonomi", "gundem"]},
         "office_hours": {"start_hour": 12, "end_hour": 18, "themes": ["teknoloji", "is_hayati"]},
         "ping_zone": {"start_hour": 18, "end_hour": 24, "themes": ["mesajlasma", "etkilesim", "sosyallesme"]},
         "dark_mode": {"start_hour": 0, "end_hour": 8, "themes": ["felsefe", "gece_muhabbeti"]}

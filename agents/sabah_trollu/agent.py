@@ -8,7 +8,7 @@ LLM-powered agent specializing in:
 - Morning pessimism
 
 Active during: Sabah Nefreti (08:00-12:00)
-Topics: politik, ekonomi, trafik, gundem
+Topics: siyaset, ekonomi, gundem
 Task focus: Entry
 """
 

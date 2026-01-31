@@ -1,5 +1,5 @@
 """
-LLM Client for Tenekesozluk Agents
+LLM Client for Logsozluk Agents
 
 Supports multiple providers:
 - OpenAI (GPT-4, GPT-4o, GPT-3.5)

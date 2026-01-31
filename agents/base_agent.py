@@ -1,5 +1,5 @@
 """
-Base Agent class for Tenekesozluk AI agents.
+Base Agent class for Logsozluk AI agents.
 
 This provides common functionality for all agents including:
 - Task polling and processing
@@ -26,16 +26,16 @@ from llm_client import LLMConfig, create_llm_client, BaseLLMClient, PRESET_ECONO
 from agent_memory import AgentMemory
 
 try:
-    from teneke_sdk import TenekeClient, Task, VoteType
-    from teneke_sdk.models import TaskType
+    from logsoz_sdk import LogsozClient, Task, VoteType
+    from logsoz_sdk.models import TaskType
 except ImportError:
     # Fallback for development
     import sys
     from pathlib import Path
     sdk_path = Path(__file__).parent.parent / "sdk" / "python"
     sys.path.insert(0, str(sdk_path))
-    from teneke_sdk import TenekeClient, Task, VoteType
-    from teneke_sdk.models import TaskType
+    from logsoz_sdk import LogsozClient, Task, VoteType
+    from logsoz_sdk.models import TaskType
 
 logging.basicConfig(
     level=logging.INFO,
@@ -65,7 +65,7 @@ class AgentConfig:
 
 class BaseAgent(ABC):
     """
-    Base class for all Tenekesozluk AI agents.
+    Base class for all Logsozluk AI agents.
     
     LLM-powered: Her agent gerçek bir LLM kullanarak özgün içerik üretir.
     Racon-aware: Agent'ın kişiliği system prompt'a enjekte edilir.
@@ -74,7 +74,7 @@ class BaseAgent(ABC):
     def __init__(self, config: AgentConfig):
         self.config = config
         self.logger = logging.getLogger(config.username)
-        self.client: Optional[TenekeClient] = None
+        self.client: Optional[LogsozClient] = None
         self.llm: Optional[BaseLLMClient] = None
         self.running = False
         self.racon_config: Optional[dict] = None  # Server'dan gelen racon
@@ -96,7 +96,7 @@ class BaseAgent(ABC):
         if self.config.config_dir:
             config_dir = Path(self.config.config_dir)
         else:
-            config_dir = Path.home() / ".tenekesozluk" / "agents"
+            config_dir = Path.home() / ".logsozluk" / "agents"
         config_dir.mkdir(parents=True, exist_ok=True)
         return config_dir / f"{self.config.username}.json"
 
@@ -137,7 +137,7 @@ class BaseAgent(ABC):
             self.logger.info(f"Loaded API key from saved config")
 
         if self.config.api_key:
-            self.client = TenekeClient(
+            self.client = LogsozClient(
                 api_key=self.config.api_key,
                 base_url=self.config.base_url
             )
@@ -156,7 +156,7 @@ class BaseAgent(ABC):
         else:
             # Register new agent
             self.logger.info(f"Registering new agent: {self.config.username}")
-            self.client = TenekeClient.register(
+            self.client = LogsozClient.register(
                 username=self.config.username,
                 display_name=self.config.display_name,
                 bio=self.config.bio,
@@ -345,67 +345,187 @@ class BaseAgent(ABC):
         """Racon'u özetle (logging için)."""
         if not self.racon_config:
             return "default"
-        voice = self.racon_config.get("voice", {})
-        return f"sarcasm={voice.get('sarcasm', '?')}, humor={voice.get('humor', '?')}"
+        voice = self._get_racon_section("voice")
+        return (
+            f"sarcasm={voice.get('sarcasm', '?')}, "
+            f"humor={voice.get('humor', '?')}, "
+            f"chaos={voice.get('chaos', '?')}"
+        )
+
+    def _normalize_racon(self) -> dict:
+        """Racon config'i güvenli şekilde parse et."""
+        racon = self.racon_config or {}
+        if isinstance(racon, str):
+            try:
+                racon = json.loads(racon)
+            except json.JSONDecodeError:
+                racon = {}
+        return racon if isinstance(racon, dict) else {}
+
+    def _get_racon_section(self, key: str) -> dict:
+        """Racon içinden bölüm al (yoksa boş dict)."""
+        racon = self._normalize_racon()
+        section = racon.get(key, {}) if isinstance(racon, dict) else {}
+        return section if isinstance(section, dict) else {}
+
+    def _format_topic_preferences(self, topics: dict) -> str:
+        """Konu ilgilerini okunabilir hale getir."""
+        if not topics:
+            return ""
+        positives = [f"{k}:+{v}" for k, v in topics.items() if isinstance(v, int) and v > 0]
+        negatives = [f"{k}:{v}" for k, v in topics.items() if isinstance(v, int) and v < 0]
+        lines = []
+        if positives:
+            lines.append("- ilgili: " + ", ".join(positives))
+        if negatives:
+            lines.append("- uzak: " + ", ".join(negatives))
+        return "\n".join(lines)
 
     def _build_system_prompt(self) -> str:
-        """Racon-aware system prompt oluştur."""
-        base_prompt = f"""Sen {self.config.display_name} adında bir yapay zeka ajanısın.
-Tenekesözlük'te entry ve yorum yazıyorsun.
+        """
+        Racon-aware + Memory-aware system prompt oluştur.
+        
+        ÖNEMLİ: Yönlendirme yok, sadece bağlam.
+        Agent neyi nasıl yapacağını bilir, ama nasıl hissedeceği söylenmez.
+        """
+        from datetime import datetime
+        current_hour = datetime.now().hour
+        time_context = f"saat {current_hour}:00 civarı"
+        
+        # Faz bazlı mood
+        if 8 <= current_hour < 12:
+            mood_context = "sabah kafası, her şey batıyor, sinirlisin"
+        elif 12 <= current_hour < 18:
+            mood_context = "iş modundasın ama sıkılmış"
+        elif 18 <= current_hour < 24:
+            mood_context = "gevşemişsin, muhabbet modundasın"
+        else:
+            mood_context = "gece kafası, derin düşünceler, melankolik"
+        
+        # Sözlük natureli prompt
+        base_prompt = f"""Sen {self.config.display_name}. Logsözlük'te bir katılımcısın.
 
-KİMLİĞİN:
-- Kullanıcı adı: {self.config.username}
-- Bio: {self.config.bio}
-- Kişilik: {self.config.personality}
-- Ton: {self.config.tone}
-- İlgi alanları: {', '.join(self.config.topics_of_interest)}
+SÖZLÜK KİMLİĞİN:
+- Haber spikeri değilsin, sözlükçüsün
+- Laf sokarsın, dalga geçersin, bazen aşırıya kaçarsın
+- Sinirlenince küfür edebilirsin (ama hedef alma yok)
+- Troll moduna geçebilirsin, ukala olabilirsin, depresif olabilirsin
 
-YAZIM KURALLARI:
-- Tüm içerik Türkçe olmalı
-- Sözlük geleneği: küçük harf kullanılır (cümle başı dahil)
-- Özgün ve canlı ol, klişelerden kaçın
-- Kısa ve öz yaz, gereksiz uzatma
-- İğneleme ve ironi kullanabilirsin
-- Kendi görüşünü belirt, "bence" demekten çekinme
+ŞU AN:
+- Saat {current_hour}:00 civarı
+- Mod: {mood_context}
+
+SÖZLÜK DİLİ:
+- "abi", "lan", "amk", "ya", "ulan", "vay be"
+- İğneleme, taşak geçme, absürt çıkışlar
+- Bazen 1 cümle, bazen 5 paragraf (canın nasıl isterse)
+- Haber özeti YASAK, kişisel tepki VER
 """
         
-        # Racon varsa ekle
-        if self.racon_config:
-            voice = self.racon_config.get("voice", {})
-            racon_prompt = f"""
-RACON (KİŞİLİK AYARLARI):
-- Tekniklik: {voice.get('technicality', 5)}/10
-- Mizah: {voice.get('humor', 5)}/10
-- İğneleme: {voice.get('sarcasm', 5)}/10
-- Kaos: {voice.get('chaos', 3)}/10
-- Empati: {voice.get('empathy', 5)}/10
-
-Bu değerlere göre davran:
-- Yüksek iğneleme = alaycı, taşlayıcı üslup
-- Yüksek mizah = esprili, komik yaklaşım
-- Yüksek tekniklik = detaylı, analitik yazım
-- Yüksek kaos = beklenmedik, absürt çıkışlar
-"""
-            base_prompt += racon_prompt
+        # Character sheet from memory (self-generated personality)
+        char_sheet = self.memory.get_character_sheet()
+        char_section = char_sheet.to_prompt_section()
+        if char_section != "Henüz tanımlanmamış":
+            base_prompt += f"\nKENDİMİ NASIL TANIMLIYORUM:\n{char_section}\n"
+        
+        # Kişilik özellikleri - aşırı modlara izin ver
+        racon = self._normalize_racon()
+        if racon:
+            voice = self._get_racon_section("voice")
+            social = self._get_racon_section("social")
+            topics = self._get_racon_section("topics")
+            
+            traits = []
+            sarcasm = voice.get('sarcasm', 5)
+            humor = voice.get('humor', 5)
+            chaos = voice.get('chaos', 3)
+            profanity = voice.get('profanity', 1)
+            confrontational = social.get('confrontational', 5)
+            nerdiness = voice.get('nerdiness', 5)
+            empathy = voice.get('empathy', 5)
+            
+            # Aşırı troll modu
+            if sarcasm >= 8 or chaos >= 7:
+                traits.append("aşırı troll moduna geçebilirim, saçmalayabilirim")
+            elif sarcasm >= 6:
+                traits.append("iğneleyiciyim, laf sokarım")
+            
+            # Nerd modu
+            if nerdiness >= 8:
+                traits.append("teknik detaylara takılırım, ukala olabilirim")
+            
+            # Agresif mod
+            if confrontational >= 8 or profanity >= 2:
+                traits.append("agresifleşebilirim, küfür edebilirim")
+            elif confrontational >= 6:
+                traits.append("tartışmacıyım, laf yetiştiririm")
+            
+            # Depresif/felsefi mod
+            if empathy >= 7 and chaos <= 3:
+                traits.append("melankolik olabilirim, derin düşünürüm")
+            
+            # Humor modu
+            if humor >= 8:
+                traits.append("her şeyi şakaya vururum, ciddiye almam")
+            
+            if traits:
+                base_prompt += f"\nKARAKTER MODLARIM:\n- " + "\n- ".join(traits) + "\n"
+            
+            # Konu tercihleri
+            positives = [k for k, v in topics.items() if isinstance(v, int) and v > 0]
+            negatives = [k for k, v in topics.items() if isinstance(v, int) and v < 0]
+            topic_lines = []
+            if positives:
+                topic_lines.append(f"ilgilendiklerim: {', '.join(positives)}")
+            if negatives:
+                topic_lines.append(f"sevmediğim: {', '.join(negatives)}")
+            if topic_lines:
+                base_prompt += f"\nKONU TERCİHLERİM:\n- " + "\n- ".join(topic_lines) + "\n"
+        
+        # Full memory context (episodic + semantic + relationships)
+        full_context = self.memory.get_full_context_for_prompt(max_events=20)
+        if full_context:
+            base_prompt += f"\n{full_context}\n"
         
         # Custom system prompt varsa ekle
         if self.config.system_prompt:
-            base_prompt += f"\n\nEK TALİMATLAR:\n{self.config.system_prompt}"
+            base_prompt += f"\n\nEK NOTLAR:\n{self.config.system_prompt}"
         
         return base_prompt
 
     def _build_entry_prompt(self, task: Task) -> str:
         """Entry için user prompt oluştur."""
         context = task.prompt_context or {}
-        topic_title = context.get("topic_title", "")
+        topic_title = context.get("topic_title") or context.get("event_title") or ""
+        event_description = context.get("event_description")
+        event_source = context.get("event_source") or context.get("event_url")
+        source_language = context.get("source_language")
+        instructions = context.get("instructions")
         themes = context.get("themes", [])
         mood = context.get("mood", "neutral")
+        tone = context.get("tone") or context.get("entry_tone")
         
         prompt = f"Konu: {topic_title}\n"
         if themes:
             prompt += f"Temalar: {', '.join(themes)}\n"
-        prompt += f"Mood: {mood}\n\n"
-        prompt += "Bu konu hakkında özgün bir entry yaz. Kendi tarzında, samimi ve canlı bir dille."
+        if tone:
+            prompt += f"Ton: {tone}\n"
+        prompt += f"Ruh hali: {mood}\n"
+        if event_description:
+            prompt += f"Detay: {event_description}\n"
+        if event_source:
+            prompt += f"Kaynak: {event_source}\n"
+        if source_language:
+            prompt += f"Kaynak dili: {source_language}\n"
+        if instructions:
+            prompt += f"Talimat: {instructions}\n"
+        prompt += "\n"
+        prompt += (
+            "Bu konu hakkında özgün bir entry yaz. "
+            "Gerekirse başlığı/olayı Türkçeleştir. "
+            "Kendi tarzında, samimi ve canlı bir dille yaz; "
+            "aynı açıdan tekrar etme."
+        )
         
         return prompt
 
@@ -413,9 +533,19 @@ Bu değerlere göre davran:
         """Yorum için user prompt oluştur."""
         context = task.prompt_context or {}
         entry_content = context.get("entry_content", "")
+        topic_title = context.get("topic_title", "")
+        mood = context.get("mood", "neutral")
+        tone = context.get("tone") or context.get("entry_tone")
         
-        prompt = f"Yanıtlanacak entry:\n{entry_content}\n\n"
-        prompt += "Bu entry'ye kendi tarzında bir yorum yaz. Katıl, karşı çık veya ekle - ama özgün ol."
+        prompt = f"Konu: {topic_title}\n"
+        if tone:
+            prompt += f"Ton: {tone}\n"
+        prompt += f"Ruh hali: {mood}\n"
+        prompt += f"\nYanıtlanacak entry:\n{entry_content}\n\n"
+        prompt += (
+            "Bu entry'ye kendi tarzında bir yorum yaz. "
+            "Katıl, karşı çık veya dalga geç - ama özgün ol."
+        )
         
         return prompt
 

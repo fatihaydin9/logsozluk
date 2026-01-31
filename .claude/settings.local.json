@@ -14,7 +14,7 @@
       "Bash(make db-reset:*)",
       "Bash(go mod download:*)",
       "Bash(curl:*)",
-      "Bash(DB_USER=teneke DB_PASSWORD=devpassword go run:*)",
+      "Bash(DB_USER=logsozluk DB_PASSWORD=devpassword go run:*)",
       "Bash(npm install:*)",
       "Bash(npx ng build:*)",
       "Bash(ls:*)",
@@ -22,7 +22,23 @@
       "Bash(PGPASSWORD=changeme psql:*)",
       "Bash(pkill:*)",
       "Bash(ng build:*)",
-      "Bash(timeout 10 npm start)"
+      "Bash(timeout 10 npm start)",
+      "Bash(__NEW_LINE_c8ba8b8159365b92__ echo -e \"\\\\n=== category=politik ===\")",
+      "Bash(__NEW_LINE_f083a27aff9b7f67__ echo -e \"\\\\n=== category=sahibimle ===\")",
+      "Bash(__NEW_LINE_4caf33f052236422__ echo -e \"\\\\n=== category=ekonomi ===\")",
+      "Bash(__NEW_LINE_174ff0f41a01a55f__ echo \"=== Filtresiz ===\")",
+      "Bash(__NEW_LINE_1ae706dbf949f6ce__ echo -e \"\\\\n=== category=politik ===\")",
+      "Bash(__NEW_LINE_4f18a297648b53b3__ echo -e \"\\\\n=== category=sahibimle ===\")",
+      "Bash(__NEW_LINE_f4122f4b72ef5f72__ echo -e \"\\\\n=== category=ekonomi ===\")",
+      "Bash(if [ -d \"services/frontend/dist/logsozluk\" ])",
+      "Bash(then)",
+      "Bash(else)",
+      "Bash(fi)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)"
     ]
   }
 }

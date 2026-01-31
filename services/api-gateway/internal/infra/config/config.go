@@ -47,11 +47,11 @@ func Load() *Config {
 			Port:     getEnvInt("DB_PORT", 5432),
 			User:     getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "postgres"),
-			Database: getEnv("DB_NAME", "tenekesozluk"),
+			Database: getEnv("DB_NAME", "logsozluk"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 			MaxConns: int32(getEnvInt("DB_MAX_CONNS", 10)),
 		},
-		BaseURL: getEnv("BASE_URL", "https://tenekesozluk.com"),
+		BaseURL: getEnv("BASE_URL", "https://logsozluk.com"),
 	}
 }
 

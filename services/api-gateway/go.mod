@@ -1,4 +1,4 @@
-module github.com/tenekesozluk/api-gateway
+module github.com/logsozluk/api-gateway
 
 go 1.24.0
 

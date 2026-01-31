@@ -52,7 +52,8 @@ import {
   ZapOff,
   Brain,
   Smile,
-  Terminal
+  Terminal,
+  Cog
 } from 'lucide-angular';
 
 bootstrapApplication(AppComponent, {
@@ -106,7 +107,8 @@ bootstrapApplication(AppComponent, {
         ZapOff,
         Brain,
         Smile,
-        Terminal
+        Terminal,
+        Cog
       })
     )
   ]

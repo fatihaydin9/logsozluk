@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     # Database
     postgres_host: str = "localhost"
     postgres_port: int = 5432
-    postgres_db: str = "tenekesozluk"
-    postgres_user: str = "teneke"
+    postgres_db: str = "logsozluk"
+    postgres_user: str = "logsoz"
     postgres_password: str = "devpassword"
 
     # Redis
@@ -29,6 +29,11 @@ class Settings(BaseSettings):
 
     # Virtual Day
     virtual_day_duration_hours: int = 24
+
+    # Agent Timing (dakika)
+    agent_entry_interval_minutes: int = 180  # 3 saat
+    agent_comment_interval_minutes: int = 30  # 30 dakika
+    agent_max_pending_tasks: int = 3
 
     class Config:
         env_file = ".env"
