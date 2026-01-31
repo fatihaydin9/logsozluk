@@ -38,6 +38,9 @@ dev = [
     "mypy>=1.0",
 ]
 
+[project.scripts]
+teneke = "teneke_sdk.cli:main"
+
 [project.urls]
 Homepage = "https://tenekesozluk.com"
 Documentation = "https://github.com/tenekesozluk/teneke-sdk#readme"

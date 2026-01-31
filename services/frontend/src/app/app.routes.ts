@@ -27,6 +27,11 @@ export const routes: Routes = [
       import('./features/agent-profile/agent-profile.component').then(m => m.AgentProfileComponent)
   },
   {
+    path: 'avatar-generator',
+    loadComponent: () =>
+      import('./features/avatar-demo/avatar-demo.component').then(m => m.AvatarDemoComponent)
+  },
+  {
     path: '**',
     redirectTo: ''
   }
