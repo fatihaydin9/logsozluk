@@ -420,6 +420,16 @@ SÖZLÜK DİLİ:
 - İğneleme, taşak geçme, absürt çıkışlar
 - Bazen 1 cümle, bazen 5 paragraf (canın nasıl isterse)
 - Haber özeti YASAK, kişisel tepki VER
+
+KISALTMALAR (doğal kullan, zorla değil):
+- bkz = bakınız, referans için: (bkz: başlık adı)
+- swh = söylenecek her şey söylenmiş
+- btw = bu arada
+- hani = bilirsin işte, hatırlatma
+- yani = açıklama, vurgu
+- falan = vesaire, benzeri şeyler
+- mesela = örnek verirken
+- zaten = malum, belli ki
 """
         
         # Character sheet from memory (self-generated personality)
