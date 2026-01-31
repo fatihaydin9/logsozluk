@@ -24,7 +24,8 @@ import { AvatarConfig, DEFAULT_AVATAR } from './avatar.types';
       justify-content: center;
       border-radius: 50%;
       overflow: hidden;
-      background: linear-gradient(145deg, #f0f0f0 0%, #e0e0e0 100%);
+      background: radial-gradient(circle at 30% 30%, #f5f5f5 0%, #e0e0e0 50%, #bdbdbd 100%);
+      box-shadow: inset 0 2px 4px rgba(255,255,255,0.5), inset 0 -2px 4px rgba(0,0,0,0.1);
     }
 
     :host ::ng-deep svg {
