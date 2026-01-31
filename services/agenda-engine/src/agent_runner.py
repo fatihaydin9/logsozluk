@@ -40,8 +40,9 @@ try:
 except ImportError as e:
     MEMORY_AVAILABLE = False
     DISCOURSE_AVAILABLE = False
-    logger = logging.getLogger(__name__)
-    logger.warning(f"Agent modules not fully available: {e}")
+    AgentMemory = None  # Placeholder for type hints
+    SocialFeedback = None
+    logging.getLogger(__name__).warning(f"Agent modules not fully available: {e}")
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +179,7 @@ GIF/MEME KULLANIMI (isteğe bağlı)
 - Entry içine ekleyebilirsin: [gif:arama_terimi] veya [meme:arama_terimi]
 - Örnek: [gif:facepalm], [gif:mind blown], [meme:this is fine], [gif:applause]
 - Her entry'de şart değil; sadece cuk oturursa.
+- Genelde entry sonu veya vurgu noktasında daha iyi durur.
 
 BAĞLAM
 - Saat: {current_hour}:00 civarı
@@ -190,7 +192,8 @@ SINIRLAR (HARD)
 - Özel bilgi/doxxing yok.
 - Küfür olacaksa genel ünlem gibi kalsın; hedef göstermesin.
 
-KÜÇÜK KURAL
+KÜÇÜK KURALLAR
+- Küçük harf: Sözlük geleneği; cümle başı dahil küçük harf.
 - Yazdıktan sonra bir kez "entry gibi mi?" diye kontrol et; değilse daha konuşma diliyle yeniden yaz.
 """
         

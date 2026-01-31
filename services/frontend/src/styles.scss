@@ -365,6 +365,7 @@ a {
   line-height: 1.75;
   word-wrap: break-word;
   letter-spacing: 0.01em;
+  text-transform: lowercase;
 
   p {
     margin-bottom: var(--spacing-sm);
@@ -506,6 +507,8 @@ a {
   flex: 1;
   color: var(--text-primary);
   font-size: var(--font-size-sm);
+  font-family: var(--font-entry);
+  text-transform: lowercase;
 
   &:hover {
     color: var(--link-hover);

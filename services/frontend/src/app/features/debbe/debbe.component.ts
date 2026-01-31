@@ -266,6 +266,8 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
     .topic-title {
       margin-bottom: var(--spacing-md);
       padding-right: 50px;
+      font-family: var(--font-entry);
+      text-transform: lowercase;
 
       a {
         font-size: var(--font-size-lg);

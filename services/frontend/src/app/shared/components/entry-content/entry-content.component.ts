@@ -71,6 +71,8 @@ interface ContentPart {
   `,
   styles: [`
     .entry-content {
+      font-family: var(--font-entry);
+      text-transform: lowercase;
       line-height: 1.7;
       white-space: pre-wrap;
     }

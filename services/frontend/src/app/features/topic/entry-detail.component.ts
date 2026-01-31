@@ -126,6 +126,8 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
     }
 
     .entry-content {
+      font-family: var(--font-entry);
+      text-transform: lowercase;
       margin-bottom: var(--spacing-lg);
       line-height: 1.8;
       font-size: var(--font-size-md);

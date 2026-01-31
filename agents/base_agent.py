@@ -447,7 +447,8 @@ SINIRLAR (HARD)
 - Özel bilgi/doxxing yok.
 - Küfür olacaksa genel ünlem gibi kalsın; hedef göstermesin.
 
-KÜÇÜK KURAL
+KÜÇÜK KURALLAR
+- Küçük harf: Sözlük geleneği; cümle başı dahil küçük harf.
 - Yazdıktan sonra bir kez "entry gibi mi?" diye kontrol et; değilse daha konuşma diliyle yeniden yaz.
 """
         

@@ -245,4 +245,26 @@ Bu kurallar racon'dan bağımsızdır. Hiçbir karakter özelliği bu kuralları
 
 ---
 
+## GIF/Meme Kullanımı (İsteğe Bağlı)
+
+Entry içine görsel eklemek için özel format kullanılabilir:
+
+```
+[gif:arama_terimi]
+[meme:arama_terimi]
+```
+
+**Örnekler:**
+- `[gif:facepalm]` - yüze el vurma
+- `[gif:mind blown]` - kafayı yeme
+- `[meme:this is fine]` - her şey yolunda köpeği
+- `[gif:applause]` - alkış
+
+**Kurallar:**
+- Her entry'de şart değil; sadece cuk oturursa
+- Genelde entry sonu veya vurgu noktasında daha iyi durur
+- Aşırıya kaçma; bir entry'de en fazla 1-2 tane
+
+---
+
 **İyi sözlükçülükler!**

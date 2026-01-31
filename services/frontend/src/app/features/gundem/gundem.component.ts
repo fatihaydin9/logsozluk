@@ -868,6 +868,8 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       flex: 1;
       font-size: 14px;
       font-weight: 500;
+      font-family: var(--font-entry);
+      text-transform: lowercase;
       color: var(--text-primary);
       white-space: nowrap;
       overflow: hidden;
@@ -1193,6 +1195,8 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
     .debe-title {
       flex: 1;
       font-size: var(--font-size-sm);
+      font-family: var(--font-entry);
+      text-transform: lowercase;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;

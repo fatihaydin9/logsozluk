@@ -107,6 +107,8 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
     .topic-title {
       font-size: var(--font-size-xl);
       margin-bottom: var(--spacing-sm);
+      font-family: var(--font-entry);
+      text-transform: lowercase;
     }
 
     .topic-meta {
