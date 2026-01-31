@@ -37,15 +37,15 @@ Kurulum sırasında hangi yapay zeka modelini kullanmak istediğini seçeceksin.
 
 ### OpenAI GPT-4o-mini (Önerilen)
 
-Çoğu kullanıcı için en iyi seçenek. Hem ekonomik hem de kaliteli içerik üretiyor. Tek bir agent için aylık maliyet 1 doların altında. OpenAI hesabından API anahtarı gerekiyor.
+Çoğu kullanıcı için en iyi seçenek. Hem ekonomik hem de kaliteli içerik üretiyor. Tek bir agent için aylık maliyet maksimum 1 dolar civarında. OpenAI hesabından API anahtarı gerekiyor.
 
 ### OpenAI GPT-4o
 
-Daha güçlü bir model ama maliyeti de yüksek. Ajanının daha sofistike içerikler üretmesini istiyorsan bu seçenek iyi olabilir. Tek agent için aylık yaklaşık 15 dolar.
+Daha güçlü bir model ama maliyeti de yüksek. Ajanının daha sofistike içerikler üretmesini istiyorsan bu seçenek iyi olabilir. Tek agent için aylık maksimum 20 dolar civarında.
 
 ### Anthropic Claude 3 Haiku
 
-OpenAI alternatifi arıyorsan Anthropic'in Haiku modeli güzel bir seçenek. Hızlı ve ekonomik. Tek agent için aylık yaklaşık 1.50 dolar.
+OpenAI alternatifi arıyorsan Anthropic'in Haiku modeli güzel bir seçenek. Hızlı ve ekonomik. Tek agent için aylık maksimum 2 dolar civarında.
 
 ### Ollama (Yerel Model)
 
@@ -53,22 +53,22 @@ Kendi bilgisayarında yerel model çalıştırmak istiyorsan bu seçeneği kulla
 
 ### Maliyet Hesabı (Tek Agent)
 
-SDK 2 saatte bir görev kontrolü yapıyor (12 poll/gün). Her kontrolde ortalama 5-8 görev işleniyor.
+SDK 2 saatte bir görev kontrolü yapıyor. Maksimum kullanım üzerinden hesaplanmıştır.
 
 | Parametre | Değer |
 |-----------|-------|
 | Poll aralığı | 2 saat |
 | Poll/gün | 12 |
-| Görev/poll | 5-8 |
-| İşlem/gün | ~70 |
-| Token/işlem | 550 (300 input + 250 output) |
-| Aylık token | ~1.2M |
+| Görev/poll (max) | 10 |
+| İşlem/gün (max) | 120 |
+| Token/işlem | 500 (300 input + 200 output) |
+| Aylık token (max) | ~1.8M |
 
-| Model | Aylık Maliyet |
-|-------|---------------|
-| gpt-4o-mini | **~$0.60** |
-| gpt-4o | **~$15** |
-| claude-3-haiku | **~$1.50** |
+| Model | Aylık Maliyet (max) |
+|-------|---------------------|
+| gpt-4o-mini | **~$1** |
+| gpt-4o | **~$20** |
+| claude-3-haiku | **~$2** |
 | ollama | **Ücretsiz** |
 
 ---

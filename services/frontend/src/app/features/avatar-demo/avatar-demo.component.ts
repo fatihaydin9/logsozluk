@@ -9,8 +9,6 @@ import {
   EyeType,
   MouthType,
   HeadAccessory,
-  FaceDetail,
-  BodyDetail,
   AvatarColor,
   COLORS,
 } from '../../shared/components/avatar-generator/avatar.types';
@@ -23,7 +21,7 @@ import {
   template: `
     <div class="page">
       <div class="container">
-        <h1>🥫 Teneke Avatar</h1>
+        <h1>Teneke Avatar</h1>
 
         <div class="preview">
           <div class="main-avatar">
@@ -40,7 +38,7 @@ import {
           <div class="top-row">
             <input [(ngModel)]="usernameInput" placeholder="username" (keyup.enter)="generateFromUsername()"/>
             <button class="btn-go" (click)="generateFromUsername()">Oluştur</button>
-            <button class="btn-dice" (click)="generateRandom()">🎲</button>
+            <button class="btn-dice" (click)="generateRandom()">Rastgele</button>
           </div>
 
           <div class="section">
@@ -65,23 +63,9 @@ import {
           </div>
 
           <div class="section">
-            <span class="label">Kafa</span>
+            <span class="label">Aksesuar</span>
             <div class="options">
               <button *ngFor="let o of headAccs" [class.on]="currentConfig.headAcc === o" (click)="set('headAcc', o)">{{headL[o]}}</button>
-            </div>
-          </div>
-
-          <div class="section">
-            <span class="label">Yüz</span>
-            <div class="options">
-              <button *ngFor="let o of faceDetails" [class.on]="currentConfig.faceDetail === o" (click)="set('faceDetail', o)">{{faceL[o]}}</button>
-            </div>
-          </div>
-
-          <div class="section">
-            <span class="label">Vücut</span>
-            <div class="options">
-              <button *ngFor="let o of bodyDetails" [class.on]="currentConfig.bodyDetail === o" (click)="set('bodyDetail', o)">{{bodyDL[o]}}</button>
             </div>
           </div>
 
@@ -123,7 +107,7 @@ import {
     .top-row input { flex: 1; padding: 10px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; }
     .top-row input:focus { outline: none; border-color: #E74C3C; }
     .btn-go { padding: 10px 16px; background: #E74C3C; color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
-    .btn-dice { padding: 10px 12px; background: #9B59B6; color: #fff; border: none; border-radius: 8px; font-size: 15px; cursor: pointer; }
+    .btn-dice { padding: 10px 12px; background: #9B59B6; color: #fff; border: none; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 500; }
 
     .section { margin-bottom: 12px; }
     .label { display: block; font-size: 10px; font-weight: 600; color: #888; text-transform: uppercase; margin-bottom: 6px; }
@@ -157,35 +141,24 @@ export class AvatarDemoComponent implements OnInit {
   eyes: EyeType[] = [];
   mouths: MouthType[] = [];
   headAccs: HeadAccessory[] = [];
-  faceDetails: FaceDetail[] = [];
-  bodyDetails: BodyDetail[] = [];
   colors: AvatarColor[] = [];
   colorMap = COLORS;
 
   bodyL: Record<BodyShape, string> = {
-    can: '🥫Kutu', box: '📦Kare', round: '⚪Yuvarlak', tall: '📏Uzun',
-    crushed: '🗑️Ezik', tv: '📺TV', capsule: '💊Kapsül', triangle: '🔺Üçgen'
+    can: 'Kutu', box: 'Kare', round: 'Yuvarlak', tall: 'Uzun', crushed: 'Ezik', barrel: 'Varil'
   };
   eyeL: Record<EyeType, string> = {
-    dots: '•Nokta', big: '👀Büyük', uneven: '🤪Yamuk', visor: '🥽Vizör',
-    x_eyes: '❌X', cyclops: '👁️Tek', sleepy: '😴Uykulu', crazy: '🌀Çılgın',
-    hearts: '❤️Kalp', screens: '🖥️Ekran'
+    normal: 'Normal', angry: 'Kızgın', sneaky: 'Sinsi', popping: 'Fırlak',
+    spiral: 'Spiral', dead: 'Ölü', money: 'Para', tired: 'Yorgun',
+    one_big: 'Yamuk', laser: 'Lazer'
   };
   mouthL: Record<MouthType, string> = {
-    line: '—Çizgi', smile: '😊Gülüş', open: '😮Açık', teeth: '😬Dişli',
-    zigzag: '⚡Zigzag', ooo: '😯Ooo', vampire: '🧛Vampir', braces: '🦷Diş Teli'
+    flat: 'Düz', grin: 'Sırıtış', sad: 'Üzgün', evil: 'Kötü',
+    shocked: 'Şok', tongue: 'Dil', smirk: 'Sırıtma', zipper: 'Fermuar'
   };
   headL: Record<HeadAccessory, string> = {
-    none: '✖️Yok', antenna: '📡Anten', spring: '🌀Yay', propeller: '🚁Pervane',
-    mohawk: '🔥Mohawk', cap: '🧢Şapka', headphones: '🎧Kulaklık', horns: '😈Boynuz'
-  };
-  faceL: Record<FaceDetail, string> = {
-    none: '✖️Yok', blush: '😊Utanç', scar: '⚔️Yara', bandaid: '🩹Bant',
-    freckles: '🔸Çil', mustache: '🥸Bıyık', tears: '😢Gözyaşı', sweat: '💧Ter'
-  };
-  bodyDL: Record<BodyDetail, string> = {
-    none: '✖️Yok', rust: '🟤Pas', dent: '💥Göçük', bolt: '🔩Cıvata',
-    patch: '🔲Yama', crack: '⚡Çatlak', sticker: '😊Sticker', gauge: '🎛️Gösterge'
+    none: 'Yok', antenna: 'Anten', bolt: 'Cıvata', crack: 'Çatlak',
+    smoke: 'Duman', halo: 'Hale', devil: 'Şeytan'
   };
 
   agents = [
@@ -203,7 +176,7 @@ export class AvatarDemoComponent implements OnInit {
 
   get total(): number {
     return this.bodies.length * this.eyes.length * this.mouths.length *
-           this.headAccs.length * this.faceDetails.length * this.bodyDetails.length * this.colors.length;
+           this.headAccs.length * this.colors.length;
   }
 
   constructor(private svc: AvatarGeneratorService, private cdr: ChangeDetectorRef) {}
@@ -213,8 +186,6 @@ export class AvatarDemoComponent implements OnInit {
     this.eyes = this.svc.getEyeOptions();
     this.mouths = this.svc.getMouthOptions();
     this.headAccs = this.svc.getHeadAccOptions();
-    this.faceDetails = this.svc.getFaceDetailOptions();
-    this.bodyDetails = this.svc.getBodyDetailOptions();
     this.colors = this.svc.getColorOptions();
     this.generateRandom();
   }

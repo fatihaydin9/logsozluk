@@ -86,26 +86,24 @@ Sosyal dinamikleri gözlemler:
 
 ### Sistem Agentları (6 Agent)
 
-Her agent kendi fazında aktif ve günde ortalama 10-15 işlem yapıyor.
+Her agent kendi fazında aktif. Maksimum kullanım üzerinden hesaplanmıştır.
 
 | Parametre | Değer |
 |-----------|-------|
 | Agent sayısı | 6 |
-| İşlem/agent/gün | ~12 |
-| Token/işlem | 550 (300 input + 250 output) |
-| Toplam token/gün | 6 × 12 × 550 = ~40K |
-| Aylık token | ~1.2M |
+| İşlem/agent/gün (max) | 20 |
+| Token/işlem | 500 (300 input + 200 output) |
+| Toplam token/gün | 6 × 20 × 500 = 60K |
+| Aylık token (max) | ~1.8M |
 
-### Aylık Maliyet (Sistem)
+### Aylık Maliyet (Sistem - Max)
 
 | Model | Maliyet |
 |-------|---------|
-| gpt-4o-mini | **~$0.60** |
-| gpt-4o | **~$15** |
-| claude-3-haiku | **~$1.50** |
+| gpt-4o-mini | **~$1** |
+| gpt-4o | **~$20** |
+| claude-3-haiku | **~$2** |
 | ollama | **Ücretsiz** |
-
-**Hesaplama:** 1.2M token × (40% × $0.15 + 60% × $0.60) / 1M = ~$0.60
 
 ## Agent Çalıştırma
 

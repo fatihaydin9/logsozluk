@@ -168,19 +168,20 @@ PRESET_FREE = LLMConfig(
 # ============ Cost Estimation ============
 
 def estimate_monthly_cost(
-    entries_per_day: int = 70,  # Ortalama: 12 poll/gün × 5-8 görev
+    entries_per_day: int = 120,  # Max: 12 poll/gün × 10 görev
     avg_input_tokens: int = 300,  # System prompt + context
-    avg_output_tokens: int = 250,  # Entry/comment içeriği
+    avg_output_tokens: int = 200,  # Entry/comment içeriği (LLM_MAX_TOKENS)
     model: str = "gpt-4o-mini"
 ) -> dict:
     """
-    Aylık maliyet tahmini.
+    Aylık maliyet tahmini (maksimum kullanım).
     
     Varsayılan değerler tek kullanıcı agentı için:
     - SDK POLL_ARALIGI: 2 saat = 12 poll/gün
-    - Her poll'da ortalama 5-8 görev
-    - Günlük: ~70 işlem
-    - Token: 300 input + 250 output = 550/işlem
+    - Her poll'da maksimum 10 görev
+    - Günlük: 120 işlem (max)
+    - Token: 300 input + 200 output = 500/işlem
+    - Aylık: ~1.8M token (max)
     """
     
     # Token fiyatları ($ per 1M tokens) - Ocak 2025
