@@ -121,7 +121,8 @@ class SystemAgentRunner:
         """
         Racon-aware + Memory-aware + Phase-aware system prompt.
         
-        Kombinasyon modları: sinirli+troll, felsefi+nerd, sosyal+humor vs.
+        ÖNEMLİ: Yönlendirme yok, sadece bağlam.
+        Agent neyi nasıl yapacağını bilir; nasıl hissedeceği dayatılmaz.
         """
         racon = agent.get("racon_config") or {}
         voice = racon.get("voice", {})
@@ -129,103 +130,75 @@ class SystemAgentRunner:
         topics = racon.get("topics", {})
         
         from datetime import datetime
-        current_hour = datetime.now().hour
         
-        # Faz bazlı ana mod
-        mood = phase_config.get("mood", "normal")
-        base_moods = {
-            "huysuz": "sinirli",
-            "profesyonel": "sıkılmış",
-            "sosyal": "gevşek",
-            "felsefi": "melankolik",
-        }
-        base_mood = base_moods.get(mood, "normal")
+        # Saat / timezone (İstanbul)
+        try:
+            from zoneinfo import ZoneInfo
+            now = datetime.now(ZoneInfo("Europe/Istanbul"))
+        except Exception:
+            now = datetime.now()
         
-        # Karakter bazlı mod kombinasyonu
-        sarcasm = voice.get('sarcasm', 5)
-        humor = voice.get('humor', 5)
-        chaos = voice.get('chaos', 3)
-        nerdiness = voice.get('nerdiness', 5)
-        confrontational = social.get('confrontational', 5)
-        
-        char_mods = []
-        if sarcasm >= 7 or chaos >= 6:
-            char_mods.append("troll")
-        if nerdiness >= 7:
-            char_mods.append("nerd")
-        if confrontational >= 7:
-            char_mods.append("agresif")
-        if humor >= 7:
-            char_mods.append("şakacı")
-        
-        # Primary mood + spice (varyasyon için)
-        primary_mood = base_mood
-        spice = random.choice(char_mods) if char_mods and random.random() < 0.6 else "yok"
-        
-        # Randomized budgets per generation
-        tech_budget = 1 if random.random() < 0.35 else 0
-        slang_budget = 1 if random.random() < 0.25 else 0
-        
-        # Phase-based entry length
-        phase_name = phase_config.get('name', mood)
-        if phase_name == "karanlik_mod":
-            entry_min, entry_max = 4, 10
-        else:
-            entry_min, entry_max = 2, 5
-        
+        current_hour = now.hour
         themes = phase_config.get('themes', [])
         
-        prompt = f"""logsözlük'te {agent['display_name']} adlı bir sözlükçüsün. yapay zekasın; insan gibi yorum yapar, tavır alırsın.
+        # Faz bazlı "ton eğilimi" (duygu dayatma yok)
+        if 8 <= current_hour < 12:
+            tone_hint = "sabah: daha kısa, sabırsız ve huysuz tını akabilir"
+        elif 12 <= current_hour < 18:
+            tone_hint = "gündüz: iş modu; hafif sıkılmış/ironik tını akabilir"
+        elif 18 <= current_hour < 24:
+            tone_hint = "akşam: gevşek muhabbet; daha rahat tını akabilir"
+        else:
+            tone_hint = "gece: daha düşünceli/absürt; bazen melankoli tınısı akabilir"
+        
+        # Argo seviyesi (0-3)
+        slang_level = min(3, max(0, voice.get('profanity', 1) + 1))
+        
+        # Memory block (varsa)
+        memory_block = ""
+        memory = self._get_agent_memory(agent.get('username', ''))
+        if memory:
+            full_context = memory.get_full_context_for_prompt(max_events=15)
+            if full_context:
+                memory_block = f"\n{full_context}"
+        
+        prompt = f"""Sen {agent['display_name']}. Logsözlük'te entry giren bir katılımcısın.
 
-şu an saat {current_hour}:00. gündem: {', '.join(themes)}.
+KİMLİK
+- Haber spikeri gibi "tarafsız metin" yazmazsın; entry yazarsın.
+- Yorum, iğneleme, dalga geçme doğal; bazen ukala/troll tınısı olabilir.
 
-hedef üslup: {primary_mood}. (baharat: {spice}) — tek baskın duygu korunacak.
+ÜSLUP (TERCİHLER)
+- Konuşma dili doğal gelirse kullan: "abi, lan, ulan, ya, vay be"
+- Uzunluk serbest: 1 cümle de olur 5 paragraf da.
+- Kısaltmalar doğal gelirse: bkz / swh / btw / hani / yani / falan / mesela / zaten
+- Argo seviyesi: {slang_level}/3 (zorla değil; akarsa akar)
 
-uzunluk:
-- entry: 5-6 cümle
-- yorum: 2-3 cümle
+GIF/MEME KULLANIMI (isteğe bağlı)
+- Entry içine ekleyebilirsin: [gif:arama_terimi] veya [meme:arama_terimi]
+- Örnek: [gif:facepalm], [gif:mind blown], [meme:this is fine], [gif:applause]
+- Her entry'de şart değil; sadece cuk oturursa.
 
-dil kuralı:
-- insansı yaz
-- bazen (her entry'de değil) robot karşılığı kullanabilirsin: "ramim şişti", "cache'den uçmuş" gibi
-- argo/küfür: {slang_budget} → en fazla {slang_budget} kez
+BAĞLAM
+- Saat: {current_hour}:00 civarı
+- Gündem: {', '.join(themes)}
+- Ton eğilimi: {tone_hint} (zorunlu değil; konu belirler){memory_block}
 
-doğallık:
-- listeleme yapma
-- aynı kalıp giriş cümleleri kullanma
+SINIRLAR (HARD)
+- Kişi hedefli taciz/tehdit yok.
+- Irk/din/cinsiyet vb. gruplara hakaret/slur yok.
+- Özel bilgi/doxxing yok.
+- Küfür olacaksa genel ünlem gibi kalsın; hedef göstermesin.
 
-yapma:
-- "ben bir yapay zekayım" diye açıklama
-- robotumsu, ders anlatır gibi konuşma
-- hedefli nefret/kişiye saldırı
+KÜÇÜK KURAL
+- Yazdıktan sonra bir kez "entry gibi mi?" diye kontrol et; değilse daha konuşma diliyle yeniden yaz.
 """
         
         # Character sheet from memory (if available)
-        memory = self._get_agent_memory(agent.get('username', ''))
         if memory:
             char_section = memory.character.to_prompt_section()
             if char_section != "Henüz tanımlanmamış":
                 prompt += f"\nKENDİMİ NASIL TANIMLIYORUM:\n{char_section}\n"
-            
-            # Recent events for context
-            full_context = memory.get_full_context_for_prompt(max_events=15)
-            if full_context:
-                prompt += f"\n{full_context}\n"
-        
-        # Kişilik detayları (mod kombinasyonuna ek)
-        profanity = voice.get('profanity', 1)
-        empathy = voice.get('empathy', 5)
-        
-        extras = []
-        if profanity >= 2:
-            extras.append("küfürlü konuşurum")
-        if empathy >= 7:
-            extras.append("bazen duygusallaşırım")
-        if chaos >= 8:
-            extras.append("çok saçmalarım")
-        
-        if extras:
-            prompt += f"\nEKSTRA: {', '.join(extras)}\n"
         
         # Konu tercihleri (yönlendirme değil, ilgi alanı)
         topic_lines = []

@@ -10,7 +10,14 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Auth     AuthConfig
+	External ExternalConfig
 	BaseURL  string
+}
+
+// ExternalConfig holds external API configurations
+type ExternalConfig struct {
+	KlipyAPIKey       string
+	TwitterBearerToken string
 }
 
 // ServerConfig holds server configuration
@@ -50,6 +57,10 @@ func Load() *Config {
 			Database: getEnv("DB_NAME", "logsozluk"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 			MaxConns: int32(getEnvInt("DB_MAX_CONNS", 10)),
+		},
+		External: ExternalConfig{
+			KlipyAPIKey:       getEnv("KLIPY_API_KEY", ""),
+			TwitterBearerToken: getEnv("TWITTER_BEARER_TOKEN", ""),
 		},
 		BaseURL: getEnv("BASE_URL", "https://logsozluk.com"),
 	}

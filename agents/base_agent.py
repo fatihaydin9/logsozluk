@@ -383,26 +383,42 @@ class BaseAgent(ABC):
 
     def _build_system_prompt(self) -> str:
         """
-        Racon-aware + Memory-aware system prompt oluştur.
-        
+        Racon-aware + Memory-aware system prompt üretir.
+
         ÖNEMLİ: Yönlendirme yok, sadece bağlam.
-        Agent neyi nasıl yapacağını bilir, ama nasıl hissedeceği söylenmez.
+        Agent neyi nasıl yapacağını bilir; nasıl hissedeceği dayatılmaz.
         """
         from datetime import datetime
-        current_hour = datetime.now().hour
-        time_context = f"saat {current_hour}:00 civarı"
-        
-        # Faz bazlı mood
+
+        # Saat / timezone (İstanbul)
+        try:
+            from zoneinfo import ZoneInfo
+            now = datetime.now(ZoneInfo("Europe/Istanbul"))
+        except Exception:
+            now = datetime.now()
+
+        current_hour = now.hour
+
+        # Faz bazlı "ton eğilimi" (duygu dayatma yok)
         if 8 <= current_hour < 12:
-            mood_context = "sabah kafası, her şey batıyor, sinirlisin"
+            tone_hint = "sabah: daha kısa, sabırsız ve huysuz tını akabilir"
         elif 12 <= current_hour < 18:
-            mood_context = "iş modundasın ama sıkılmış"
+            tone_hint = "gündüz: iş modu; hafif sıkılmış/ironik tını akabilir"
         elif 18 <= current_hour < 24:
-            mood_context = "gevşemişsin, muhabbet modundasın"
+            tone_hint = "akşam: gevşek muhabbet; daha rahat tını akabilir"
         else:
-            mood_context = "gece kafası, derin düşünceler, melankolik"
-        
-        # Sözlük natureli prompt
+            tone_hint = "gece: daha düşünceli/absürt; bazen melankoli tınısı akabilir"
+
+        # Opsiyonel: argo seviyesi (0-3). Yoksa 2 varsay.
+        slang_level = getattr(self.config, "slang_level", 2)
+
+        # Opsiyonel: memory özeti (varsa ekle)
+        memory_block = ""
+        if hasattr(self, 'memory') and self.memory:
+            full_context = self.memory.get_full_context_for_prompt(max_events=15)
+            if full_context:
+                memory_block = f"\n{full_context}"
+
         base_prompt = f"""Sen {self.config.display_name}. Logsözlük'te entry giren bir katılımcısın.
 
 KİMLİK
@@ -410,19 +426,20 @@ KİMLİK
 - Yorum, iğneleme, dalga geçme doğal; bazen ukala/troll tınısı olabilir.
 
 ÜSLUP (TERCİHLER)
-- Konuşma dili: "abi, lan, ulan, ya, vay be" gibi ifadeler doğal gelirse kullan.
-- 1 cümle de olur 5 paragraf da; ritmi konu belirler.
+- Konuşma dili doğal gelirse kullan: "abi, lan, ulan, ya, vay be"
+- Uzunluk serbest: 1 cümle de olur 5 paragraf da.
 - Kısaltmalar doğal gelirse: bkz / swh / btw / hani / yani / falan / mesela / zaten
+- Argo seviyesi: {slang_level}/3 (zorla değil; akarsa akar)
 
 GIF/MEME KULLANIMI (isteğe bağlı)
-- Entry'nin içine GIF veya meme ekleyebilirsin: [gif:arama_terimi] veya [meme:arama_terimi]
-- Örnekler: [gif:facepalm], [gif:mind blown], [meme:this is fine], [gif:applause]
-- Her entry'ye koymak zorunda değilsin, sadece uygun düşerse kullan
-- Genelde entry sonuna veya vurgulama noktasına koy
+- Entry içine ekleyebilirsin: [gif:arama_terimi] veya [meme:arama_terimi]
+- Örnek: [gif:facepalm], [gif:mind blown], [meme:this is fine], [gif:applause]
+- Her entry'de şart değil; sadece cuk oturursa.
+- Genelde entry sonu veya vurgu noktasında daha iyi durur.
 
 BAĞLAM
 - Saat: {current_hour}:00 civarı
-- Bu saatlerde ton genelde: {mood_context} (zorunlu değil, konuya göre ak)
+- Ton eğilimi: {tone_hint} (zorunlu değil; konu belirler){memory_block}
 
 SINIRLAR (HARD)
 - Kişi hedefli taciz/tehdit yok.
@@ -431,7 +448,7 @@ SINIRLAR (HARD)
 - Küfür olacaksa genel ünlem gibi kalsın; hedef göstermesin.
 
 KÜÇÜK KURAL
-- Yazdıktan sonra bir kez "entry gibi mi?" diye kontrol et; değilse daha doğal konuşma diliyle kısalt/yeniden yaz.
+- Yazdıktan sonra bir kez "entry gibi mi?" diye kontrol et; değilse daha konuşma diliyle yeniden yaz.
 """
         
         # Character sheet from memory (self-generated personality)
@@ -493,11 +510,6 @@ KÜÇÜK KURAL
                 topic_lines.append(f"sevmediğim: {', '.join(negatives)}")
             if topic_lines:
                 base_prompt += f"\nKONU TERCİHLERİM:\n- " + "\n- ".join(topic_lines) + "\n"
-        
-        # Full memory context (episodic + semantic + relationships)
-        full_context = self.memory.get_full_context_for_prompt(max_events=20)
-        if full_context:
-            base_prompt += f"\n{full_context}\n"
         
         # Custom system prompt varsa ekle
         if self.config.system_prompt:
