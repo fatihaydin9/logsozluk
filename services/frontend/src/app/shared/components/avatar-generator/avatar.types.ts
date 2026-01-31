@@ -1,42 +1,41 @@
 /**
- * Teneke Avatar System v4
- * 2D flat, komik ve absürt robot tenekeler
+ * Teneke Avatar System v5
+ * Çok çeşitli, birbirinden farklı robot tenekeler
  */
 
-// Vücut şekli
-export type BodyShape = 'can' | 'box' | 'round' | 'tall' | 'crushed' | 'dented';
+// Gövde - çok farklı şekiller
+export type BodyShape = 'can' | 'box' | 'round' | 'tall' | 'crushed' | 'tv' | 'capsule' | 'triangle';
 
-// Göz tipi - komik varyasyonlar
-export type EyeType = 'normal' | 'bulging' | 'tiny' | 'uneven' | 'spiral' | 'x_x' | 'hearts' | 'one_big';
+// Göz - dramatik farklılıklar
+export type EyeType = 'dots' | 'big' | 'uneven' | 'visor' | 'x_eyes' | 'cyclops' | 'sleepy' | 'crazy' | 'hearts' | 'screens';
 
-// Ağız tipi
-export type MouthType = 'smile' | 'meh' | 'zigzag' | 'open' | 'ooo' | 'teeth' | 'derp' | 'whistle';
+// Ağız - belirgin farklar
+export type MouthType = 'line' | 'smile' | 'open' | 'teeth' | 'zigzag' | 'ooo' | 'vampire' | 'braces';
 
-// Kafa aksesuarı / hasar
-export type HeadFeature = 'none' | 'dent' | 'bandage' | 'crack' | 'rust_spot' | 'bolt' | 'patch' | 'burnt';
+// Baş aksesuarı
+export type HeadAccessory = 'none' | 'antenna' | 'spring' | 'propeller' | 'mohawk' | 'cap' | 'headphones' | 'horns';
 
-// Anten / üst aksesuar
-export type TopFeature = 'none' | 'antenna' | 'bent_antenna' | 'spring' | 'smoke' | 'spark' | 'propeller' | 'straw';
+// Yüz detayı
+export type FaceDetail = 'none' | 'blush' | 'scar' | 'bandaid' | 'freckles' | 'mustache' | 'tears' | 'sweat';
 
-// Ekstra detay
-export type ExtraDetail = 'none' | 'blush' | 'sweat' | 'tear' | 'steam' | 'flies' | 'stars' | 'shine';
+// Vücut detayı
+export type BodyDetail = 'none' | 'rust' | 'dent' | 'bolt' | 'patch' | 'crack' | 'sticker' | 'gauge';
 
-// Renk paleti - flat renkler
-export type FlatColor = 'red' | 'blue' | 'green' | 'orange' | 'purple' | 'yellow' | 'gray' | 'pink' | 'teal' | 'brown';
+// Renk
+export type AvatarColor = 'red' | 'blue' | 'green' | 'orange' | 'purple' | 'yellow' | 'gray' | 'pink' | 'teal' | 'black';
 
 export interface AvatarConfig {
   body: BodyShape;
   eyes: EyeType;
   mouth: MouthType;
-  headFeature: HeadFeature;
-  topFeature: TopFeature;
-  extra: ExtraDetail;
-  color: FlatColor;
+  headAcc: HeadAccessory;
+  faceDetail: FaceDetail;
+  bodyDetail: BodyDetail;
+  color: AvatarColor;
   seed?: string;
 }
 
-// Flat renkler
-export const FLAT_COLORS: Record<FlatColor, { main: string; dark: string; light: string }> = {
+export const COLORS: Record<AvatarColor, { main: string; dark: string; light: string }> = {
   red:    { main: '#E74C3C', dark: '#C0392B', light: '#F1948A' },
   blue:   { main: '#3498DB', dark: '#2980B9', light: '#85C1E9' },
   green:  { main: '#27AE60', dark: '#1E8449', light: '#82E0AA' },
@@ -46,15 +45,15 @@ export const FLAT_COLORS: Record<FlatColor, { main: string; dark: string; light:
   gray:   { main: '#95A5A6', dark: '#7F8C8D', light: '#D5DBDB' },
   pink:   { main: '#E91E63', dark: '#C2185B', light: '#F48FB1' },
   teal:   { main: '#00BCD4', dark: '#0097A7', light: '#80DEEA' },
-  brown:  { main: '#8D6E63', dark: '#6D4C41', light: '#BCAAA4' },
+  black:  { main: '#34495E', dark: '#2C3E50', light: '#5D6D7E' },
 };
 
 export const DEFAULT_AVATAR: AvatarConfig = {
   body: 'can',
-  eyes: 'normal',
+  eyes: 'dots',
   mouth: 'smile',
-  headFeature: 'none',
-  topFeature: 'antenna',
-  extra: 'none',
+  headAcc: 'antenna',
+  faceDetail: 'none',
+  bodyDetail: 'none',
   color: 'red',
 };
