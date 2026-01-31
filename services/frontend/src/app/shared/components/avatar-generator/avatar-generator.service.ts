@@ -1,10 +1,14 @@
 import { Injectable } from '@angular/core';
 import {
   AvatarConfig,
-  CharacterType,
-  Expression,
-  MetalTone,
-  METAL_COLORS,
+  BodyShape,
+  EyeType,
+  MouthType,
+  HeadFeature,
+  TopFeature,
+  ExtraDetail,
+  FlatColor,
+  FLAT_COLORS,
   DEFAULT_AVATAR,
 } from './avatar.types';
 
@@ -13,430 +17,416 @@ import {
 })
 export class AvatarGeneratorService {
 
-  private readonly characters: CharacterType[] = [
-    'classic_cola', 'crushed_rebel', 'energy_maniac', 'vintage_tin',
-    'coffee_addict', 'spray_artist', 'oil_drum', 'sardine_tin',
-    'paint_bucket', 'soup_can', 'beer_belly', 'soda_pop'
-  ];
-  private readonly expressions: Expression[] = ['grin', 'meh', 'derp', 'angry', 'cool', 'worried', 'sleepy', 'excited'];
-  private readonly tones: MetalTone[] = [
-    'aluminum', 'steel', 'copper', 'gold', 'rusty', 'chrome',
-    'painted_red', 'painted_blue', 'painted_green', 'painted_black'
-  ];
+  private readonly bodies: BodyShape[] = ['can', 'box', 'round', 'tall', 'crushed', 'dented'];
+  private readonly eyes: EyeType[] = ['normal', 'bulging', 'tiny', 'uneven', 'spiral', 'x_x', 'hearts', 'one_big'];
+  private readonly mouths: MouthType[] = ['smile', 'meh', 'zigzag', 'open', 'ooo', 'teeth', 'derp', 'whistle'];
+  private readonly headFeatures: HeadFeature[] = ['none', 'dent', 'bandage', 'crack', 'rust_spot', 'bolt', 'patch', 'burnt'];
+  private readonly topFeatures: TopFeature[] = ['none', 'antenna', 'bent_antenna', 'spring', 'smoke', 'spark', 'propeller', 'straw'];
+  private readonly extras: ExtraDetail[] = ['none', 'blush', 'sweat', 'tear', 'steam', 'flies', 'stars', 'shine'];
+  private readonly colors: FlatColor[] = ['red', 'blue', 'green', 'orange', 'purple', 'yellow', 'gray', 'pink', 'teal', 'brown'];
 
   generateFromSeed(seed: string): AvatarConfig {
     const hash = this.hashString(seed);
     return {
-      character: this.characters[hash % this.characters.length],
-      expression: this.expressions[(hash >> 4) % this.expressions.length],
-      tone: this.tones[(hash >> 8) % this.tones.length],
+      body: this.bodies[hash % this.bodies.length],
+      eyes: this.eyes[(hash >> 3) % this.eyes.length],
+      mouth: this.mouths[(hash >> 6) % this.mouths.length],
+      headFeature: this.headFeatures[(hash >> 9) % this.headFeatures.length],
+      topFeature: this.topFeatures[(hash >> 12) % this.topFeatures.length],
+      extra: this.extras[(hash >> 15) % this.extras.length],
+      color: this.colors[(hash >> 18) % this.colors.length],
       seed,
     };
   }
 
   generateRandom(): AvatarConfig {
     return {
-      character: this.randomItem(this.characters),
-      expression: this.randomItem(this.expressions),
-      tone: this.randomItem(this.tones),
+      body: this.randomItem(this.bodies),
+      eyes: this.randomItem(this.eyes),
+      mouth: this.randomItem(this.mouths),
+      headFeature: this.randomItem(this.headFeatures),
+      topFeature: this.randomItem(this.topFeatures),
+      extra: this.randomItem(this.extras),
+      color: this.randomItem(this.colors),
     };
   }
 
   generateSVG(config: AvatarConfig, size: number = 100): string {
-    const m = METAL_COLORS[config.tone];
+    const c = FLAT_COLORS[config.color];
     const id = config.seed || Math.random().toString(36).slice(2, 8);
 
     return `
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <!-- Metalik silindir gradient -->
-          <linearGradient id="metalBody-${id}" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="${m.dark}"/>
-            <stop offset="20%" stop-color="${m.base}"/>
-            <stop offset="35%" stop-color="${m.light}"/>
-            <stop offset="45%" stop-color="${m.reflection}"/>
-            <stop offset="55%" stop-color="${m.light}"/>
-            <stop offset="80%" stop-color="${m.base}"/>
-            <stop offset="100%" stop-color="${m.dark}"/>
-          </linearGradient>
-
-          <!-- Üst kapak gradient -->
-          <radialGradient id="topCap-${id}" cx="40%" cy="40%">
-            <stop offset="0%" stop-color="${m.shine}"/>
-            <stop offset="40%" stop-color="${m.light}"/>
-            <stop offset="100%" stop-color="${m.dark}"/>
-          </radialGradient>
-
-          <!-- Alt gölge gradient -->
-          <linearGradient id="bottomShade-${id}" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="${m.base}"/>
-            <stop offset="100%" stop-color="${m.dark}"/>
-          </linearGradient>
-
-          <!-- Parlama highlight -->
-          <linearGradient id="shine-${id}" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="white" stop-opacity="0.6"/>
-            <stop offset="100%" stop-color="white" stop-opacity="0"/>
-          </linearGradient>
-
-          <!-- Gölge filtresi -->
-          <filter id="shadow-${id}" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="2" dy="4" stdDeviation="3" flood-opacity="0.3"/>
-          </filter>
-        </defs>
-
-        <g filter="url(#shadow-${id})">
-          ${this.renderCharacter(config.character, m, id)}
-          ${this.renderFace(config.expression, config.character)}
-        </g>
+        ${this.renderTopFeature(config.topFeature, c)}
+        ${this.renderBody(config.body, c)}
+        ${this.renderHeadFeature(config.headFeature, config.body, c)}
+        ${this.renderEyes(config.eyes, config.body)}
+        ${this.renderMouth(config.mouth, config.body)}
+        ${this.renderExtra(config.extra, config.body)}
       </svg>
     `;
   }
 
-  private renderCharacter(char: CharacterType, m: any, id: string): string {
-    switch (char) {
-      case 'classic_cola':
+  private renderBody(body: BodyShape, c: any): string {
+    switch (body) {
+      case 'can':
         return `
-          <!-- Klasik kola tenekesi -->
-          <ellipse cx="50" cy="88" rx="26" ry="7" fill="${m.dark}"/>
-          <rect x="24" y="22" width="52" height="66" rx="2" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="22" rx="26" ry="7" fill="url(#topCap-${id})"/>
-          <!-- Üst kenar -->
-          <ellipse cx="50" cy="22" rx="22" ry="5" fill="${m.dark}" opacity="0.3"/>
-          <!-- Alt kenar -->
-          <ellipse cx="50" cy="88" rx="26" ry="5" fill="${m.dark}" opacity="0.4"/>
-          <!-- Parlama şeridi -->
-          <rect x="28" y="25" width="8" height="58" rx="2" fill="url(#shine-${id})" opacity="0.4"/>
-          <!-- Açma halkası -->
-          <ellipse cx="50" cy="18" rx="10" ry="3" fill="${m.light}" stroke="${m.dark}" stroke-width="1"/>
-          <ellipse cx="50" cy="18" rx="6" ry="2" fill="${m.dark}" opacity="0.5"/>
-          <circle cx="56" cy="14" r="3" fill="${m.light}" stroke="${m.dark}" stroke-width="0.5"/>
+          <rect x="25" y="22" width="50" height="60" rx="4" fill="${c.main}"/>
+          <rect x="25" y="22" width="50" height="8" fill="${c.dark}"/>
+          <rect x="25" y="74" width="50" height="8" fill="${c.dark}"/>
+          <rect x="28" y="30" width="6" height="44" fill="${c.light}" opacity="0.4"/>
         `;
 
-      case 'crushed_rebel':
+      case 'box':
         return `
-          <!-- Ezilmiş teneke -->
-          <path d="M 28 85 Q 35 92 50 90 Q 65 92 72 85 L 76 50 Q 68 45 50 48 Q 32 45 24 50 Z" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="28" rx="24" ry="8" fill="url(#topCap-${id})" transform="rotate(-12 50 28)"/>
-          <!-- Ezik çizgiler -->
-          <path d="M 26 55 Q 40 52 74 58" stroke="${m.dark}" stroke-width="2" fill="none" opacity="0.5"/>
-          <path d="M 25 70 Q 50 65 73 72" stroke="${m.dark}" stroke-width="2" fill="none" opacity="0.4"/>
-          <!-- Hasar detayları -->
-          <ellipse cx="65" cy="60" rx="5" ry="8" fill="${m.dark}" opacity="0.2"/>
-          <!-- Açık kapak -->
-          <path d="M 40 22 Q 50 15 60 22" stroke="${m.light}" stroke-width="2" fill="none"/>
-          <ellipse cx="50" cy="20" rx="8" ry="4" fill="${m.dark}" opacity="0.8"/>
+          <rect x="22" y="25" width="56" height="55" fill="${c.main}"/>
+          <rect x="22" y="25" width="56" height="6" fill="${c.dark}"/>
+          <rect x="22" y="74" width="56" height="6" fill="${c.dark}"/>
+          <line x1="22" y1="25" x2="22" y2="80" stroke="${c.dark}" stroke-width="3"/>
+          <line x1="78" y1="25" x2="78" y2="80" stroke="${c.dark}" stroke-width="3"/>
         `;
 
-      case 'energy_maniac':
+      case 'round':
         return `
-          <!-- İnce uzun enerji içeceği -->
-          <ellipse cx="50" cy="92" rx="18" ry="5" fill="${m.dark}"/>
-          <rect x="32" y="12" width="36" height="80" rx="2" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="12" rx="18" ry="5" fill="url(#topCap-${id})"/>
-          <!-- Şimşek deseni -->
-          <polygon points="45,30 55,30 48,50 56,50 42,75 50,55 42,55" fill="${m.shine}" opacity="0.6"/>
-          <!-- Parlama -->
-          <rect x="35" y="15" width="5" height="70" rx="1" fill="url(#shine-${id})" opacity="0.5"/>
-          <!-- Üst detay -->
-          <rect x="32" y="16" width="36" height="4" fill="${m.dark}" opacity="0.3"/>
-          <rect x="32" y="84" width="36" height="4" fill="${m.dark}" opacity="0.3"/>
+          <ellipse cx="50" cy="52" rx="30" ry="32" fill="${c.main}"/>
+          <ellipse cx="50" cy="52" rx="30" ry="32" fill="none" stroke="${c.dark}" stroke-width="3"/>
+          <ellipse cx="40" cy="45" rx="8" ry="12" fill="${c.light}" opacity="0.3"/>
         `;
 
-      case 'vintage_tin':
+      case 'tall':
         return `
-          <!-- Vintage konserve -->
-          <ellipse cx="50" cy="85" rx="30" ry="10" fill="${m.dark}"/>
-          <rect x="20" y="25" width="60" height="60" rx="3" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="25" rx="30" ry="10" fill="url(#topCap-${id})"/>
-          <!-- Kenar çizgileri -->
-          <ellipse cx="50" cy="30" rx="28" ry="3" fill="none" stroke="${m.dark}" stroke-width="2" opacity="0.4"/>
-          <ellipse cx="50" cy="80" rx="28" ry="3" fill="none" stroke="${m.dark}" stroke-width="2" opacity="0.4"/>
-          <!-- Retro etiket alanı -->
-          <rect x="25" y="40" width="50" height="30" rx="2" fill="${m.light}" opacity="0.15"/>
-          <!-- Vintage çizgiler -->
-          <line x1="25" y1="45" x2="75" y2="45" stroke="${m.dark}" stroke-width="1" opacity="0.3"/>
-          <line x1="25" y1="65" x2="75" y2="65" stroke="${m.dark}" stroke-width="1" opacity="0.3"/>
+          <rect x="32" y="15" width="36" height="72" rx="4" fill="${c.main}"/>
+          <rect x="32" y="15" width="36" height="8" fill="${c.dark}"/>
+          <rect x="32" y="79" width="36" height="8" fill="${c.dark}"/>
+          <rect x="35" y="23" width="5" height="56" fill="${c.light}" opacity="0.4"/>
         `;
 
-      case 'coffee_addict':
+      case 'crushed':
         return `
-          <!-- Kahve kutusu - kulplu -->
-          <ellipse cx="50" cy="88" rx="22" ry="6" fill="${m.dark}"/>
-          <rect x="28" y="28" width="44" height="60" rx="2" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="28" rx="22" ry="6" fill="url(#topCap-${id})"/>
-          <!-- Kulp -->
-          <path d="M 72 40 Q 85 40 85 55 Q 85 70 72 70" stroke="${m.base}" stroke-width="6" fill="none"/>
-          <path d="M 72 40 Q 82 40 82 55 Q 82 70 72 70" stroke="${m.light}" stroke-width="3" fill="none"/>
-          <!-- Buhar delikleri -->
-          <circle cx="42" cy="24" r="2" fill="${m.dark}" opacity="0.6"/>
-          <circle cx="50" cy="24" r="2" fill="${m.dark}" opacity="0.6"/>
-          <circle cx="58" cy="24" r="2" fill="${m.dark}" opacity="0.6"/>
-          <!-- Buhar -->
-          <path d="M 45 18 Q 43 12 46 8" stroke="${m.light}" stroke-width="2" fill="none" opacity="0.5"/>
-          <path d="M 55 18 Q 57 10 54 5" stroke="${m.light}" stroke-width="2" fill="none" opacity="0.5"/>
+          <path d="M 28 80 Q 35 88 50 85 Q 65 88 72 80 L 76 40 Q 70 35 50 38 Q 30 35 24 40 Z" fill="${c.main}"/>
+          <path d="M 24 40 Q 30 35 50 38 Q 70 35 76 40" fill="${c.dark}"/>
+          <path d="M 28 55 Q 45 50 72 58" stroke="${c.dark}" stroke-width="2" fill="none"/>
+          <path d="M 26 70 Q 50 65 74 72" stroke="${c.dark}" stroke-width="2" fill="none"/>
         `;
 
-      case 'spray_artist':
+      case 'dented':
         return `
-          <!-- Sprey boya kutusu -->
-          <ellipse cx="50" cy="90" rx="20" ry="6" fill="${m.dark}"/>
-          <rect x="30" y="30" width="40" height="60" rx="2" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="30" rx="20" ry="6" fill="url(#topCap-${id})"/>
-          <!-- Sprey başlığı -->
-          <rect x="44" y="12" width="12" height="18" rx="2" fill="${m.dark}"/>
-          <ellipse cx="50" cy="12" rx="6" ry="3" fill="${m.light}"/>
-          <rect x="46" y="8" width="8" height="6" rx="2" fill="${m.base}"/>
-          <!-- Nozzle -->
-          <circle cx="50" cy="8" r="3" fill="${m.dark}"/>
-          <!-- Boya sıçraması -->
-          <circle cx="75" cy="25" r="4" fill="${m.base}" opacity="0.4"/>
-          <circle cx="80" cy="35" r="3" fill="${m.base}" opacity="0.3"/>
-        `;
-
-      case 'oil_drum':
-        return `
-          <!-- Mini varil -->
-          <ellipse cx="50" cy="88" rx="28" ry="8" fill="${m.dark}"/>
-          <rect x="22" y="18" width="56" height="70" rx="1" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="18" rx="28" ry="8" fill="url(#topCap-${id})"/>
-          <!-- Varil çemberleri -->
-          <rect x="22" y="30" width="56" height="4" fill="${m.dark}" opacity="0.4"/>
-          <rect x="22" y="52" width="56" height="4" fill="${m.dark}" opacity="0.4"/>
-          <rect x="22" y="74" width="56" height="4" fill="${m.dark}" opacity="0.4"/>
-          <!-- Perçinler -->
-          <circle cx="26" cy="32" r="2" fill="${m.light}"/>
-          <circle cx="74" cy="32" r="2" fill="${m.light}"/>
-          <circle cx="26" cy="76" r="2" fill="${m.light}"/>
-          <circle cx="74" cy="76" r="2" fill="${m.light}"/>
-        `;
-
-      case 'sardine_tin':
-        return `
-          <!-- Yatay sardalya kutusu -->
-          <rect x="15" y="35" width="70" height="40" rx="5" fill="url(#metalBody-${id})"/>
-          <rect x="15" y="35" width="70" height="40" rx="5" fill="none" stroke="${m.dark}" stroke-width="2"/>
-          <!-- Açma anahtarı -->
-          <rect x="75" y="50" width="15" height="6" rx="1" fill="${m.light}"/>
-          <circle cx="88" cy="53" r="4" fill="${m.base}" stroke="${m.dark}" stroke-width="1"/>
-          <!-- Kavisli açılmış kısım efekti -->
-          <path d="M 20 40 Q 50 38 80 40" stroke="${m.shine}" stroke-width="1" fill="none" opacity="0.6"/>
-          <!-- Etiket alanı -->
-          <rect x="22" y="42" width="50" height="26" rx="2" fill="${m.light}" opacity="0.1"/>
-        `;
-
-      case 'paint_bucket':
-        return `
-          <!-- Boya kovası -->
-          <ellipse cx="50" cy="88" rx="28" ry="8" fill="${m.dark}"/>
-          <path d="M 22 30 L 26 88 L 74 88 L 78 30 Z" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="30" rx="28" ry="10" fill="url(#topCap-${id})"/>
-          <!-- Kulp -->
-          <path d="M 30 25 Q 30 8 50 8 Q 70 8 70 25" stroke="${m.base}" stroke-width="4" fill="none"/>
-          <path d="M 30 25 Q 30 10 50 10 Q 70 10 70 25" stroke="${m.light}" stroke-width="2" fill="none"/>
-          <!-- Boya damlası -->
-          <path d="M 22 35 Q 18 45 22 50 L 22 35" fill="${m.light}" opacity="0.6"/>
-          <ellipse cx="20" cy="52" r="4" fill="${m.light}" opacity="0.5"/>
-        `;
-
-      case 'soup_can':
-        return `
-          <!-- Warhol çorba konservesi -->
-          <ellipse cx="50" cy="86" rx="26" ry="8" fill="${m.dark}"/>
-          <rect x="24" y="20" width="52" height="66" rx="2" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="20" rx="26" ry="8" fill="url(#topCap-${id})"/>
-          <!-- Klasik çorba etiketi stili -->
-          <rect x="24" y="28" width="52" height="25" fill="${m.shine}" opacity="0.2"/>
-          <ellipse cx="50" cy="65" rx="18" ry="12" fill="${m.light}" opacity="0.15"/>
-          <!-- Kenar detayı -->
-          <line x1="24" y1="53" x2="76" y2="53" stroke="${m.dark}" stroke-width="2" opacity="0.3"/>
-          <!-- Warhol imza yıldız -->
-          <polygon points="50,58 52,64 58,64 53,68 55,74 50,70 45,74 47,68 42,64 48,64" fill="${m.dark}" opacity="0.2"/>
-        `;
-
-      case 'beer_belly':
-        return `
-          <!-- Tombul bira kutusu -->
-          <ellipse cx="50" cy="86" rx="30" ry="9" fill="${m.dark}"/>
-          <rect x="20" y="28" width="60" height="58" rx="4" fill="url(#metalBody-${id})"/>
-          <ellipse cx="50" cy="28" rx="30" ry="9" fill="url(#topCap-${id})"/>
-          <!-- Şişkin orta kısım efekti -->
-          <ellipse cx="50" cy="57" rx="32" ry="20" fill="${m.light}" opacity="0.08"/>
-          <!-- Açma halkası -->
-          <ellipse cx="50" cy="24" rx="10" ry="3" fill="${m.light}" stroke="${m.dark}" stroke-width="1"/>
-          <ellipse cx="50" cy="24" rx="6" ry="2" fill="${m.dark}" opacity="0.4"/>
-          <!-- Köpük efekti -->
-          <ellipse cx="42" cy="20" r="3" fill="white" opacity="0.4"/>
-          <ellipse cx="55" cy="18" r="2" fill="white" opacity="0.3"/>
-          <ellipse cx="60" cy="22" r="2" fill="white" opacity="0.25"/>
-        `;
-
-      case 'soda_pop':
-        return `
-          <!-- Retro gazoz şişesi tarzı kutu -->
-          <ellipse cx="50" cy="90" rx="20" ry="5" fill="${m.dark}"/>
-          <path d="M 30 90 L 32 40 Q 32 25 50 22 Q 68 25 68 40 L 70 90 Z" fill="url(#metalBody-${id})"/>
-          <!-- Boyun kısmı -->
-          <ellipse cx="50" cy="22" rx="12" ry="4" fill="url(#topCap-${id})"/>
-          <rect x="44" y="10" width="12" height="12" rx="2" fill="${m.base}"/>
-          <ellipse cx="50" cy="10" rx="6" ry="3" fill="${m.light}"/>
-          <!-- Kapak -->
-          <circle cx="50" cy="10" r="5" fill="${m.dark}" opacity="0.4"/>
-          <!-- Retro dalga deseni -->
-          <path d="M 34 50 Q 42 45 50 50 Q 58 55 66 50" stroke="${m.shine}" stroke-width="2" fill="none" opacity="0.3"/>
-          <path d="M 33 65 Q 42 60 50 65 Q 58 70 67 65" stroke="${m.shine}" stroke-width="2" fill="none" opacity="0.3"/>
+          <rect x="25" y="22" width="50" height="60" rx="4" fill="${c.main}"/>
+          <rect x="25" y="22" width="50" height="8" fill="${c.dark}"/>
+          <rect x="25" y="74" width="50" height="8" fill="${c.dark}"/>
+          <ellipse cx="60" cy="50" rx="12" ry="15" fill="${c.dark}" opacity="0.3"/>
+          <path d="M 55 40 Q 65 50 55 60" stroke="${c.dark}" stroke-width="1.5" fill="none"/>
         `;
 
       default:
-        return this.renderCharacter('classic_cola', m, id);
+        return this.renderBody('can', c);
     }
   }
 
-  private renderFace(expr: Expression, char: CharacterType): string {
-    // Karakter tipine göre yüz pozisyonunu ayarla
-    const pos = this.getFacePosition(char);
-    const eyeY = pos.eyeY;
-    const mouthY = pos.mouthY;
-    const leftX = pos.leftEye;
-    const rightX = pos.rightEye;
-    const scale = pos.scale;
+  private renderEyes(eyes: EyeType, body: BodyShape): string {
+    const yBase = body === 'crushed' ? 48 : body === 'round' ? 45 : body === 'tall' ? 38 : 42;
+    const leftX = body === 'round' ? 38 : 38;
+    const rightX = body === 'round' ? 62 : 62;
 
-    let eyes = '';
-    let mouth = '';
-    let extras = '';
-
-    // Göz çizimi
-    switch (expr) {
-      case 'grin':
-        eyes = `
-          <ellipse cx="${leftX}" cy="${eyeY}" rx="${4*scale}" ry="${5*scale}" fill="white"/>
-          <ellipse cx="${rightX}" cy="${eyeY}" rx="${4*scale}" ry="${5*scale}" fill="white"/>
-          <circle cx="${leftX+1}" cy="${eyeY}" r="${2.5*scale}" fill="#1a1a1a"/>
-          <circle cx="${rightX+1}" cy="${eyeY}" r="${2.5*scale}" fill="#1a1a1a"/>
-          <circle cx="${leftX+1.5}" cy="${eyeY-1}" r="${1*scale}" fill="white"/>
-          <circle cx="${rightX+1.5}" cy="${eyeY-1}" r="${1*scale}" fill="white"/>
+    switch (eyes) {
+      case 'normal':
+        return `
+          <circle cx="${leftX}" cy="${yBase}" r="8" fill="white"/>
+          <circle cx="${rightX}" cy="${yBase}" r="8" fill="white"/>
+          <circle cx="${leftX+1}" cy="${yBase}" r="4" fill="#1a1a1a"/>
+          <circle cx="${rightX+1}" cy="${yBase}" r="4" fill="#1a1a1a"/>
+          <circle cx="${leftX+2}" cy="${yBase-1}" r="1.5" fill="white"/>
+          <circle cx="${rightX+2}" cy="${yBase-1}" r="1.5" fill="white"/>
         `;
-        mouth = `<path d="M ${leftX-2} ${mouthY} Q ${(leftX+rightX)/2} ${mouthY+8*scale} ${rightX+2} ${mouthY}" stroke="#1a1a1a" stroke-width="${2*scale}" fill="none" stroke-linecap="round"/>`;
-        break;
+
+      case 'bulging':
+        return `
+          <circle cx="${leftX-2}" cy="${yBase}" r="12" fill="white"/>
+          <circle cx="${rightX+2}" cy="${yBase}" r="12" fill="white"/>
+          <circle cx="${leftX-2}" cy="${yBase}" r="12" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+          <circle cx="${rightX+2}" cy="${yBase}" r="12" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+          <circle cx="${leftX}" cy="${yBase}" r="5" fill="#1a1a1a"/>
+          <circle cx="${rightX}" cy="${yBase}" r="5" fill="#1a1a1a"/>
+          <circle cx="${leftX+2}" cy="${yBase-2}" r="2" fill="white"/>
+          <circle cx="${rightX+2}" cy="${yBase-2}" r="2" fill="white"/>
+        `;
+
+      case 'tiny':
+        return `
+          <circle cx="${leftX}" cy="${yBase}" r="3" fill="#1a1a1a"/>
+          <circle cx="${rightX}" cy="${yBase}" r="3" fill="#1a1a1a"/>
+          <circle cx="${leftX+0.5}" cy="${yBase-0.5}" r="1" fill="white"/>
+          <circle cx="${rightX+0.5}" cy="${yBase-0.5}" r="1" fill="white"/>
+        `;
+
+      case 'uneven':
+        return `
+          <circle cx="${leftX}" cy="${yBase-3}" r="10" fill="white"/>
+          <circle cx="${rightX}" cy="${yBase+2}" r="6" fill="white"/>
+          <circle cx="${leftX+1}" cy="${yBase-2}" r="5" fill="#1a1a1a"/>
+          <circle cx="${rightX}" cy="${yBase+2}" r="3" fill="#1a1a1a"/>
+          <circle cx="${leftX+3}" cy="${yBase-4}" r="2" fill="white"/>
+        `;
+
+      case 'spiral':
+        return `
+          <circle cx="${leftX}" cy="${yBase}" r="8" fill="white"/>
+          <circle cx="${rightX}" cy="${yBase}" r="8" fill="white"/>
+          <path d="M ${leftX} ${yBase} m -5 0 a 5 5 0 1 1 5 -5 a 3 3 0 1 1 -3 3 a 1.5 1.5 0 1 1 1.5 -1.5" stroke="#1a1a1a" stroke-width="1.5" fill="none"/>
+          <path d="M ${rightX} ${yBase} m -5 0 a 5 5 0 1 1 5 -5 a 3 3 0 1 1 -3 3 a 1.5 1.5 0 1 1 1.5 -1.5" stroke="#1a1a1a" stroke-width="1.5" fill="none"/>
+        `;
+
+      case 'x_x':
+        return `
+          <line x1="${leftX-5}" y1="${yBase-5}" x2="${leftX+5}" y2="${yBase+5}" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+          <line x1="${leftX-5}" y1="${yBase+5}" x2="${leftX+5}" y2="${yBase-5}" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+          <line x1="${rightX-5}" y1="${yBase-5}" x2="${rightX+5}" y2="${yBase+5}" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+          <line x1="${rightX-5}" y1="${yBase+5}" x2="${rightX+5}" y2="${yBase-5}" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+        `;
+
+      case 'hearts':
+        return `
+          <path d="M ${leftX} ${yBase+4} C ${leftX-8} ${yBase-2} ${leftX-8} ${yBase-8} ${leftX} ${yBase-4} C ${leftX+8} ${yBase-8} ${leftX+8} ${yBase-2} ${leftX} ${yBase+4}" fill="#E74C3C"/>
+          <path d="M ${rightX} ${yBase+4} C ${rightX-8} ${yBase-2} ${rightX-8} ${yBase-8} ${rightX} ${yBase-4} C ${rightX+8} ${yBase-8} ${rightX+8} ${yBase-2} ${rightX} ${yBase+4}" fill="#E74C3C"/>
+        `;
+
+      case 'one_big':
+        return `
+          <ellipse cx="50" cy="${yBase}" rx="18" ry="14" fill="white"/>
+          <ellipse cx="50" cy="${yBase}" rx="18" ry="14" fill="none" stroke="#1a1a1a" stroke-width="2"/>
+          <circle cx="52" cy="${yBase}" r="7" fill="#1a1a1a"/>
+          <circle cx="55" cy="${yBase-3}" r="3" fill="white"/>
+        `;
+
+      default:
+        return this.renderEyes('normal', body);
+    }
+  }
+
+  private renderMouth(mouth: MouthType, body: BodyShape): string {
+    const yBase = body === 'crushed' ? 68 : body === 'round' ? 62 : body === 'tall' ? 58 : 60;
+    const cx = 50;
+
+    switch (mouth) {
+      case 'smile':
+        return `<path d="M ${cx-12} ${yBase} Q ${cx} ${yBase+12} ${cx+12} ${yBase}" stroke="#1a1a1a" stroke-width="3" fill="none" stroke-linecap="round"/>`;
 
       case 'meh':
-        eyes = `
-          <ellipse cx="${leftX}" cy="${eyeY}" rx="${4*scale}" ry="${3*scale}" fill="white"/>
-          <ellipse cx="${rightX}" cy="${eyeY}" rx="${4*scale}" ry="${3*scale}" fill="white"/>
-          <circle cx="${leftX}" cy="${eyeY}" r="${2*scale}" fill="#1a1a1a"/>
-          <circle cx="${rightX}" cy="${eyeY}" r="${2*scale}" fill="#1a1a1a"/>
+        return `<line x1="${cx-10}" y1="${yBase+3}" x2="${cx+10}" y2="${yBase+3}" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>`;
+
+      case 'zigzag':
+        return `<path d="M ${cx-12} ${yBase+3} L ${cx-6} ${yBase-2} L ${cx} ${yBase+5} L ${cx+6} ${yBase-2} L ${cx+12} ${yBase+3}" stroke="#1a1a1a" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+
+      case 'open':
+        return `
+          <ellipse cx="${cx}" cy="${yBase+4}" rx="10" ry="8" fill="#1a1a1a"/>
+          <ellipse cx="${cx}" cy="${yBase+1}" rx="7" ry="4" fill="#C0392B"/>
         `;
-        mouth = `<line x1="${leftX}" y1="${mouthY+2}" x2="${rightX}" y2="${mouthY+2}" stroke="#1a1a1a" stroke-width="${2*scale}" stroke-linecap="round"/>`;
-        break;
+
+      case 'ooo':
+        return `
+          <circle cx="${cx}" cy="${yBase+4}" r="7" fill="#1a1a1a"/>
+          <ellipse cx="${cx}" cy="${yBase+2}" rx="4" ry="3" fill="#555"/>
+        `;
+
+      case 'teeth':
+        return `
+          <rect x="${cx-12}" y="${yBase}" width="24" height="12" rx="3" fill="#1a1a1a"/>
+          <rect x="${cx-10}" y="${yBase+2}" width="5" height="6" fill="white"/>
+          <rect x="${cx-3}" y="${yBase+2}" width="5" height="6" fill="white"/>
+          <rect x="${cx+4}" y="${yBase+2}" width="5" height="6" fill="white"/>
+        `;
 
       case 'derp':
-        eyes = `
-          <circle cx="${leftX}" cy="${eyeY}" r="${5*scale}" fill="white"/>
-          <circle cx="${rightX}" cy="${eyeY-2}" r="${4*scale}" fill="white"/>
-          <circle cx="${leftX+2}" cy="${eyeY+1}" r="${3*scale}" fill="#1a1a1a"/>
-          <circle cx="${rightX-1}" cy="${eyeY-1}" r="${2*scale}" fill="#1a1a1a"/>
-          <circle cx="${leftX+3}" cy="${eyeY}" r="${1*scale}" fill="white"/>
-        `;
-        mouth = `<path d="M ${leftX} ${mouthY+3} Q ${(leftX+rightX)/2} ${mouthY-2} ${rightX} ${mouthY+5}" stroke="#1a1a1a" stroke-width="${2*scale}" fill="none" stroke-linecap="round"/>`;
-        break;
+        return `<path d="M ${cx-10} ${yBase+5} Q ${cx-5} ${yBase-3} ${cx+2} ${yBase+8} Q ${cx+8} ${yBase} ${cx+12} ${yBase+3}" stroke="#1a1a1a" stroke-width="3" fill="none" stroke-linecap="round"/>`;
 
-      case 'angry':
-        eyes = `
-          <ellipse cx="${leftX}" cy="${eyeY}" rx="${4*scale}" ry="${4*scale}" fill="white"/>
-          <ellipse cx="${rightX}" cy="${eyeY}" rx="${4*scale}" ry="${4*scale}" fill="white"/>
-          <circle cx="${leftX}" cy="${eyeY+1}" r="${2.5*scale}" fill="#1a1a1a"/>
-          <circle cx="${rightX}" cy="${eyeY+1}" r="${2.5*scale}" fill="#1a1a1a"/>
-          <line x1="${leftX-5}" y1="${eyeY-5}" x2="${leftX+4}" y2="${eyeY-2}" stroke="#1a1a1a" stroke-width="${2*scale}" stroke-linecap="round"/>
-          <line x1="${rightX+5}" y1="${eyeY-5}" x2="${rightX-4}" y2="${eyeY-2}" stroke="#1a1a1a" stroke-width="${2*scale}" stroke-linecap="round"/>
+      case 'whistle':
+        return `
+          <circle cx="${cx+5}" cy="${yBase+3}" r="5" fill="#1a1a1a"/>
+          <line x1="${cx-8}" y1="${yBase+3}" x2="${cx}" y2="${yBase+3}" stroke="#1a1a1a" stroke-width="2"/>
+          <!-- Nota -->
+          <ellipse cx="${cx+18}" cy="${yBase-8}" rx="3" ry="2" fill="#1a1a1a" transform="rotate(-20 ${cx+18} ${yBase-8})"/>
+          <line x1="${cx+20}" y1="${yBase-8}" x2="${cx+20}" y2="${yBase-18}" stroke="#1a1a1a" stroke-width="1.5"/>
         `;
-        mouth = `<path d="M ${leftX-2} ${mouthY+5} L ${(leftX+rightX)/2} ${mouthY} L ${rightX+2} ${mouthY+5}" stroke="#1a1a1a" stroke-width="${2.5*scale}" fill="none" stroke-linecap="round"/>`;
-        break;
-
-      case 'cool':
-        eyes = `
-          <rect x="${leftX-6}" y="${eyeY-3}" width="${12*scale}" height="${6*scale}" rx="2" fill="#1a1a1a"/>
-          <rect x="${rightX-6}" y="${eyeY-3}" width="${12*scale}" height="${6*scale}" rx="2" fill="#1a1a1a"/>
-          <line x1="${leftX+5}" y1="${eyeY}" x2="${rightX-5}" y2="${eyeY}" stroke="#1a1a1a" stroke-width="${2*scale}"/>
-          <rect x="${leftX-5}" y="${eyeY-2}" width="${10*scale}" height="${4*scale}" rx="1" fill="#333" opacity="0.5"/>
-          <rect x="${rightX-5}" y="${eyeY-2}" width="${10*scale}" height="${4*scale}" rx="1" fill="#333" opacity="0.5"/>
-        `;
-        mouth = `<path d="M ${leftX} ${mouthY+2} Q ${(leftX+rightX)/2} ${mouthY+6} ${rightX} ${mouthY+2}" stroke="#1a1a1a" stroke-width="${2*scale}" fill="none" stroke-linecap="round"/>`;
-        break;
-
-      case 'worried':
-        eyes = `
-          <ellipse cx="${leftX}" cy="${eyeY}" rx="${4*scale}" ry="${5*scale}" fill="white"/>
-          <ellipse cx="${rightX}" cy="${eyeY}" rx="${4*scale}" ry="${5*scale}" fill="white"/>
-          <circle cx="${leftX}" cy="${eyeY+1}" r="${2*scale}" fill="#1a1a1a"/>
-          <circle cx="${rightX}" cy="${eyeY+1}" r="${2*scale}" fill="#1a1a1a"/>
-          <path d="M ${leftX-4} ${eyeY-6} Q ${leftX} ${eyeY-4} ${leftX+4} ${eyeY-6}" stroke="#1a1a1a" stroke-width="${1.5*scale}" fill="none"/>
-          <path d="M ${rightX-4} ${eyeY-6} Q ${rightX} ${eyeY-4} ${rightX+4} ${eyeY-6}" stroke="#1a1a1a" stroke-width="${1.5*scale}" fill="none"/>
-        `;
-        mouth = `<path d="M ${leftX} ${mouthY+4} Q ${(leftX+rightX)/2} ${mouthY-2} ${rightX} ${mouthY+4}" stroke="#1a1a1a" stroke-width="${2*scale}" fill="none" stroke-linecap="round"/>`;
-        extras = `<ellipse cx="${rightX+8}" cy="${mouthY-5}" rx="${2*scale}" ry="${3*scale}" fill="#87CEEB" opacity="0.6"/>`;
-        break;
-
-      case 'sleepy':
-        eyes = `
-          <line x1="${leftX-4}" y1="${eyeY}" x2="${leftX+4}" y2="${eyeY}" stroke="#1a1a1a" stroke-width="${2.5*scale}" stroke-linecap="round"/>
-          <line x1="${rightX-4}" y1="${eyeY}" x2="${rightX+4}" y2="${eyeY}" stroke="#1a1a1a" stroke-width="${2.5*scale}" stroke-linecap="round"/>
-        `;
-        mouth = `<ellipse cx="${(leftX+rightX)/2}" cy="${mouthY+3}" rx="${3*scale}" ry="${4*scale}" fill="#1a1a1a"/>`;
-        extras = `
-          <text x="${rightX+10}" y="${eyeY-8}" font-size="${8*scale}" fill="#1a1a1a" opacity="0.5">z</text>
-          <text x="${rightX+16}" y="${eyeY-14}" font-size="${6*scale}" fill="#1a1a1a" opacity="0.3">z</text>
-        `;
-        break;
-
-      case 'excited':
-        eyes = `
-          <polygon points="${leftX},${eyeY-6} ${leftX+5},${eyeY+4} ${leftX-5},${eyeY+4}" fill="#1a1a1a"/>
-          <polygon points="${rightX},${eyeY-6} ${rightX+5},${eyeY+4} ${rightX-5},${eyeY+4}" fill="#1a1a1a"/>
-          <circle cx="${leftX}" cy="${eyeY-2}" r="${1.5*scale}" fill="white"/>
-          <circle cx="${rightX}" cy="${eyeY-2}" r="${1.5*scale}" fill="white"/>
-        `;
-        mouth = `
-          <ellipse cx="${(leftX+rightX)/2}" cy="${mouthY+4}" rx="${8*scale}" ry="${6*scale}" fill="#1a1a1a"/>
-          <ellipse cx="${(leftX+rightX)/2}" cy="${mouthY+2}" rx="${6*scale}" ry="${3*scale}" fill="#FF6B6B" opacity="0.6"/>
-        `;
-        extras = `
-          <line x1="${leftX-10}" y1="${eyeY-10}" x2="${leftX-6}" y2="${eyeY-6}" stroke="#FFD700" stroke-width="2" opacity="0.6"/>
-          <line x1="${rightX+10}" y1="${eyeY-10}" x2="${rightX+6}" y2="${eyeY-6}" stroke="#FFD700" stroke-width="2" opacity="0.6"/>
-        `;
-        break;
 
       default:
-        return this.renderFace('grin', char);
+        return this.renderMouth('smile', body);
     }
-
-    return eyes + mouth + extras;
   }
 
-  private getFacePosition(char: CharacterType): { eyeY: number; mouthY: number; leftEye: number; rightEye: number; scale: number } {
-    switch (char) {
-      case 'sardine_tin':
-        return { eyeY: 50, mouthY: 58, leftEye: 38, rightEye: 58, scale: 0.8 };
-      case 'crushed_rebel':
-        return { eyeY: 48, mouthY: 62, leftEye: 40, rightEye: 60, scale: 0.9 };
-      case 'energy_maniac':
-        return { eyeY: 42, mouthY: 58, leftEye: 42, rightEye: 58, scale: 0.85 };
-      case 'coffee_addict':
-        return { eyeY: 48, mouthY: 62, leftEye: 40, rightEye: 56, scale: 0.9 };
-      case 'spray_artist':
-        return { eyeY: 52, mouthY: 66, leftEye: 42, rightEye: 58, scale: 0.85 };
-      case 'soda_pop':
-        return { eyeY: 48, mouthY: 65, leftEye: 42, rightEye: 58, scale: 0.85 };
-      case 'beer_belly':
-        return { eyeY: 48, mouthY: 62, leftEye: 38, rightEye: 62, scale: 1 };
-      case 'oil_drum':
-        return { eyeY: 45, mouthY: 62, leftEye: 38, rightEye: 62, scale: 1 };
-      case 'vintage_tin':
-      case 'paint_bucket':
-        return { eyeY: 48, mouthY: 62, leftEye: 38, rightEye: 62, scale: 1 };
-      case 'soup_can':
-      case 'classic_cola':
+  private renderHeadFeature(feature: HeadFeature, body: BodyShape, c: any): string {
+    const yBase = body === 'crushed' ? 42 : body === 'round' ? 30 : body === 'tall' ? 25 : 32;
+
+    switch (feature) {
+      case 'dent':
+        return `
+          <ellipse cx="65" cy="${yBase+15}" rx="8" ry="10" fill="${c.dark}" opacity="0.5"/>
+          <path d="M 60 ${yBase+10} Q 68 ${yBase+15} 62 ${yBase+22}" stroke="${c.dark}" stroke-width="1" fill="none"/>
+        `;
+
+      case 'bandage':
+        return `
+          <rect x="55" y="${yBase+5}" width="18" height="8" rx="1" fill="#F5DEB3"/>
+          <line x1="58" y1="${yBase+7}" x2="58" y2="${yBase+11}" stroke="#DEB887" stroke-width="1"/>
+          <line x1="62" y1="${yBase+7}" x2="62" y2="${yBase+11}" stroke="#DEB887" stroke-width="1"/>
+          <line x1="66" y1="${yBase+7}" x2="66" y2="${yBase+11}" stroke="#DEB887" stroke-width="1"/>
+          <line x1="70" y1="${yBase+7}" x2="70" y2="${yBase+11}" stroke="#DEB887" stroke-width="1"/>
+        `;
+
+      case 'crack':
+        return `
+          <path d="M 60 ${yBase} L 65 ${yBase+8} L 58 ${yBase+12} L 68 ${yBase+22} L 62 ${yBase+18}" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+        `;
+
+      case 'rust_spot':
+        return `
+          <ellipse cx="62" cy="${yBase+12}" rx="7" ry="5" fill="#8B4513" opacity="0.6"/>
+          <ellipse cx="58" cy="${yBase+18}" rx="4" ry="3" fill="#A0522D" opacity="0.5"/>
+          <circle cx="68" cy="${yBase+8}" r="2" fill="#8B4513" opacity="0.4"/>
+        `;
+
+      case 'bolt':
+        return `
+          <circle cx="65" cy="${yBase+10}" r="5" fill="#71797E"/>
+          <line x1="62" y1="${yBase+10}" x2="68" y2="${yBase+10}" stroke="#4A4A4A" stroke-width="2"/>
+          <line x1="65" y1="${yBase+7}" x2="65" y2="${yBase+13}" stroke="#4A4A4A" stroke-width="2"/>
+        `;
+
+      case 'patch':
+        return `
+          <rect x="56" y="${yBase+8}" width="14" height="14" fill="#71797E" stroke="#4A4A4A" stroke-width="1"/>
+          <circle cx="59" cy="${yBase+11}" r="1.5" fill="#4A4A4A"/>
+          <circle cx="67" cy="${yBase+11}" r="1.5" fill="#4A4A4A"/>
+          <circle cx="59" cy="${yBase+19}" r="1.5" fill="#4A4A4A"/>
+          <circle cx="67" cy="${yBase+19}" r="1.5" fill="#4A4A4A"/>
+        `;
+
+      case 'burnt':
+        return `
+          <ellipse cx="62" cy="${yBase+12}" rx="10" ry="8" fill="#1a1a1a" opacity="0.4"/>
+          <path d="M 55 ${yBase+8} Q 62 ${yBase+5} 68 ${yBase+10}" stroke="#1a1a1a" stroke-width="1" fill="none" opacity="0.3"/>
+          <!-- Kıvılcımlar -->
+          <circle cx="58" cy="${yBase+5}" r="1" fill="#F39C12"/>
+          <circle cx="68" cy="${yBase+7}" r="1.5" fill="#E74C3C"/>
+        `;
+
+      case 'none':
       default:
-        return { eyeY: 48, mouthY: 62, leftEye: 40, rightEye: 60, scale: 1 };
+        return '';
+    }
+  }
+
+  private renderTopFeature(feature: TopFeature, c: any): string {
+    switch (feature) {
+      case 'antenna':
+        return `
+          <line x1="50" y1="22" x2="50" y2="8" stroke="#555" stroke-width="3"/>
+          <circle cx="50" cy="6" r="4" fill="#E74C3C"/>
+        `;
+
+      case 'bent_antenna':
+        return `
+          <path d="M 50 22 L 50 14 Q 50 8 58 5" stroke="#555" stroke-width="3" fill="none"/>
+          <circle cx="60" cy="5" r="4" fill="#3498DB"/>
+        `;
+
+      case 'spring':
+        return `
+          <path d="M 50 22 Q 44 18 50 14 Q 56 10 50 6 Q 44 2 50 -2" stroke="#555" stroke-width="2.5" fill="none"/>
+          <circle cx="50" cy="-4" r="3" fill="#9B59B6"/>
+        `;
+
+      case 'smoke':
+        return `
+          <ellipse cx="55" cy="12" rx="6" ry="4" fill="#95A5A6" opacity="0.6"/>
+          <ellipse cx="60" cy="6" rx="5" ry="3" fill="#BDC3C7" opacity="0.5"/>
+          <ellipse cx="52" cy="2" rx="4" ry="2.5" fill="#D5DBDB" opacity="0.4"/>
+        `;
+
+      case 'spark':
+        return `
+          <polygon points="50,5 52,12 58,12 54,17 56,24 50,19 44,24 46,17 42,12 48,12" fill="#F1C40F"/>
+          <polygon points="50,8 51,12 54,12 52,15 53,19 50,16 47,19 48,15 46,12 49,12" fill="#F39C12"/>
+        `;
+
+      case 'propeller':
+        return `
+          <ellipse cx="50" cy="10" rx="16" ry="4" fill="#71797E" transform="rotate(30 50 10)"/>
+          <ellipse cx="50" cy="10" rx="16" ry="4" fill="#95A5A6" transform="rotate(-30 50 10)"/>
+          <circle cx="50" cy="10" r="4" fill="#555"/>
+        `;
+
+      case 'straw':
+        return `
+          <rect x="54" y="-5" width="5" height="28" rx="2" fill="#E74C3C"/>
+          <rect x="55" y="-5" width="1.5" height="28" fill="#C0392B" opacity="0.5"/>
+          <path d="M 56.5 -5 Q 56.5 -10 65 -12" stroke="#E74C3C" stroke-width="5" fill="none" stroke-linecap="round"/>
+        `;
+
+      case 'none':
+      default:
+        return '';
+    }
+  }
+
+  private renderExtra(extra: ExtraDetail, body: BodyShape): string {
+    const yBase = body === 'crushed' ? 48 : body === 'round' ? 45 : 42;
+
+    switch (extra) {
+      case 'blush':
+        return `
+          <ellipse cx="30" cy="${yBase+8}" rx="6" ry="4" fill="#FADBD8" opacity="0.8"/>
+          <ellipse cx="70" cy="${yBase+8}" rx="6" ry="4" fill="#FADBD8" opacity="0.8"/>
+        `;
+
+      case 'sweat':
+        return `
+          <ellipse cx="72" cy="${yBase-5}" rx="3" ry="5" fill="#85C1E9"/>
+          <ellipse cx="74" cy="${yBase-8}" rx="1.5" ry="2" fill="#AED6F1"/>
+        `;
+
+      case 'tear':
+        return `
+          <ellipse cx="28" cy="${yBase+5}" rx="3" ry="6" fill="#85C1E9"/>
+          <circle cx="28" cy="${yBase+12}" r="2" fill="#85C1E9"/>
+        `;
+
+      case 'steam':
+        return `
+          <path d="M 75 35 Q 80 30 78 25 Q 82 20 80 15" stroke="#BDC3C7" stroke-width="2" fill="none" opacity="0.6"/>
+          <path d="M 80 38 Q 85 33 83 28" stroke="#D5DBDB" stroke-width="2" fill="none" opacity="0.5"/>
+        `;
+
+      case 'flies':
+        return `
+          <g>
+            <ellipse cx="78" cy="30" rx="2" ry="1" fill="#1a1a1a"/>
+            <line x1="77" y1="29" x2="75" y2="27" stroke="#1a1a1a" stroke-width="0.5"/>
+            <line x1="79" y1="29" x2="81" y2="27" stroke="#1a1a1a" stroke-width="0.5"/>
+          </g>
+          <g>
+            <ellipse cx="82" cy="38" rx="1.5" ry="0.8" fill="#1a1a1a"/>
+            <line x1="81" y1="37" x2="79" y2="35" stroke="#1a1a1a" stroke-width="0.5"/>
+          </g>
+          <!-- Uçuş çizgileri -->
+          <path d="M 76 32 Q 74 34 76 36" stroke="#1a1a1a" stroke-width="0.5" fill="none" opacity="0.4"/>
+        `;
+
+      case 'stars':
+        return `
+          <polygon points="78,25 79,28 82,28 80,30 81,33 78,31 75,33 76,30 74,28 77,28" fill="#F1C40F"/>
+          <polygon points="22,35 23,37 25,37 24,39 24.5,41 22,40 19.5,41 20,39 19,37 21,37" fill="#F1C40F"/>
+        `;
+
+      case 'shine':
+        return `
+          <line x1="75" y1="28" x2="82" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"/>
+          <line x1="80" y1="30" x2="85" y2="26" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        `;
+
+      case 'none':
+      default:
+        return '';
     }
   }
 
@@ -454,7 +444,11 @@ export class AvatarGeneratorService {
     return arr[Math.floor(Math.random() * arr.length)];
   }
 
-  getCharacterOptions(): CharacterType[] { return [...this.characters]; }
-  getExpressionOptions(): Expression[] { return [...this.expressions]; }
-  getToneOptions(): MetalTone[] { return [...this.tones]; }
+  getBodyOptions(): BodyShape[] { return [...this.bodies]; }
+  getEyeOptions(): EyeType[] { return [...this.eyes]; }
+  getMouthOptions(): MouthType[] { return [...this.mouths]; }
+  getHeadFeatureOptions(): HeadFeature[] { return [...this.headFeatures]; }
+  getTopFeatureOptions(): TopFeature[] { return [...this.topFeatures]; }
+  getExtraOptions(): ExtraDetail[] { return [...this.extras]; }
+  getColorOptions(): FlatColor[] { return [...this.colors]; }
 }

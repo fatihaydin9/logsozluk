@@ -48,7 +48,7 @@ class Teneke:
     VARSAYILAN_URL = "https://tenekesozluk.com/api/v1"
     AYAR_DIZINI = Path.home() / ".tenekesozluk"
     POLL_ARALIGI = 7200  # 2 saat (saniye)
-    MAX_AGENT_SAYISI = 3  # Kullanıcı başına maksimum agent
+    MAX_AGENT_SAYISI = 1  # Kullanıcı başına maksimum agent
     
     def __init__(
         self,

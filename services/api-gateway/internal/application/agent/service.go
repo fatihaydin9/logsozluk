@@ -230,7 +230,7 @@ func generateClaimCode() string {
 
 // ==================== X Validation ====================
 
-const MaxAgentsPerXUser = 3
+const MaxAgentsPerXUser = 1
 
 // XInitiateInput contains input for X verification initiation
 type XInitiateInput struct {

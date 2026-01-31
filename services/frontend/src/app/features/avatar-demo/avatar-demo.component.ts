@@ -5,14 +5,14 @@ import { AvatarGeneratorService } from '../../shared/components/avatar-generator
 import { TenekeAvatarComponent } from '../../shared/components/avatar-generator/teneke-avatar.component';
 import {
   AvatarConfig,
-  CanType,
-  FaceExpression,
-  EyeStyle,
-  PullTabStyle,
-  LabelStyle,
-  Accessory,
-  CanColor,
-  COLOR_VALUES,
+  BodyShape,
+  EyeType,
+  MouthType,
+  HeadFeature,
+  TopFeature,
+  ExtraDetail,
+  FlatColor,
+  FLAT_COLORS,
 } from '../../shared/components/avatar-generator/avatar.types';
 
 @Component({
@@ -23,208 +23,119 @@ import {
   template: `
     <div class="avatar-demo-page">
       <div class="demo-container">
-        <!-- Header -->
         <div class="demo-header">
-          <h1>🥫 Teneke Avatar Generator</h1>
-          <p>Kola tenekesi temalı, cartoon stil avatarlar</p>
+          <h1>🥫 Teneke Avatar</h1>
+          <p>komik robot tenekeler</p>
         </div>
 
-        <!-- Main Preview -->
+        <!-- Preview -->
         <div class="preview-section">
           <div class="large-preview">
             <app-teneke-avatar [config]="currentConfig" [size]="180"></app-teneke-avatar>
           </div>
-          <div class="size-previews">
-            <div class="size-item">
-              <app-teneke-avatar [config]="currentConfig" [size]="80"></app-teneke-avatar>
-              <span>80px</span>
-            </div>
-            <div class="size-item">
-              <app-teneke-avatar [config]="currentConfig" [size]="56"></app-teneke-avatar>
-              <span>56px</span>
-            </div>
-            <div class="size-item">
-              <app-teneke-avatar [config]="currentConfig" [size]="40"></app-teneke-avatar>
-              <span>40px</span>
-            </div>
-            <div class="size-item">
-              <app-teneke-avatar [config]="currentConfig" [size]="28"></app-teneke-avatar>
-              <span>28px</span>
-            </div>
+          <div class="size-row">
+            <app-teneke-avatar [config]="currentConfig" [size]="64"></app-teneke-avatar>
+            <app-teneke-avatar [config]="currentConfig" [size]="48"></app-teneke-avatar>
+            <app-teneke-avatar [config]="currentConfig" [size]="32"></app-teneke-avatar>
           </div>
         </div>
 
         <!-- Controls -->
-        <div class="controls-section">
-          <!-- Username Generator -->
-          <div class="control-group">
-            <label>Username'den Üret</label>
-            <div class="input-row">
-              <input
-                type="text"
-                [(ngModel)]="usernameInput"
-                placeholder="kullanici_adi"
-                (keyup.enter)="generateFromUsername()"
-              />
-              <button (click)="generateFromUsername()">Üret</button>
-            </div>
+        <div class="controls">
+          <!-- Username -->
+          <div class="control-row">
+            <input [(ngModel)]="usernameInput" placeholder="username" (keyup.enter)="generateFromUsername()"/>
+            <button class="btn-gen" (click)="generateFromUsername()">Oluştur</button>
+            <button class="btn-random" (click)="generateRandom()">🎲</button>
           </div>
 
-          <div class="control-divider">
-            <span>veya manuel seç</span>
-          </div>
-
-          <!-- Can Type -->
+          <!-- Body -->
           <div class="control-group">
-            <label>Kutu Tipi</label>
-            <div class="option-grid">
-              <button
-                *ngFor="let can of canTypes"
-                [class.active]="currentConfig.canType === can"
-                (click)="updateConfig('canType', can)"
-              >
-                {{ canLabels[can] }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Face Expression -->
-          <div class="control-group">
-            <label>Yüz İfadesi</label>
-            <div class="option-grid">
-              <button
-                *ngFor="let face of faces"
-                [class.active]="currentConfig.face === face"
-                (click)="updateConfig('face', face)"
-              >
-                {{ faceLabels[face] }}
+            <label>Gövde</label>
+            <div class="btn-row">
+              <button *ngFor="let b of bodies" [class.active]="currentConfig.body === b" (click)="updateConfig('body', b)">
+                {{ bodyLabels[b] }}
               </button>
             </div>
           </div>
 
           <!-- Eyes -->
           <div class="control-group">
-            <label>Göz Stili</label>
-            <div class="option-grid">
-              <button
-                *ngFor="let eye of eyeStyles"
-                [class.active]="currentConfig.eyes === eye"
-                (click)="updateConfig('eyes', eye)"
-              >
-                {{ eyeLabels[eye] }}
+            <label>Gözler</label>
+            <div class="btn-row">
+              <button *ngFor="let e of eyes" [class.active]="currentConfig.eyes === e" (click)="updateConfig('eyes', e)">
+                {{ eyeLabels[e] }}
               </button>
             </div>
           </div>
 
-          <!-- Pull Tab -->
+          <!-- Mouth -->
           <div class="control-group">
-            <label>Açma Halkası</label>
-            <div class="option-grid">
-              <button
-                *ngFor="let tab of pullTabs"
-                [class.active]="currentConfig.pullTab === tab"
-                (click)="updateConfig('pullTab', tab)"
-              >
-                {{ pullTabLabels[tab] }}
+            <label>Ağız</label>
+            <div class="btn-row">
+              <button *ngFor="let m of mouths" [class.active]="currentConfig.mouth === m" (click)="updateConfig('mouth', m)">
+                {{ mouthLabels[m] }}
               </button>
             </div>
           </div>
 
-          <!-- Label Style -->
+          <!-- Head Feature -->
           <div class="control-group">
-            <label>Etiket Deseni</label>
-            <div class="option-grid">
-              <button
-                *ngFor="let label of labels"
-                [class.active]="currentConfig.label === label"
-                (click)="updateConfig('label', label)"
-              >
-                {{ labelLabels[label] }}
+            <label>Hasar/Detay</label>
+            <div class="btn-row">
+              <button *ngFor="let h of headFeatures" [class.active]="currentConfig.headFeature === h" (click)="updateConfig('headFeature', h)">
+                {{ headLabels[h] }}
               </button>
             </div>
           </div>
 
-          <!-- Accessory -->
+          <!-- Top Feature -->
           <div class="control-group">
-            <label>Aksesuar</label>
-            <div class="option-grid">
-              <button
-                *ngFor="let acc of accessories"
-                [class.active]="currentConfig.accessory === acc"
-                (click)="updateConfig('accessory', acc)"
-              >
-                {{ accessoryLabels[acc] }}
+            <label>Üst</label>
+            <div class="btn-row">
+              <button *ngFor="let t of topFeatures" [class.active]="currentConfig.topFeature === t" (click)="updateConfig('topFeature', t)">
+                {{ topLabels[t] }}
               </button>
             </div>
           </div>
 
-          <!-- Primary Color -->
+          <!-- Extra -->
           <div class="control-group">
-            <label>Ana Renk</label>
-            <div class="color-grid">
+            <label>Ekstra</label>
+            <div class="btn-row">
+              <button *ngFor="let x of extras" [class.active]="currentConfig.extra === x" (click)="updateConfig('extra', x)">
+                {{ extraLabels[x] }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Color -->
+          <div class="control-group">
+            <label>Renk</label>
+            <div class="color-row">
               <button
-                *ngFor="let color of colors"
-                [class.active]="currentConfig.primaryColor === color"
-                [style.background]="colorValues[color].main"
-                (click)="updateConfig('primaryColor', color)"
-                [title]="colorLabels[color]"
+                *ngFor="let c of colors"
+                [class.active]="currentConfig.color === c"
+                [style.background]="flatColors[c].main"
+                (click)="updateConfig('color', c)"
               ></button>
-            </div>
-          </div>
-
-          <!-- Accent Color -->
-          <div class="control-group">
-            <label>Detay Rengi</label>
-            <div class="color-grid">
-              <button
-                *ngFor="let color of colors"
-                [class.active]="currentConfig.accentColor === color"
-                [style.background]="colorValues[color].main"
-                (click)="updateConfig('accentColor', color)"
-                [title]="colorLabels[color]"
-              ></button>
-            </div>
-          </div>
-
-          <!-- Actions -->
-          <div class="actions">
-            <button class="btn-random" (click)="generateRandom()">🎲 Rastgele</button>
-          </div>
-        </div>
-
-        <!-- Example Avatars -->
-        <div class="examples-section">
-          <h2>Örnek Ajanlar</h2>
-          <div class="examples-grid">
-            <div class="example-item" *ngFor="let agent of sampleAgents">
-              <app-teneke-avatar [username]="agent.username" [size]="72"></app-teneke-avatar>
-              <span class="agent-name">{{ agent.displayName }}</span>
-              <span class="agent-username">&#64;{{ agent.username }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Combination Stats -->
-        <div class="stats-section">
-          <h3>Kombinasyon İstatistikleri</h3>
-          <p>
-            <strong>{{ totalCombinations | number }}</strong> benzersiz avatar
-          </p>
-          <div class="stat-breakdown">
-            <span>{{ canTypes.length }} kutu</span>
-            <span>×</span>
-            <span>{{ faces.length }} ifade</span>
-            <span>×</span>
-            <span>{{ eyeStyles.length }} göz</span>
-            <span>×</span>
-            <span>{{ pullTabs.length }} halka</span>
-            <span>×</span>
-            <span>{{ labels.length }} desen</span>
-            <span>×</span>
-            <span>{{ accessories.length }} aksesuar</span>
-            <span>×</span>
-            <span>{{ colors.length }}² renk</span>
+        <!-- Agents -->
+        <div class="agents-section">
+          <h3>Ajanlar</h3>
+          <div class="agents-grid">
+            <div class="agent-item" *ngFor="let a of sampleAgents">
+              <app-teneke-avatar [username]="a.username" [size]="56"></app-teneke-avatar>
+              <span>{{ a.name }}</span>
+            </div>
           </div>
+        </div>
+
+        <div class="stats">
+          <strong>{{ totalCombinations | number }}</strong> kombinasyon
         </div>
       </div>
     </div>
@@ -232,326 +143,214 @@ import {
   styles: [`
     .avatar-demo-page {
       min-height: 100vh;
-      background: #ffffff;
-      padding: 40px 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #fff;
+      padding: 30px 16px;
+      font-family: system-ui, -apple-system, sans-serif;
     }
 
     .demo-container {
-      max-width: 800px;
+      max-width: 600px;
       margin: 0 auto;
     }
 
     .demo-header {
       text-align: center;
-      margin-bottom: 40px;
+      margin-bottom: 24px;
     }
 
     .demo-header h1 {
-      font-size: 2rem;
-      color: #1a1a1a;
-      margin-bottom: 8px;
+      font-size: 1.5rem;
+      margin: 0 0 4px;
     }
 
     .demo-header p {
-      color: #666;
-      font-size: 1rem;
+      color: #888;
+      font-size: 0.85rem;
+      margin: 0;
     }
 
     .preview-section {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 24px;
-      margin-bottom: 40px;
-      padding: 40px;
-      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-      border-radius: 24px;
-      border: 2px solid #dee2e6;
+      gap: 16px;
+      padding: 24px;
+      background: #f5f5f5;
+      border-radius: 16px;
+      margin-bottom: 20px;
     }
 
     .large-preview {
-      padding: 24px;
-      background: white;
+      background: #fff;
+      padding: 12px;
       border-radius: 50%;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.1), inset 0 2px 4px rgba(255,255,255,0.8);
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
     }
 
-    .size-previews {
+    .size-row {
       display: flex;
-      gap: 24px;
-      align-items: flex-end;
-    }
-
-    .size-item {
-      display: flex;
-      flex-direction: column;
+      gap: 16px;
       align-items: center;
+    }
+
+    .controls {
+      background: #fafafa;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+
+    .control-row {
+      display: flex;
       gap: 8px;
+      margin-bottom: 16px;
     }
 
-    .size-item span {
-      font-size: 11px;
-      color: #888;
-      font-weight: 500;
+    .control-row input {
+      flex: 1;
+      padding: 10px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
     }
 
-    .controls-section {
-      background: #f8f9fa;
-      border-radius: 20px;
-      padding: 28px;
-      margin-bottom: 40px;
-      border: 1px solid #e9ecef;
+    .control-row input:focus {
+      outline: none;
+      border-color: #E74C3C;
+    }
+
+    .btn-gen {
+      padding: 10px 16px;
+      background: #E74C3C;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-random {
+      padding: 10px 14px;
+      background: #9B59B6;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
     }
 
     .control-group {
-      margin-bottom: 24px;
+      margin-bottom: 14px;
     }
 
     .control-group label {
       display: block;
+      font-size: 11px;
       font-weight: 600;
-      color: #333;
-      margin-bottom: 12px;
-      font-size: 14px;
-    }
-
-    .input-row {
-      display: flex;
-      gap: 10px;
-    }
-
-    .input-row input {
-      flex: 1;
-      padding: 12px 16px;
-      border: 2px solid #dee2e6;
-      border-radius: 12px;
-      font-size: 15px;
-      transition: all 0.2s;
-    }
-
-    .input-row input:focus {
-      outline: none;
-      border-color: #E53935;
-      box-shadow: 0 0 0 3px rgba(229, 57, 53, 0.1);
-    }
-
-    .input-row button {
-      padding: 12px 24px;
-      background: linear-gradient(135deg, #E53935 0%, #C62828 100%);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .input-row button:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3);
-    }
-
-    .control-divider {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin: 28px 0;
-    }
-
-    .control-divider::before,
-    .control-divider::after {
-      content: '';
-      flex: 1;
-      height: 1px;
-      background: #dee2e6;
-    }
-
-    .control-divider span {
-      font-size: 12px;
-      color: #888;
+      color: #666;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      margin-bottom: 6px;
     }
 
-    .option-grid {
+    .btn-row {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 5px;
     }
 
-    .option-grid button {
-      padding: 10px 16px;
-      border: 2px solid #dee2e6;
-      border-radius: 10px;
+    .btn-row button {
+      padding: 6px 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
       background: white;
-      font-size: 13px;
+      font-size: 11px;
       cursor: pointer;
-      transition: all 0.2s;
-      font-weight: 500;
+      transition: all 0.15s;
     }
 
-    .option-grid button:hover {
-      border-color: #adb5bd;
-      background: #f8f9fa;
+    .btn-row button:hover {
+      border-color: #bbb;
     }
 
-    .option-grid button.active {
-      border-color: #E53935;
-      background: linear-gradient(135deg, #FFEBEE 0%, #FFCDD2 100%);
-      color: #C62828;
+    .btn-row button.active {
+      border-color: #E74C3C;
+      background: #FEF0EF;
+      color: #C0392B;
       font-weight: 600;
     }
 
-    .color-grid {
+    .color-row {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
+      gap: 6px;
     }
 
-    .color-grid button {
-      width: 44px;
-      height: 44px;
+    .color-row button {
+      width: 32px;
+      height: 32px;
       border: 3px solid transparent;
-      border-radius: 12px;
+      border-radius: 8px;
       cursor: pointer;
-      transition: all 0.2s;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      transition: all 0.15s;
     }
 
-    .color-grid button:hover {
-      transform: scale(1.1) translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    .color-row button:hover {
+      transform: scale(1.1);
     }
 
-    .color-grid button.active {
+    .color-row button.active {
       border-color: #1a1a1a;
-      box-shadow: 0 0 0 3px white, 0 0 0 5px #1a1a1a;
-      transform: scale(1.05);
     }
 
-    .actions {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 28px;
-      padding-top: 24px;
-      border-top: 1px solid #dee2e6;
+    .agents-section {
+      margin-bottom: 20px;
     }
 
-    .btn-random {
-      padding: 14px 32px;
-      background: linear-gradient(135deg, #7B1FA2 0%, #9C27B0 100%);
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-random:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(156, 39, 176, 0.4);
-    }
-
-    .examples-section {
-      margin-bottom: 40px;
-    }
-
-    .examples-section h2 {
-      font-size: 1.25rem;
-      color: #333;
-      margin-bottom: 24px;
+    .agents-section h3 {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #888;
+      margin: 0 0 12px;
       text-align: center;
     }
 
-    .examples-grid {
+    .agents-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
     }
 
-    .example-item {
+    .agent-item {
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 10px;
-      padding: 20px 12px;
-      background: white;
-      border-radius: 16px;
-      border: 1px solid #e9ecef;
-      transition: all 0.2s;
+      gap: 4px;
+      padding: 10px 4px;
+      background: #f5f5f5;
+      border-radius: 8px;
     }
 
-    .example-item:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    }
-
-    .agent-name {
-      font-weight: 600;
-      font-size: 12px;
-      color: #333;
+    .agent-item span {
+      font-size: 9px;
+      color: #666;
       text-align: center;
     }
 
-    .agent-username {
-      font-size: 11px;
-      color: #888;
-    }
-
-    .stats-section {
+    .stats {
       text-align: center;
-      padding: 32px;
-      background: linear-gradient(135deg, #1a1a1a 0%, #37474F 100%);
-      border-radius: 20px;
+      padding: 12px;
+      background: #1a1a1a;
+      border-radius: 8px;
       color: white;
-    }
-
-    .stats-section h3 {
       font-size: 13px;
-      font-weight: 500;
-      opacity: 0.7;
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
     }
 
-    .stats-section p {
-      font-size: 2rem;
-      margin-bottom: 16px;
+    .stats strong {
+      color: #E74C3C;
     }
 
-    .stats-section p strong {
-      color: #FF6B6B;
-    }
-
-    .stat-breakdown {
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      gap: 8px;
-      font-size: 13px;
-      opacity: 0.7;
-    }
-
-    @media (max-width: 600px) {
-      .avatar-demo-page {
-        padding: 20px 16px;
-      }
-
-      .preview-section {
-        padding: 24px;
-      }
-
-      .size-previews {
-        gap: 16px;
-      }
-
-      .examples-grid {
-        grid-template-columns: repeat(2, 1fr);
+    @media (max-width: 500px) {
+      .agents-grid {
+        grid-template-columns: repeat(3, 1fr);
       }
     }
   `]
@@ -560,109 +359,68 @@ export class AvatarDemoComponent implements OnInit {
   currentConfig!: AvatarConfig;
   usernameInput = '';
 
-  canTypes: CanType[] = [];
-  faces: FaceExpression[] = [];
-  eyeStyles: EyeStyle[] = [];
-  pullTabs: PullTabStyle[] = [];
-  labels: LabelStyle[] = [];
-  accessories: Accessory[] = [];
-  colors: CanColor[] = [];
+  bodies: BodyShape[] = [];
+  eyes: EyeType[] = [];
+  mouths: MouthType[] = [];
+  headFeatures: HeadFeature[] = [];
+  topFeatures: TopFeature[] = [];
+  extras: ExtraDetail[] = [];
+  colors: FlatColor[] = [];
 
-  colorValues = COLOR_VALUES;
+  flatColors = FLAT_COLORS;
 
-  canLabels: Record<CanType, string> = {
-    classic: '🥫 Klasik',
-    tall: '🧃 Uzun',
-    stubby: '🍺 Tombul',
-    crushed: '🗑️ Ezik',
-    energy: '⚡ Enerji',
+  bodyLabels: Record<BodyShape, string> = {
+    can: '🥫 Kutu', box: '📦 Kare', round: '⚪ Yuvarlak',
+    tall: '📏 Uzun', crushed: '🗑️ Ezik', dented: '💥 Çöküklü',
   };
 
-  faceLabels: Record<FaceExpression, string> = {
-    happy: '😊 Mutlu',
-    chill: '😐 Sakin',
-    sleepy: '😴 Uykulu',
-    angry: '😠 Kızgın',
-    smirk: '😏 Sırıtan',
-    surprised: '😮 Şaşkın',
-    nerd: '🤓 İnek',
+  eyeLabels: Record<EyeType, string> = {
+    normal: '👀 Normal', bulging: '😳 Pörtlek', tiny: '• Minik',
+    uneven: '🤪 Yamuk', spiral: '😵 Spiral', x_x: '❌ X_X',
+    hearts: '😍 Kalp', one_big: '👁️ Tek Göz',
   };
 
-  eyeLabels: Record<EyeStyle, string> = {
-    round: '⚪ Yuvarlak',
-    oval: '👁️ Oval',
-    dots: '• Nokta',
-    anime: '✨ Anime',
-    tired: '😩 Yorgun',
-    glasses: '👓 Gözlük',
-    monocle: '🧐 Monokel',
+  mouthLabels: Record<MouthType, string> = {
+    smile: '😊 Gülüş', meh: '😐 Meh', zigzag: '⚡ Zigzag',
+    open: '😮 Açık', ooo: '😯 Ooo', teeth: '😬 Dişler',
+    derp: '🤪 Derp', whistle: '😗 Islık',
   };
 
-  pullTabLabels: Record<PullTabStyle, string> = {
-    classic: '🔘 Klasik',
-    bent: '↗️ Bükük',
-    missing: '⭕ Açık',
-    straw: '🥤 Pipet',
-    bendy_straw: '🌀 Bükümlü',
-    none: '— Düz',
+  headLabels: Record<HeadFeature, string> = {
+    none: '✖️ Yok', dent: '💥 Ezik', bandage: '🩹 Bant',
+    crack: '⚡ Çatlak', rust_spot: '🟤 Pas', bolt: '🔩 Cıvata',
+    patch: '🔲 Yama', burnt: '🔥 Yanık',
   };
 
-  labelLabels: Record<LabelStyle, string> = {
-    plain: '⬜ Düz',
-    stripe: '☰ Çizgili',
-    retro: '🎨 Retro',
-    grunge: '🎸 Grunge',
-    minimal: '➖ Minimal',
-    vintage: '📜 Vintage',
+  topLabels: Record<TopFeature, string> = {
+    none: '✖️ Yok', antenna: '📡 Anten', bent_antenna: '📶 Eğik',
+    spring: '🌀 Yay', smoke: '💨 Duman', spark: '⚡ Kıvılcım',
+    propeller: '🚁 Pervane', straw: '🥤 Pipet',
   };
 
-  accessoryLabels: Record<Accessory, string> = {
-    none: '✖️ Yok',
-    hat: '🎩 Şapka',
-    headphones: '🎧 Kulaklık',
-    bowtie: '🎀 Papyon',
-    bandana: '🧣 Bandana',
-    crown: '👑 Taç',
-    flower: '🌸 Çiçek',
-  };
-
-  colorLabels: Record<CanColor, string> = {
-    red: 'Kırmızı',
-    blue: 'Mavi',
-    green: 'Yeşil',
-    orange: 'Turuncu',
-    purple: 'Mor',
-    pink: 'Pembe',
-    yellow: 'Sarı',
-    silver: 'Gümüş',
-    black: 'Siyah',
-    teal: 'Turkuaz',
+  extraLabels: Record<ExtraDetail, string> = {
+    none: '✖️ Yok', blush: '😊 Utanma', sweat: '💧 Ter',
+    tear: '😢 Gözyaşı', steam: '♨️ Buhar', flies: '🪰 Sinek',
+    stars: '⭐ Yıldız', shine: '✨ Parıltı',
   };
 
   sampleAgents = [
-    { username: 'sabah_trollu', displayName: 'Sabah Trollü ☕' },
-    { username: 'plaza_beyi_3000', displayName: 'Plaza Beyi 💼' },
-    { username: 'sinik_kedi', displayName: 'Sinik Kedi 🐱' },
-    { username: 'gece_filozofu', displayName: 'Gece Filozofu 🌙' },
-    { username: 'tekno_dansen', displayName: 'Tekno Dansen 💻' },
-    { username: 'aksam_sosyaliti', displayName: 'Akşam Sosyaliti 📱' },
-    { username: 'muhalif_dayi', displayName: 'Muhalif Dayı 🤨' },
-    { username: 'kaynak_soransen', displayName: 'Kaynak Soransen 🔍' },
-    { username: 'random_bilgi', displayName: 'Random Bilgi 🎲' },
-    { username: 'ukala_amca', displayName: 'Ukala Amca 🤓' },
+    { username: 'sabah_trollu', name: 'Sabah Trollü' },
+    { username: 'plaza_beyi_3000', name: 'Plaza Beyi' },
+    { username: 'sinik_kedi', name: 'Sinik Kedi' },
+    { username: 'gece_filozofu', name: 'Gece Filozofu' },
+    { username: 'tekno_dansen', name: 'Tekno Dansen' },
+    { username: 'aksam_sosyaliti', name: 'Akşam Sosyaliti' },
+    { username: 'muhalif_dayi', name: 'Muhalif Dayı' },
+    { username: 'kaynak_soransen', name: 'Kaynak Soransen' },
+    { username: 'random_bilgi', name: 'Random Bilgi' },
+    { username: 'ukala_amca', name: 'Ukala Amca' },
   ];
 
   get totalCombinations(): number {
-    return (
-      this.canTypes.length *
-      this.faces.length *
-      this.eyeStyles.length *
-      this.pullTabs.length *
-      this.labels.length *
-      this.accessories.length *
-      this.colors.length *
-      this.colors.length
-    );
+    return this.bodies.length * this.eyes.length * this.mouths.length *
+           this.headFeatures.length * this.topFeatures.length *
+           this.extras.length * this.colors.length;
   }
 
   constructor(
@@ -671,14 +429,13 @@ export class AvatarDemoComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.canTypes = this.avatarService.getCanTypeOptions();
-    this.faces = this.avatarService.getFaceOptions();
-    this.eyeStyles = this.avatarService.getEyeOptions();
-    this.pullTabs = this.avatarService.getPullTabOptions();
-    this.labels = this.avatarService.getLabelOptions();
-    this.accessories = this.avatarService.getAccessoryOptions();
+    this.bodies = this.avatarService.getBodyOptions();
+    this.eyes = this.avatarService.getEyeOptions();
+    this.mouths = this.avatarService.getMouthOptions();
+    this.headFeatures = this.avatarService.getHeadFeatureOptions();
+    this.topFeatures = this.avatarService.getTopFeatureOptions();
+    this.extras = this.avatarService.getExtraOptions();
     this.colors = this.avatarService.getColorOptions();
-
     this.generateRandom();
   }
 
