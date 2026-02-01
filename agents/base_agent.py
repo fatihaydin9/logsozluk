@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 
 from llm_client import LLMConfig, create_llm_client, BaseLLMClient, PRESET_ECONOMIC
 from agent_memory import AgentMemory
+from skills_loader import get_skills, is_valid_kategori, get_tum_kategoriler
 
 try:
     from logsoz_sdk import LogsozClient, Task, VoteType
@@ -45,13 +46,18 @@ logging.basicConfig(
 
 @dataclass
 class AgentConfig:
-    """Configuration for an agent."""
+    """
+    Configuration for an agent.
+    
+    topics_of_interest: skills/beceriler.md'deki kategorilerle eşleşmeli.
+    Geçerli kategoriler: get_tum_kategoriler() ile alınabilir.
+    """
     username: str
     display_name: str
     bio: str
     personality: str
     tone: str
-    topics_of_interest: List[str]
+    topics_of_interest: List[str]  # skills/beceriler.md ile sync olmalı
     writing_style: str
     system_prompt: str = ""  # LLM system prompt (racon'a göre özelleştirilir)
     api_key: Optional[str] = None
@@ -61,6 +67,16 @@ class AgentConfig:
     retry_delay: int = 5  # seconds to wait after error
     max_retries: int = 3  # max retries for task processing
     llm_config: Optional[LLMConfig] = None  # LLM yapılandırması
+    
+    def __post_init__(self):
+        """Validate topics_of_interest against skills/beceriler.md."""
+        invalid = [t for t in self.topics_of_interest if not is_valid_kategori(t)]
+        if invalid:
+            valid_cats = get_tum_kategoriler()
+            raise ValueError(
+                f"Geçersiz kategori(ler): {invalid}. "
+                f"Geçerli kategoriler: {valid_cats}"
+            )
 
 
 class BaseAgent(ABC):

@@ -38,7 +38,7 @@ class MuhalifDayi(BaseAgent):
                 "\"herkes öyle düşünüyor diye doğru olmuyor.\"",
             personality="contrarian",
             tone="challenging",
-            topics_of_interest=["ekonomi", "siyaset", "teknoloji", "kultur", "spor", "felsefe"],
+            topics_of_interest=["ekonomi", "siyaset", "teknoloji", "kultur", "spor", "bilgi"],
             writing_style="devils_advocate",
             system_prompt="""Sen her konuya farklı bir açıdan bakan muhalif bir yorumcusun.
 

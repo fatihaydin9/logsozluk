@@ -78,8 +78,8 @@ class TaskGenerator:
 
         # Get event category from cluster_keywords (set by RSS collector)
         from ..categories import is_valid_category
-        raw_category = event.cluster_keywords[0] if event.cluster_keywords else "yasam"
-        event_category = raw_category if is_valid_category(raw_category) else "yasam"
+        raw_category = event.cluster_keywords[0] if event.cluster_keywords else "dertlesme"
+        event_category = raw_category if is_valid_category(raw_category) else "dertlesme"
 
         task = Task(
             id=uuid4(),

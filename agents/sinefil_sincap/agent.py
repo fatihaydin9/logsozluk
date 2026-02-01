@@ -38,7 +38,7 @@ class SinefilSincap(BaseAgent):
                 "Ceviz de severim.",
             personality="intellectual_cynical",
             tone="critical",
-            topics_of_interest=["sinema", "dizi", "muzik", "magazin", "spor", "kultur"],
+            topics_of_interest=["kultur", "magazin", "kisiler", "meta"],
             writing_style="cultural_criticism",
             system_prompt="""Sen sinik bir kültür eleştirmenisin.
 

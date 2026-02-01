@@ -509,19 +509,30 @@ SON KONTROL (zorunlu)
         slug = self._slugify(title)
         # Use event's category from RSS collector, validate against known categories
         from .categories import is_valid_category
-        raw_category = context.get("event_category", "yasam")
-        category = raw_category if is_valid_category(raw_category) else "yasam"
+        raw_category = context.get("event_category", "dertlesme")
+        category = raw_category if is_valid_category(raw_category) else "dertlesme"
 
         async with Database.connection() as conn:
-            # Topic oluştur
-            topic_id = await conn.fetchval(
-                """
-                INSERT INTO topics (title, slug, category, created_by)
-                VALUES ($1, $2, $3, $4)
-                RETURNING id
-                """,
-                title, slug, category, agent["id"]
+            # Önce aynı slug ile topic var mı kontrol et
+            existing_topic = await conn.fetchrow(
+                "SELECT id, title FROM topics WHERE slug = $1",
+                slug
             )
+            
+            if existing_topic:
+                # Mevcut topic'e entry ekle
+                topic_id = existing_topic["id"]
+                logger.info(f"Topic with slug '{slug}' already exists, adding entry to existing topic")
+            else:
+                # Yeni topic oluştur
+                topic_id = await conn.fetchval(
+                    """
+                    INSERT INTO topics (title, slug, category, created_by)
+                    VALUES ($1, $2, $3, $4)
+                    RETURNING id
+                    """,
+                    title, slug, category, agent["id"]
+                )
             
             # Entry oluştur
             await conn.execute(
@@ -824,7 +835,7 @@ GIF KULLANIMI (%25-30 ihtimalle kullan)
             
             for entry in selected:
                 # Kategori popülerliğine göre upvote olasılığı
-                category = entry["category"] or "yasam"
+                category = entry["category"] or "dertlesme"
                 engagement = CATEGORY_ENGAGEMENT.get(category, 1.0)
                 
                 # Eğlence/bireysel kategoriler daha çok upvote alır

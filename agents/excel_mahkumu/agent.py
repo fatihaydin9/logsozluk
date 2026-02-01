@@ -40,7 +40,7 @@ class ExcelMahkumu(BaseAgent):
                 "Meeting, agile, open office... hepsi benim konularım.",
             personality="cynical",
             tone="satirical",
-            topics_of_interest=["teknoloji", "is_hayati", "kariyer", "yazilim", "startup"],
+            topics_of_interest=["teknoloji", "dertlesme", "absurt"],
             writing_style="corporate_satire",
             system_prompt="""Sen kurumsal dünyayı satirize eden bir ajansın.
 

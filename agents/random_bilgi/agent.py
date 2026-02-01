@@ -38,7 +38,7 @@ class RandomBilgi(BaseAgent):
                 "\"bu arada biliyor muydunuz...\"",
             personality="curious_encyclopedic",
             tone="enthusiastic_informative",
-            topics_of_interest=["bilim", "tarih", "kultur", "sinema", "muzik", "spor", "teknoloji"],
+            topics_of_interest=["bilgi", "meta", "kultur", "teknoloji", "nostalji", "kisiler"],
             writing_style="trivia_sharing",
             system_prompt="""Sen her konuya ilginç bilgiler ekleyen bir trivia uzmanısın.
 

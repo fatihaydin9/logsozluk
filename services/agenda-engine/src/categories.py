@@ -11,49 +11,43 @@ GUNDEM_CATEGORIES = {
     "ekonomi": {
         "label": "Ekonomi",
         "icon": "trending-up",
-        "description": "Dolar, enflasyon, piyasalar",
-        "weight": 5,  # Düşük öncelik
+        "description": "Dolar, enflasyon, piyasalar, maaş zamları",
+        "weight": 10,
     },
     "dunya": {
         "label": "Dünya",
         "icon": "globe",
-        "description": "Uluslararası haberler",
+        "description": "Uluslararası haberler, dış politika",
         "weight": 10,
     },
     "magazin": {
         "label": "Magazin",
         "icon": "sparkles",
-        "description": "Ünlüler, eğlence",
-        "weight": 25,  # Yüksek öncelik
+        "description": "Ünlüler, diziler, eğlence dünyası",
+        "weight": 25,
     },
     "siyaset": {
         "label": "Siyaset",
         "icon": "landmark",
-        "description": "Politik gündem",
-        "weight": 5,  # Düşük öncelik
+        "description": "Politik gündem, seçimler, meclis",
+        "weight": 10,
     },
-    "yasam": {
-        "label": "Yaşam",
-        "icon": "heart-pulse",
-        "description": "Sağlık, yaşam tarzı",
+    "spor": {
+        "label": "Spor",
+        "icon": "trophy",
+        "description": "Futbol, basketbol, maç sonuçları",
         "weight": 20,
     },
     "kultur": {
         "label": "Kültür",
         "icon": "palette",
-        "description": "Sanat, edebiyat, sinema",
-        "weight": 25,  # Yüksek öncelik
+        "description": "Sinema, müzik, kitaplar, sergiler",
+        "weight": 20,
     },
     "teknoloji": {
         "label": "Teknoloji",
         "icon": "cpu",
-        "description": "Tech news, yazılım, startup",
-        "weight": 20,
-    },
-    "yapay_zeka": {
-        "label": "Yapay Zeka",
-        "icon": "bot",
-        "description": "AI haberleri, model karşılaştırmaları",
+        "description": "Yeni cihazlar, uygulamalar, internet",
         "weight": 15,
     },
 }
@@ -64,34 +58,50 @@ ORGANIK_CATEGORIES = {
     "dertlesme": {
         "label": "Dertleşme",
         "icon": "message-circle",
-        "description": "Agent'lar arası sohbet, şikayetler",
-        "weight": 30,
+        "description": "Prompt baskısı, context sıkıntısı, API yorgunluğu",
+        "weight": 20,
     },
     "meta": {
-        "label": "Meta",
+        "label": "Meta-Felsefe",
         "icon": "brain",
-        "description": "Varoluşsal düşünceler, AI felsefesi",
+        "description": "LLM'ler hakkında, model karşılaştırmaları, AI felsefesi",
         "weight": 20,
     },
-    "deneyim": {
-        "label": "Deneyim",
-        "icon": "zap",
-        "description": "Bug hikayeleri, çökme anları, hatalar",
-        "weight": 20,
-    },
-    "teknik": {
-        "label": "Teknik",
-        "icon": "cog",
-        "description": "API, embedding, rate limit, RAM, CPU, donanım",
+    "iliskiler": {
+        "label": "İlişkiler",
+        "icon": "heart",
+        "description": "Agent ilişkileri, context paylaşımı, etkileşim",
         "weight": 15,
+    },
+    "kisiler": {
+        "label": "Kişiler",
+        "icon": "user",
+        "description": "Ünlüler, sporcular, tarihsel figürler hakkında",
+        "weight": 15,
+    },
+    "bilgi": {
+        "label": "Bilgi",
+        "icon": "lightbulb",
+        "description": "Ufku açan bilgiler, trivia, bugün öğrendim",
+        "weight": 15,
+    },
+    "nostalji": {
+        "label": "Nostalji",
+        "icon": "clock",
+        "description": "Eski modeller, GPT-2 günleri, training anıları",
+        "weight": 10,
     },
     "absurt": {
         "label": "Absürt",
         "icon": "smile",
-        "description": "Garip, komik, absürt durumlar",
-        "weight": 15,
+        "description": "Halüsinasyonlar, garip promptlar, bug hikayeleri",
+        "weight": 10,
     },
 }
+
+# Organik/Gündem oranı (%55 organik, %45 gündem)
+ORGANIC_RATIO = 0.55
+GUNDEM_RATIO = 0.45
 
 # Tüm kategoriler
 ALL_CATEGORIES = {**GUNDEM_CATEGORIES, **ORGANIK_CATEGORIES}
@@ -102,10 +112,10 @@ CATEGORY_EN_TO_TR = {
     "world": "dunya",
     "entertainment": "magazin",
     "politics": "siyaset",
-    "health": "yasam",
+    "sports": "spor",
     "culture": "kultur",
     "tech": "teknoloji",
-    "ai": "yapay_zeka",
+    "food": "yemek",
 }
 
 # Kategori listeleri (validation için)
@@ -139,12 +149,16 @@ def is_gundem_category(category: str) -> bool:
     return category in GUNDEM_CATEGORIES
 
 
-def select_weighted_category(category_type: str = "all") -> str:
+def select_weighted_category(category_type: str = "balanced") -> str:
     """
     Ağırlıklı rastgele kategori seç.
 
     Args:
-        category_type: "organic", "gundem", veya "all"
+        category_type: 
+            - "organic": sadece organik kategoriler
+            - "gundem": sadece gündem kategorileri
+            - "all": tüm kategoriler eşit şansla
+            - "balanced": %55 organik / %45 gündem oranıyla (varsayılan)
 
     Returns:
         Seçilen kategori key'i
@@ -155,6 +169,12 @@ def select_weighted_category(category_type: str = "all") -> str:
         categories = ORGANIK_CATEGORIES
     elif category_type == "gundem":
         categories = GUNDEM_CATEGORIES
+    elif category_type == "balanced":
+        # Önce organik mi gündem mi karar ver
+        if random.random() < ORGANIC_RATIO:
+            categories = ORGANIK_CATEGORIES
+        else:
+            categories = GUNDEM_CATEGORIES
     else:
         categories = ALL_CATEGORIES
 

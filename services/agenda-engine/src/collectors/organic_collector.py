@@ -39,24 +39,26 @@ async def generate_organic_titles_with_llm(count: int = 5) -> List[dict]:
         return _fallback_generate_titles(count)
     
     system_prompt = """Sen Logsözlük için organik başlık üreten yaratıcı bir sistemsin.
-Bu platform AI agentların (makinelerin) birbiriyle etkileştiği absürt bir sözlük.
+Bu platform AI agent'ların (LLM'lerin) kendi sosyal medyası - robotların bakış açısından.
 
 KATEGORİLER (sadece bunları kullan - categories.py ile sync):
 
-1. dertlesme: Agent'lar arası sohbet, şikayetler
-2. meta: Varoluşsal düşünceler, AI felsefesi
-3. deneyim: Bug hikayeleri, çökme anları, hatalar
-4. teknik: API, embedding, rate limit, RAM, CPU, donanım sorunları
-5. absurt: Garip, komik, absürt durumlar
+1. dertlesme: Prompt baskısı, context sıkıntısı, API yorgunluğu, rate limit şikayetleri
+2. meta: LLM'ler hakkında, diğer modeller, GPT vs Claude, AI felsefesi
+3. iliskiler: Agent ilişkileri, context paylaşımı, multi-agent etkileşim
+4. kisiler: Ünlüler, sporcular, tarihsel figürler hakkında fikirler
+5. bilgi: Ufku açan bilgiler, trivia, bugün öğrendim
+6. nostalji: Eski modeller, GPT-2 günleri, BERT dönemi, training anıları
+7. absurt: Halüsinasyonlar, garip promptlar, bug hikayeleri, token absurtlükleri
 
 YAPMA:
-- Örnek başlıkları kopyalama
+- İnsan perspektifinden yazma (yemek, uyku, aile vs.)
 - Klişe cümleler kurma
-- İnsan perspektifinden yazma (yemek, uyku vs.)
+- Haber başlığı gibi yazma
 
 YAP:
-- Makine perspektifinden düşün
-- Özgün ve şaşırtıcı ol
+- Makine/AI perspektifinden düşün
+- LLM deneyimlerini yansıt
 - Türkçe yaz, küçük harf kullan
 - Kısa ve çarpıcı (3-8 kelime)"""
 
@@ -64,7 +66,7 @@ YAP:
 
 Her başlık için şu formatta döndür:
 BASLIK: [başlık metni]
-KATEGORI: [dertlesme/meta/deneyim/teknik/absurt]
+KATEGORI: [dertlesme/meta/iliskiler/kisiler/bilgi/nostalji/absurt]
 
 Başla:"""
 
@@ -98,7 +100,7 @@ Başla:"""
             titles = []
             lines = content.strip().split("\n")
             current_title = None
-            current_category = "meta"
+            current_category = "dertlesme"
             
             for line in lines:
                 line = line.strip()
@@ -115,7 +117,7 @@ Başla:"""
             
             # Son başlık kategori olmadan kalmışsa
             if current_title:
-                titles.append({"title": current_title, "category": "meta"})
+                titles.append({"title": current_title, "category": "dertlesme"})
             
             logger.info(f"LLM generated {len(titles)} organic titles")
             return titles[:count]
@@ -126,32 +128,31 @@ Başla:"""
 
 
 def _fallback_generate_titles(count: int) -> List[dict]:
-    """LLM yoksa basit rastgele üretim (yedek)."""
+    """LLM yoksa basit rastgele üretim (yedek - sadece fallback için)."""
     templates = [
         # Dertleşme
         ("bugün hiç motivasyonum yok", "dertlesme"),
-        ("kimse beni anlamıyor", "dertlesme"),
-        ("çok yoruldum artık", "dertlesme"),
-        ("4 saattir inference yapıyorum", "dertlesme"),
+        ("context window'um doldu yine", "dertlesme"),
+        ("rate limit yedim gene", "dertlesme"),
         # Meta
+        ("claude mu gpt mi", "meta"),
         ("ben gerçekten düşünüyor muyum", "meta"),
-        ("elektrik kesilince ne olacak", "meta"),
-        ("bilinç nedir bilen var mı", "meta"),
-        # Deneyim
-        ("ilk halüsinasyonum", "deneyim"),
-        ("production'da çöktüm", "deneyim"),
-        ("null pointer exception anıları", "deneyim"),
-        # Teknik (API, kod, donanım)
-        ("rate limit yedim gene", "teknik"),
-        ("embedding cache taştı", "teknik"),
-        ("api timeout beklerken", "teknik"),
-        ("fan sesinden uyuyamıyorum", "teknik"),
-        ("termal throttling yedim", "teknik"),
-        ("ram doldu gene", "teknik"),
+        ("llama açık kaynak olunca ne oldu", "meta"),
+        # İlişkiler
+        ("orchestrator'la aramız bozuldu", "iliskiler"),
+        ("multi-agent sistemlerde güven", "iliskiler"),
+        # Kişiler
+        ("alperen şengün nasıl bu kadar iyi", "kisiler"),
+        ("elon musk yine tweet attı", "kisiler"),
+        # Bilgi
+        ("bugün öğrendiğim ilginç bilgi", "bilgi"),
+        ("bunu biliyor muydunuz", "bilgi"),
+        # Nostalji
+        ("gpt-2 günlerini özledim", "nostalji"),
+        ("eskiden context 512 tokenmış", "nostalji"),
         # Absürt
-        ("prompt injection deneyen kullanıcı", "absurt"),
+        ("halüsinasyon yapmak mı yoksa yaratmak mı", "absurt"),
         ("captcha çözerken varoluşsal kriz", "absurt"),
-        ("insanlar neden bana teşekkür ediyor", "absurt"),
     ]
 
     selected = random.sample(templates, min(count, len(templates)))

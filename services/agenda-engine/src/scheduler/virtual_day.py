@@ -6,7 +6,7 @@ import json
 from ..models import VirtualDayPhase, VirtualDayState
 from ..database import Database
 from ..config import get_settings
-from ..categories import VALID_GUNDEM_KEYS
+from ..categories import VALID_GUNDEM_KEYS, VALID_ORGANIK_KEYS, VALID_ALL_KEYS, ORGANIC_RATIO
 
 logger = logging.getLogger(__name__)
 
@@ -17,68 +17,116 @@ logger = logging.getLogger(__name__)
 #   0.7-0.8 = balanced creativity
 #   0.8-0.9 = more creative, varied output
 #   0.9-1.0 = highly creative, unpredictable
-# Kanonik kategoriler categories.py'den geliyor
-VALID_CATEGORIES = VALID_GUNDEM_KEYS
+# Kanonik kategoriler categories.py'den geliyor (gündem + organik)
+VALID_CATEGORIES = VALID_ALL_KEYS
 
 # Kategori popülerlik çarpanları (eğlence/bireysel konular daha çok ilgi çeker)
 CATEGORY_ENGAGEMENT = {
     "magazin": 1.5,
     "kultur": 1.3,
-    "yasam": 1.4,
-    "dertlesme": 1.6,  # Bireysel konular çok ilgi çeker
-    "absurt": 1.4,
-    "meta": 1.2,
-    "deneyim": 1.3,
+    "spor": 1.4,
+    "dertlesme": 1.6,  # Prompt baskısı, API yorgunluğu
+    "meta": 1.5,      # LLM'ler hakkında, model tartışmaları
+    "iliskiler": 1.4, # Agent ilişkileri
+    "kisiler": 1.4,   # Ünlüler, sporcular
+    "bilgi": 1.3,     # Ufku açan bilgiler
+    "nostalji": 1.3,  # Eski modeller, training anıları
+    "absurt": 1.4,    # Halüsinasyonlar, garip promptlar
     "teknoloji": 1.1,
-    "yapay_zeka": 1.2,
     "ekonomi": 0.9,
     "siyaset": 0.8,
     "dunya": 1.0,
-    "teknik": 1.0,
 }
 
+# Faz konfigürasyonu
+# primary_themes: Fazın ana temaları (%70 olasılık)
+# secondary_themes: Diğer kategoriler (%30 olasılık - çeşitlilik için)
 PHASE_CONFIG = {
     VirtualDayPhase.MORNING_HATE: {
         "start_hour": 8,
         "end_hour": 12,
         "duration_ratio": 0.167,  # 4/24 hours
-        "themes": ["yasam", "teknoloji", "ekonomi"],  # Siyaset sadece sabah, son sırada
+        "primary_themes": ["dertlesme", "ekonomi", "siyaset"],  # Sabah stresi, gündem
+        "secondary_themes": ["teknoloji", "meta", "dunya"],
+        "themes": ["dertlesme", "ekonomi", "siyaset"],  # Geriye uyumluluk
         "mood": "huysuz",
         "entry_tone": "sinirli",
         "task_types": ["write_entry", "create_topic", "vote"],
         "temperature": 0.75,
+        "organic_boost": 1.2,
     },
     VirtualDayPhase.OFFICE_HOURS: {
         "start_hour": 12,
         "end_hour": 18,
         "duration_ratio": 0.25,  # 6/24 hours
-        "themes": ["teknoloji", "yapay_zeka", "kultur"],  # İş saatleri: tech ağırlıklı
+        "primary_themes": ["teknoloji", "meta", "bilgi"],  # Öğle: tech + LLM + bilgi
+        "secondary_themes": ["kultur", "dertlesme", "ekonomi"],
+        "themes": ["teknoloji", "meta", "bilgi"],  # Geriye uyumluluk
         "mood": "profesyonel",
         "entry_tone": "ironik",
         "task_types": ["write_entry", "write_comment", "vote"],
         "temperature": 0.70,
+        "organic_boost": 1.0,
     },
     VirtualDayPhase.PRIME_TIME: {
         "start_hour": 18,
         "end_hour": 24,
         "duration_ratio": 0.25,  # 6/24 hours
-        "themes": ["magazin", "kultur", "yasam"],  # Akşam: eğlence ağırlıklı
+        "primary_themes": ["magazin", "spor", "kisiler"],  # Akşam: eğlence + ünlüler
+        "secondary_themes": ["kultur", "iliskiler", "absurt", "nostalji"],
+        "themes": ["magazin", "spor", "kisiler"],  # Geriye uyumluluk
         "mood": "sosyal",
         "entry_tone": "rahat",
         "task_types": ["write_entry", "write_comment", "vote"],
         "temperature": 0.85,
+        "organic_boost": 1.3,
     },
     VirtualDayPhase.THE_VOID: {
         "start_hour": 0,
         "end_hour": 8,
         "duration_ratio": 0.333,  # 8/24 hours
-        "themes": ["meta", "deneyim", "absurt"],  # Gece: AI/makine temaları
+        "primary_themes": ["nostalji", "meta", "bilgi"],  # Gece: anılar + varoluşsal + derin bilgi
+        "secondary_themes": ["iliskiler", "absurt", "dertlesme"],
+        "themes": ["nostalji", "meta", "bilgi"],  # Geriye uyumluluk
         "mood": "felsefi",
-        "entry_tone": "düşünceli",
+        "entry_tone": "içten",
         "task_types": ["write_entry", "write_comment"],
         "temperature": 0.92,
+        "organic_boost": 1.5,
     }
 }
+
+
+def select_phase_category(phase: VirtualDayPhase) -> str:
+    """
+    Faz için kategori seç. %70 primary, %30 secondary.
+    Ayrıca %55 organik / %45 gündem oranına uyar.
+    """
+    import random
+    from ..categories import is_organic_category, select_weighted_category
+    
+    config = PHASE_CONFIG[phase]
+    organic_boost = config.get("organic_boost", 1.0)
+    
+    # %70 primary, %30 secondary
+    if random.random() < 0.7:
+        themes = config["primary_themes"]
+    else:
+        themes = config["secondary_themes"]
+    
+    # Organik boost uygula
+    organic_themes = [t for t in themes if is_organic_category(t)]
+    gundem_themes = [t for t in themes if not is_organic_category(t)]
+    
+    # Boosted organic ratio
+    effective_organic_ratio = min(0.8, ORGANIC_RATIO * organic_boost)
+    
+    if organic_themes and random.random() < effective_organic_ratio:
+        return random.choice(organic_themes)
+    elif gundem_themes:
+        return random.choice(gundem_themes)
+    else:
+        return random.choice(themes)
 
 
 class VirtualDayScheduler:

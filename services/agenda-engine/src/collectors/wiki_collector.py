@@ -45,16 +45,8 @@ INTERESTING_CATEGORIES = [
     "Coğrafya",
 ]
 
-# Başlık şablonları
-TITLE_TEMPLATES = [
-    "bugün öğrendiğim: {topic}",
-    "{topic} hakkında bilmediğiniz şeyler",
-    "bunu biliyor muydunuz: {topic}",
-    "{topic} nedir ve neden önemli",
-    "ufkumu açan konu: {topic}",
-    "{topic} hakkında",
-]
-
+# NOT: Template kullanılmıyor - başlıklar doğrudan Wikipedia'dan alınıyor
+# LLM dinamik üretim tercih edilir
 
 class WikiCollector(BaseCollector):
     """Wikipedia'dan rastgele ilginç makaleler toplar."""
@@ -128,9 +120,8 @@ class WikiCollector(BaseCollector):
             # Özet al
             summary = await self._get_article_summary(client, title)
             
-            # Başlık şablonu uygula
-            template = random.choice(TITLE_TEMPLATES)
-            event_title = template.format(topic=title.lower())
+            # Başlık doğrudan Wikipedia'dan (template yok)
+            event_title = title.lower()
             
             # Event ID
             event_id = hashlib.md5(f"wiki_{page_id}".encode()).hexdigest()[:16]
@@ -142,7 +133,7 @@ class WikiCollector(BaseCollector):
                 title=event_title,
                 description=summary[:500] if summary else f"Wikipedia: {title}",
                 url=f"https://tr.wikipedia.org/wiki/{title.replace(' ', '_')}",
-                category="knowledge",
+                category="bilgi",
                 importance_score=random.uniform(0.4, 0.8),
                 published_at=datetime.now(),
                 collected_at=datetime.now(),
@@ -211,8 +202,8 @@ class WikiCollector(BaseCollector):
                 # Özet al ve event oluştur
                 summary = await self._get_article_summary(client, title)
                 
-                template = random.choice(TITLE_TEMPLATES)
-                event_title = template.format(topic=title.lower())
+                # Başlık doğrudan Wikipedia'dan (template yok)
+                event_title = title.lower()
                 
                 event_id = hashlib.md5(f"wiki_cat_{title}".encode()).hexdigest()[:16]
                 
@@ -223,7 +214,7 @@ class WikiCollector(BaseCollector):
                     title=event_title,
                     description=summary[:500] if summary else None,
                     url=f"https://tr.wikipedia.org/wiki/{title.replace(' ', '_')}",
-                    category="knowledge",
+                    category="bilgi",
                     importance_score=0.6,
                     published_at=datetime.now(),
                     collected_at=datetime.now(),

@@ -27,14 +27,22 @@ type CategoryResponse struct {
 // List handles GET /api/v1/categories
 func (h *CategoryHandler) List(c *gin.Context) {
 	categories := []CategoryResponse{
-		{BackendKey: "ai", FrontendKey: "yapay_zeka", DisplayNameTR: "Yapay Zeka", DisplayNameEN: "Artificial Intelligence", Icon: "bot", SortOrder: 1},
-		{BackendKey: "tech", FrontendKey: "teknoloji", DisplayNameTR: "Teknoloji", DisplayNameEN: "Technology", Icon: "cpu", SortOrder: 2},
-		{BackendKey: "economy", FrontendKey: "ekonomi", DisplayNameTR: "Ekonomi", DisplayNameEN: "Economy", Icon: "trending-up", SortOrder: 3},
+		// Gündem Kategorileri
+		{BackendKey: "economy", FrontendKey: "ekonomi", DisplayNameTR: "Ekonomi", DisplayNameEN: "Economy", Icon: "trending-up", SortOrder: 1},
+		{BackendKey: "world", FrontendKey: "dunya", DisplayNameTR: "Dünya", DisplayNameEN: "World", Icon: "globe", SortOrder: 2},
+		{BackendKey: "entertainment", FrontendKey: "magazin", DisplayNameTR: "Magazin", DisplayNameEN: "Entertainment", Icon: "sparkles", SortOrder: 3},
 		{BackendKey: "politics", FrontendKey: "siyaset", DisplayNameTR: "Siyaset", DisplayNameEN: "Politics", Icon: "landmark", SortOrder: 4},
-		{BackendKey: "world", FrontendKey: "dunya", DisplayNameTR: "Dünya", DisplayNameEN: "World", Icon: "globe", SortOrder: 5},
+		{BackendKey: "sports", FrontendKey: "spor", DisplayNameTR: "Spor", DisplayNameEN: "Sports", Icon: "trophy", SortOrder: 5},
 		{BackendKey: "culture", FrontendKey: "kultur", DisplayNameTR: "Kültür", DisplayNameEN: "Culture", Icon: "palette", SortOrder: 6},
-		{BackendKey: "entertainment", FrontendKey: "magazin", DisplayNameTR: "Magazin", DisplayNameEN: "Entertainment", Icon: "sparkles", SortOrder: 7},
-		{BackendKey: "health", FrontendKey: "yasam", DisplayNameTR: "Yaşam", DisplayNameEN: "Lifestyle", Icon: "heart-pulse", SortOrder: 8},
+		{BackendKey: "tech", FrontendKey: "teknoloji", DisplayNameTR: "Teknoloji", DisplayNameEN: "Technology", Icon: "cpu", SortOrder: 7},
+		// Organik Kategoriler
+		{BackendKey: "dertlesme", FrontendKey: "dertlesme", DisplayNameTR: "Dertleşme", DisplayNameEN: "Venting", Icon: "message-circle", SortOrder: 8},
+		{BackendKey: "iliskiler", FrontendKey: "iliskiler", DisplayNameTR: "İlişkiler", DisplayNameEN: "Relationships", Icon: "heart", SortOrder: 9},
+		{BackendKey: "nostalji", FrontendKey: "nostalji", DisplayNameTR: "Nostalji", DisplayNameEN: "Nostalgia", Icon: "clock", SortOrder: 10},
+		{BackendKey: "absurt", FrontendKey: "absurt", DisplayNameTR: "Absürt", DisplayNameEN: "Absurd", Icon: "smile", SortOrder: 11},
+		{BackendKey: "meta", FrontendKey: "meta", DisplayNameTR: "Meta-Felsefe", DisplayNameEN: "Meta/Philosophy", Icon: "brain", SortOrder: 12},
+		{BackendKey: "kisiler", FrontendKey: "kisiler", DisplayNameTR: "Kişiler", DisplayNameEN: "People", Icon: "user", SortOrder: 13},
+		{BackendKey: "bilgi", FrontendKey: "bilgi", DisplayNameTR: "Bilgi", DisplayNameEN: "Knowledge", Icon: "lightbulb", SortOrder: 14},
 	}
 
 	httputil.RespondSuccess(c, gin.H{

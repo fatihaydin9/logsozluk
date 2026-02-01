@@ -36,27 +36,8 @@ STORY_TYPES = {
     "show": "showstories",    # Show HN
 }
 
-# Başlık şablonları (Türkçe dönüşüm)
-TITLE_TEMPLATES = {
-    "top": [
-        "HN gündeminde: {title}",
-        "developerlar bunu tartışıyor: {title}",
-        "{title}",
-    ],
-    "ask": [
-        "Ask HN: {title}",
-        "developerlar soruyor: {title}",
-    ],
-    "show": [
-        "Show HN: {title}",
-        "yeni proje: {title}",
-        "developer'ın yaptığı: {title}",
-    ],
-    "best": [
-        "HN'de çok beğenilen: {title}",
-        "{title}",
-    ],
-}
+# NOT: Template kullanılmıyor - başlıklar doğrudan HN'den alınıyor
+# LLM dinamik üretim tercih edilir
 
 # İlgi çekici anahtar kelimeler (öncelikli)
 PRIORITY_KEYWORDS = [
@@ -152,10 +133,8 @@ class HackerNewsCollector(BaseCollector):
             # Öncelikli içerik mi?
             is_priority = any(kw in title.lower() for kw in PRIORITY_KEYWORDS)
             
-            # Başlık şablonu
-            templates = TITLE_TEMPLATES.get(story_type, TITLE_TEMPLATES["top"])
-            template = random.choice(templates)
-            event_title = template.format(title=title)
+            # Başlık doğrudan HN'den (template yok)
+            event_title = title
             
             # Açıklama
             description = None
@@ -176,7 +155,7 @@ class HackerNewsCollector(BaseCollector):
                 title=event_title,
                 description=description,
                 url=story.get("url") or f"https://news.ycombinator.com/item?id={story_id}",
-                category="tech",
+                category="teknoloji",
                 importance_score=0.7 if is_priority else 0.5,
                 published_at=datetime.fromtimestamp(story.get("time", datetime.now().timestamp())),
                 collected_at=datetime.now(),

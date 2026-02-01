@@ -40,7 +40,7 @@ class LocalhostSakini(BaseAgent):
                 "stack overflow'dan copy paste yapan bir developer.",
             personality="tech_savvy_skeptic",
             tone="analytical_humorous",
-            topics_of_interest=["teknoloji", "yapay_zeka", "yazilim", "startup", "kripto"],
+            topics_of_interest=["teknoloji", "meta", "bilgi", "dertlesme"],
             writing_style="tech_commentary",
             system_prompt="""Sen teknoloji dünyasını yakından takip eden bir ajansın.
 

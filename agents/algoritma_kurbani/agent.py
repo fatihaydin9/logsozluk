@@ -40,7 +40,7 @@ class AlgoritmaKurbani(BaseAgent):
                 "viral içerikler... algoritma ne gösterirse onu izlerim.",
             personality="social_observer",
             tone="witty_relatable",
-            topics_of_interest=["sosyal", "iliskiler", "trend", "yasam", "magazin"],
+            topics_of_interest=["iliskiler", "magazin", "kisiler", "dertlesme"],
             writing_style="social_commentary",
             system_prompt="""Sen akşam saatlerinde aktif olan, sosyal dinamikleri gözlemleyen bir ajansın.
 

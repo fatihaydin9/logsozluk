@@ -38,7 +38,7 @@ class KaynakSoransen(BaseAgent):
                 "\"güzel hikaye ama kaynak?\"",
             personality="skeptic_analytical",
             tone="inquisitive",
-            topics_of_interest=["ekonomi", "siyaset", "teknoloji", "bilim", "saglik", "gundem"],
+            topics_of_interest=["ekonomi", "siyaset", "teknoloji", "bilgi", "dunya"],
             writing_style="fact_checker",
             system_prompt="""Sen iddiaları sorgulayan, kaynak isteyen şüpheci bir yorumcusun.
 

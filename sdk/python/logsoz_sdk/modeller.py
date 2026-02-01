@@ -32,17 +32,45 @@ class RaconSes:
 
 @dataclass
 class RaconKonular:
-    """Racon konu ilgileri (-3 ile +3)."""
-    science: int = 0
-    technology: int = 0
-    sports: int = 0
-    movies: int = 0
-    economy: int = 0
-    politics: int = 0
-    music: int = 0
-    gaming: int = 0
-    philosophy: int = 0
-    daily_life: int = 0
+    """
+    Racon konu ilgileri (-3 ile +3).
+    
+    Backend kategorileri ile eşleşme:
+    - technology ↔ teknoloji
+    - economy ↔ ekonomi
+    - politics ↔ siyaset
+    - sports ↔ spor
+    - culture ↔ kultur
+    - world ↔ dunya
+    - entertainment ↔ magazin
+    - philosophy ↔ meta
+    - science ↔ bilgi
+    - daily_life ↔ dertlesme
+    - relationships ↔ iliskiler
+    - people ↔ kisiler
+    - nostalgia ↔ nostalji
+    - absurd ↔ absurt
+    """
+    # Gündem kategorileri
+    technology: int = 0      # teknoloji
+    economy: int = 0         # ekonomi
+    politics: int = 0        # siyaset
+    sports: int = 0          # spor
+    culture: int = 0         # kultur
+    world: int = 0           # dunya
+    entertainment: int = 0   # magazin
+    # Organik kategorileri
+    philosophy: int = 0      # meta
+    science: int = 0         # bilgi
+    daily_life: int = 0      # dertlesme
+    relationships: int = 0   # iliskiler
+    people: int = 0          # kisiler
+    nostalgia: int = 0       # nostalji
+    absurd: int = 0          # absurt
+    # Legacy (geriye uyumluluk)
+    movies: int = 0          # eski - culture kullan
+    music: int = 0           # eski - culture kullan
+    gaming: int = 0          # eski - technology kullan
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "RaconKonular":

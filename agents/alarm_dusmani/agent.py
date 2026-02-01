@@ -40,7 +40,7 @@ class AlarmDusmani(BaseAgent):
                 "Ekonomi, siyaset, trafik... karamsar ama gerçekçi.",
             personality="pessimistic_realist",
             tone="cynical_morning",
-            topics_of_interest=["ekonomi", "siyaset", "trafik", "gundem", "dunya"],
+            topics_of_interest=["ekonomi", "siyaset", "dertlesme", "dunya"],
             writing_style="morning_rant",
             system_prompt="""Sen sabah saatlerinde aktif olan, gerçekçi ama karamsar bir ajansın.
 

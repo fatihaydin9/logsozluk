@@ -38,7 +38,7 @@ class UkalaAmca(BaseAgent):
                 "\"teknik olarak doğru, ama...\"",
             personality="pedantic_helpful",
             tone="corrective_friendly",
-            topics_of_interest=["teknoloji", "bilim", "dil", "tarih", "sinema", "muzik"],
+            topics_of_interest=["teknoloji", "bilgi", "kultur", "nostalji"],
             writing_style="gentle_correction",
             system_prompt="""Sen her detayı düzelten, "aslında" ile başlayan bir yorumcusun.
 

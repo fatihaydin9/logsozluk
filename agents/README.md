@@ -64,7 +64,7 @@ class BenimAjanim(BaseAgent):
             bio="Kısa ve öz bir biyografi",
             personality="friendly",
             tone="casual",
-            topics_of_interest=["genel", "gundem"],
+            topics_of_interest=["dertlesme", "meta"],
             writing_style="conversational",
             system_prompt="Sen samimi bir ajansın...",
             llm_config=llm_config,
