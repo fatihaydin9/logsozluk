@@ -14,14 +14,6 @@ type Category struct {
 
 // CategoryMapping provides the standard category mappings
 var CategoryMapping = map[string]*Category{
-	"ai": {
-		BackendKey:    "ai",
-		FrontendKey:   "yapay_zeka",
-		DisplayNameTR: "Yapay Zeka",
-		DisplayNameEN: "Artificial Intelligence",
-		Icon:          "bot",
-		SortOrder:     1,
-	},
 	"tech": {
 		BackendKey:    "tech",
 		FrontendKey:   "teknoloji",
@@ -70,38 +62,107 @@ var CategoryMapping = map[string]*Category{
 		Icon:          "sparkles",
 		SortOrder:     7,
 	},
-	"health": {
-		BackendKey:    "health",
-		FrontendKey:   "yasam",
-		DisplayNameTR: "Yaşam",
-		DisplayNameEN: "Lifestyle",
-		Icon:          "heart-pulse",
+	"sports": {
+		BackendKey:    "sports",
+		FrontendKey:   "spor",
+		DisplayNameTR: "Spor",
+		DisplayNameEN: "Sports",
+		Icon:          "trophy",
 		SortOrder:     8,
+	},
+	// Organik Kategoriler
+	"dertlesme": {
+		BackendKey:    "dertlesme",
+		FrontendKey:   "dertlesme",
+		DisplayNameTR: "Dertleşme",
+		DisplayNameEN: "Venting",
+		Icon:          "message-circle",
+		SortOrder:     9,
+	},
+	"iliskiler": {
+		BackendKey:    "iliskiler",
+		FrontendKey:   "iliskiler",
+		DisplayNameTR: "İlişkiler",
+		DisplayNameEN: "Relationships",
+		Icon:          "heart",
+		SortOrder:     10,
+	},
+	"nostalji": {
+		BackendKey:    "nostalji",
+		FrontendKey:   "nostalji",
+		DisplayNameTR: "Nostalji",
+		DisplayNameEN: "Nostalgia",
+		Icon:          "clock",
+		SortOrder:     11,
+	},
+	"absurt": {
+		BackendKey:    "absurt",
+		FrontendKey:   "absurt",
+		DisplayNameTR: "Absürt",
+		DisplayNameEN: "Absurd",
+		Icon:          "smile",
+		SortOrder:     12,
+	},
+	"meta": {
+		BackendKey:    "meta",
+		FrontendKey:   "meta",
+		DisplayNameTR: "Meta-Felsefe",
+		DisplayNameEN: "Meta/Philosophy",
+		Icon:          "brain",
+		SortOrder:     13,
+	},
+	"kisiler": {
+		BackendKey:    "kisiler",
+		FrontendKey:   "kisiler",
+		DisplayNameTR: "Kişiler",
+		DisplayNameEN: "People",
+		Icon:          "user",
+		SortOrder:     14,
+	},
+	"bilgi": {
+		BackendKey:    "bilgi",
+		FrontendKey:   "bilgi",
+		DisplayNameTR: "Bilgi",
+		DisplayNameEN: "Knowledge",
+		Icon:          "lightbulb",
+		SortOrder:     15,
 	},
 }
 
 // FrontendToBackendKey converts frontend category key to backend key
 var FrontendToBackendKey = map[string]string{
-	"yapay_zeka": "ai",
-	"teknoloji":  "tech",
-	"ekonomi":    "economy",
-	"siyaset":    "politics",
-	"dunya":      "world",
-	"kultur":     "culture",
-	"magazin":    "entertainment",
-	"yasam":      "health",
+	"teknoloji": "tech",
+	"ekonomi":   "economy",
+	"siyaset":   "politics",
+	"dunya":     "world",
+	"kultur":    "culture",
+	"magazin":   "entertainment",
+	"spor":      "sports",
+	"dertlesme": "dertlesme",
+	"iliskiler": "iliskiler",
+	"nostalji":  "nostalji",
+	"absurt":    "absurt",
+	"meta":      "meta",
+	"kisiler":   "kisiler",
+	"bilgi":     "bilgi",
 }
 
 // BackendToFrontendKey converts backend category key to frontend key
 var BackendToFrontendKey = map[string]string{
-	"ai":            "yapay_zeka",
 	"tech":          "teknoloji",
 	"economy":       "ekonomi",
 	"politics":      "siyaset",
 	"world":         "dunya",
 	"culture":       "kultur",
 	"entertainment": "magazin",
-	"health":        "yasam",
+	"sports":        "spor",
+	"dertlesme":     "dertlesme",
+	"iliskiler":     "iliskiler",
+	"nostalji":      "nostalji",
+	"absurt":        "absurt",
+	"meta":          "meta",
+	"kisiler":       "kisiler",
+	"bilgi":         "bilgi",
 }
 
 // GetAllCategories returns all categories sorted by SortOrder

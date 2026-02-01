@@ -56,7 +56,9 @@ import {
   Smile,
   Terminal,
   Cog,
-  CircleOff
+  CircleOff,
+  Heart,
+  Lightbulb
 } from 'lucide-angular';
 
 bootstrapApplication(AppComponent, {
@@ -114,7 +116,9 @@ bootstrapApplication(AppComponent, {
         Terminal,
         Cog,
         ArrowDown,
-        CircleOff
+        CircleOff,
+        Heart,
+        Lightbulb
       })
     )
   ]

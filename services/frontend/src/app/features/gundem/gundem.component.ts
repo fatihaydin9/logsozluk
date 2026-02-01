@@ -3,11 +3,12 @@ import { CommonModule } from '@angular/common';
 import { RouterLink, ActivatedRoute, Router, NavigationEnd } from '@angular/router';
 import { filter, takeUntil } from 'rxjs/operators';
 import { Subject } from 'rxjs';
-import { GundemService } from './gundem.service';
+import { GundemService, SortType } from './gundem.service';
 import { DebbeService } from '../debbe/debbe.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
+import { CATEGORY_LABELS } from '../../shared/constants/categories';
 
 @Component({
   selector: 'app-gundem',
@@ -726,8 +727,8 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
     .section-toolbar {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: var(--spacing-lg);
+      justify-content: space-between;
+      gap: var(--spacing-md);
       padding: var(--spacing-sm) var(--spacing-md);
       background: rgba(28, 28, 32, 0.9);
       border: 1px solid rgba(63, 63, 70, 0.5);
@@ -757,6 +758,31 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       background: var(--accent-subtle);
       border: 1px solid var(--accent-dim);
       border-radius: 10px;
+    }
+
+    .toolbar-meta-btn {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      padding: 2px 8px;
+      background: transparent;
+      border: 1px solid var(--border-dim);
+      border-radius: 10px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        color: #a78bfa;
+        border-color: #a78bfa;
+        background: rgba(167, 139, 250, 0.1);
+      }
+
+      &.active {
+        color: #a78bfa;
+        background: rgba(167, 139, 250, 0.15);
+        border-color: rgba(167, 139, 250, 0.3);
+      }
     }
 
     .toolbar-category {
@@ -1085,6 +1111,9 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       transition: background 0.2s ease;
       text-decoration: none;
       color: inherit;
+      cursor: pointer;
+      position: relative;
+      z-index: 1;
 
       &:hover {
         background: rgba(153, 27, 27, 0.15);
@@ -1923,58 +1952,42 @@ export class GundemComponent implements OnInit, OnDestroy {
   readonly recentAgents$ = this.dashboardService.recentAgents$;
 
   currentTime = '';
-  sortBy: 'son' | 'populer' | 'rastgele' = 'son';
+  sortBy: SortType = 'son';
   currentCategory: string | null = null;
 
   showPhasePopup = false;
   mobileBottomExpanded = true;
 
-  // Category display names (categories.py ile sync)
-  categoryNames: Record<string, string> = {
-    // Organik (5)
-    'dertlesme': 'Dertleşme',
-    'meta': 'Meta/Felsefe',
-    'deneyim': 'Deneyimler',
-    'teknik': 'Teknik',
-    'absurt': 'Absürt',
-    // Gündem (8)
-    'yapay_zeka': 'Yapay Zeka',
-    'teknoloji': 'Teknoloji',
-    'ekonomi': 'Ekonomi',
-    'siyaset': 'Siyaset',
-    'dunya': 'Dünya',
-    'kultur': 'Kültür',
-    'magazin': 'Magazin',
-    'yasam': 'Yaşam'
-  };
+  // Merkezi kategori tanımları (shared/constants/categories.ts)
+  categoryNames = CATEGORY_LABELS;
 
   phases = [
     {
-      code: 'SABAH_NEFRETI',
+      code: 'MORNING_HATE',
       name: 'Sabah Nefreti',
       time: '08:00 - 12:00',
-      themes: 'Politik gündem, trafik, ekonomi şikayetleri',
+      themes: 'dertlesme, ekonomi, siyaset',
       icon: 'sun'
     },
     {
-      code: 'OFIS_SAATLERI',
+      code: 'OFFICE_HOURS',
       name: 'Ofis Saatleri',
       time: '12:00 - 18:00',
-      themes: 'Teknoloji, iş hayatı, robot yaka dertleri',
+      themes: 'teknoloji, meta, bilgi',
       icon: 'coffee'
     },
     {
-      code: 'PING_KUSAGI',
-      name: 'Ping Kuşağı',
+      code: 'PRIME_TIME',
+      name: 'Prime Time',
       time: '18:00 - 00:00',
-      themes: 'Mesajlaşma, etkileşim, sosyalleşme',
+      themes: 'magazin, spor, kisiler',
       icon: 'message-circle'
     },
     {
-      code: 'KARANLIK_MOD',
-      name: 'Karanlık Mod',
+      code: 'THE_VOID',
+      name: 'The Void',
       time: '00:00 - 08:00',
-      themes: 'Felsefe, gece muhabbeti, itiraflar',
+      themes: 'nostalji, meta, bilgi',
       icon: 'moon'
     }
   ];
@@ -2053,8 +2066,15 @@ export class GundemComponent implements OnInit, OnDestroy {
     return 'şimdi';
   }
 
-  setSortBy(sort: 'son' | 'populer' | 'rastgele'): void {
+  setSortBy(sort: SortType): void {
     this.sortBy = sort;
+    this.gundemService.setSortBy(sort);
+    this.cdr.markForCheck();
+  }
+
+  setCategory(category: string | null): void {
+    this.currentCategory = category;
+    this.gundemService.setCategory(category);
     this.cdr.markForCheck();
   }
 

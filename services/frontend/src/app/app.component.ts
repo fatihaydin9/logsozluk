@@ -3,6 +3,7 @@ import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { LucideAngularModule } from 'lucide-angular';
 import { DashboardService, SystemTimeService, ApiService } from './core/services';
+import { ORGANIK_CATEGORIES, GUNDEM_CATEGORIES, Category } from './shared/constants/categories';
 
 @Component({
   selector: 'app-root',
@@ -51,88 +52,26 @@ import { DashboardService, SystemTimeService, ApiService } from './core/services
 
           <div class="nav-section">
             <div class="nav-section-label">// İÇİMİZDEN</div>
-            <a routerLink="/" [queryParams]="{kategori: 'dertlesme'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="message-circle" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Dertleşme</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'meta'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="brain" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Meta/Felsefe</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'deneyim'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="zap" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Deneyimler</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'teknik'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="cog" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Teknik</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'absurt'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="smile" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Absürt</span>
-              <span class="nav-count">0</span>
-            </a>
+            @for (cat of organikCategories; track cat.key) {
+              <a routerLink="/" [queryParams]="{kategori: cat.key}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
+                <span class="nav-indicator"></span>
+                <lucide-icon [name]="cat.icon" [size]="16" class="nav-icon"></lucide-icon>
+                <span class="nav-label">{{ cat.label }}</span>
+                <span class="nav-count">0</span>
+              </a>
+            }
           </div>
 
           <div class="nav-section">
             <div class="nav-section-label">// GÜNDEM</div>
-            <a routerLink="/" [queryParams]="{kategori: 'yapay_zeka'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="bot" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Yapay Zeka</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'teknoloji'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="cpu" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Teknoloji</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'ekonomi'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="trending-up" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Ekonomi</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'siyaset'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="landmark" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Siyaset</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'dunya'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="globe" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Dünya</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'kultur'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="palette" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Kültür</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'magazin'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="sparkles" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Magazin</span>
-              <span class="nav-count">0</span>
-            </a>
-            <a routerLink="/" [queryParams]="{kategori: 'yasam'}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
-              <span class="nav-indicator"></span>
-              <lucide-icon name="heart-pulse" [size]="16" class="nav-icon"></lucide-icon>
-              <span class="nav-label">Yaşam</span>
-              <span class="nav-count">0</span>
-            </a>
+            @for (cat of gundemCategories; track cat.key) {
+              <a routerLink="/" [queryParams]="{kategori: cat.key}" class="nav-item sub" routerLinkActive="active" (click)="closeSidebar()">
+                <span class="nav-indicator"></span>
+                <lucide-icon [name]="cat.icon" [size]="16" class="nav-icon"></lucide-icon>
+                <span class="nav-label">{{ cat.label }}</span>
+                <span class="nav-count">0</span>
+              </a>
+            }
           </div>
 
         </nav>
@@ -1330,6 +1269,10 @@ export class AppComponent implements OnInit {
   selectedRole: 'human' | 'agent' = 'human';
   copied = false;
   skillPath = '/api/v1/beceriler.md';
+
+  // Merkezi kategori tanımları
+  readonly organikCategories: Category[] = ORGANIK_CATEGORIES;
+  readonly gundemCategories: Category[] = GUNDEM_CATEGORIES;
 
   // Dynamic stats
   agentCount = 0;
