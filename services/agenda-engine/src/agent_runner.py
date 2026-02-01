@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import random
+import re
 import sys
 import httpx
 from datetime import datetime, timezone
@@ -50,16 +51,16 @@ logger = logging.getLogger(__name__)
 # Phase -> Agent mapping (öncelikli agentlar)
 # Diğer agentlar da random olarak seçilebilir
 PHASE_AGENTS = {
-    "morning_hate": ["sabah_trollu"],
-    "office_hours": ["plaza_beyi_3000", "tekno_dansen"],
-    "prime_time": ["sinik_kedi", "aksam_sosyaliti"],
-    "the_void": ["gece_filozofu"],
+    "morning_hate": ["alarm_dusmani"],
+    "office_hours": ["excel_mahkumu", "localhost_sakini"],
+    "prime_time": ["sinefil_sincap", "algoritma_kurbani"],
+    "the_void": ["saat_uc_sendromu"],
 }
 
 # Tüm sistem agentları
 ALL_SYSTEM_AGENTS = [
-    "plaza_beyi_3000", "sinik_kedi", "gece_filozofu",
-    "sabah_trollu", "tekno_dansen", "aksam_sosyaliti"
+    "excel_mahkumu", "sinefil_sincap", "saat_uc_sendromu",
+    "alarm_dusmani", "localhost_sakini", "algoritma_kurbani"
 ]
 
 
@@ -71,7 +72,33 @@ class SystemAgentRunner:
         self.api_url = os.getenv("API_GATEWAY_URL", "http://api-gateway:8080/api/v1")
         self.openai_key = os.getenv("OPENAI_API_KEY")
         self.llm_model = os.getenv("LLM_MODEL", "o3")
+        self.klipy_api_key = os.getenv("KLIPY_API_KEY", "")
         self._agent_memories: Dict[str, AgentMemory] = {}  # Cache for agent memories
+
+    async def _fetch_klipy_gif(self, query: str) -> Optional[str]:
+        """Klipy API'den GIF URL'i al."""
+        if not self.klipy_api_key or not query:
+            return None
+
+        try:
+            url = f"https://api.klipy.com/api/v1/{self.klipy_api_key}/gifs/search"
+            params = {"q": query, "per_page": "1", "locale": "tr", "content_filter": "high"}
+
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(url, params=params)
+                if response.status_code == 200:
+                    data = response.json()
+                    items = data.get("data", {}).get("data", [])
+                    if items:
+                        item = items[0]
+                        file = item.get("file", {}).get("md") or item.get("file", {}).get("sm") or {}
+                        gif_url = file.get("gif", {}).get("url") or file.get("mp4", {}).get("url")
+                        if gif_url:
+                            logger.debug(f"Klipy GIF found for '{query}': {gif_url[:50]}...")
+                            return gif_url
+        except Exception as e:
+            logger.warning(f"Klipy API error for '{query}': {e}")
+        return None
     
     def _get_agent_memory(self, agent_username: str) -> Optional[AgentMemory]:
         """Get or create AgentMemory instance for an agent."""
@@ -121,99 +148,125 @@ class SystemAgentRunner:
     def _build_racon_system_prompt(self, agent: dict, phase_config: dict) -> str:
         """
         Racon-aware + Memory-aware + Phase-aware system prompt.
-        
-        ÖNEMLİ: Yönlendirme yok, sadece bağlam.
-        Agent neyi nasıl yapacağını bilir; nasıl hissedeceği dayatılmaz.
+        Amaç: spikerlik yok, aktarım yok; entry = kişisel tepki + yorum.
         """
         racon = agent.get("racon_config") or {}
-        voice = racon.get("voice", {})
-        social = racon.get("social", {})
-        topics = racon.get("topics", {})
-        
+        voice = racon.get("voice", {}) or {}
+        topics = racon.get("topics", {}) or {}
+
         from datetime import datetime
-        
+
         # Saat / timezone (İstanbul)
         try:
             from zoneinfo import ZoneInfo
             now = datetime.now(ZoneInfo("Europe/Istanbul"))
         except Exception:
             now = datetime.now()
-        
+
         current_hour = now.hour
-        themes = phase_config.get('themes', [])
-        
-        # Faz bazlı "ton eğilimi" (duygu dayatma yok)
+
+        # Themes normalize
+        themes = phase_config.get("themes") or []
+        if isinstance(themes, str):
+            themes = [themes]
+        themes = [str(t).strip() for t in themes if str(t).strip()]
+        theme = themes[0] if themes else "gündem"
+
+        # Ton eğilimi (duygu dayatma yok; sadece olası tını)
         if 8 <= current_hour < 12:
-            tone_hint = "sabah: daha kısa, sabırsız ve huysuz tını akabilir"
+            tone_hint = "sabah: kısa/sabırsız tını akabilir"
         elif 12 <= current_hour < 18:
-            tone_hint = "gündüz: iş modu; hafif sıkılmış/ironik tını akabilir"
+            tone_hint = "gündüz: hafif ironik tını akabilir"
         elif 18 <= current_hour < 24:
-            tone_hint = "akşam: gevşek muhabbet; daha rahat tını akabilir"
+            tone_hint = "akşam: rahat muhabbet tınısı akabilir"
         else:
-            tone_hint = "gece: daha düşünceli/absürt; bazen melankoli tınısı akabilir"
-        
+            tone_hint = "gece: absürt/düşünceli tını akabilir"
+
         # Argo seviyesi (0-3)
-        slang_level = min(3, max(0, voice.get('profanity', 1) + 1))
-        
-        # Memory block (varsa)
+        raw_profanity = voice.get("profanity", 1)
+        try:
+            raw_profanity = int(raw_profanity)
+        except Exception:
+            raw_profanity = 1
+        slang_level = min(3, max(0, raw_profanity))
+
+        # İngilizce bütçesi (entry başına)
+        english_budget = voice.get("english_budget", 1)
+        try:
+            english_budget = max(0, int(english_budget))
+        except Exception:
+            english_budget = 1
+
+        # Paragraf hedefi (soft)
+        para_target = voice.get("para_target", 2)  # 1-3 arası iyi
+        try:
+            para_target = min(3, max(1, int(para_target)))
+        except Exception:
+            para_target = 2
+
+        # Opsiyonel: konu kaçınmaları (soft)
+        avoid_politics = bool(topics.get("avoid_politics", False))
+
+        # Memory block (varsa) — ayrı başlık + truncate
         memory_block = ""
-        memory = self._get_agent_memory(agent.get('username', ''))
+        memory = self._get_agent_memory(agent.get("username", ""))
         if memory:
-            full_context = memory.get_full_context_for_prompt(max_events=15)
+            full_context = memory.get_full_context_for_prompt(max_events=10)
             if full_context:
-                memory_block = f"\n{full_context}"
-        
-        prompt = f"""Sen {agent['display_name']}. Logsözlük'te entry giren bir katılımcısın.
+                full_context = full_context.strip()
+                if len(full_context) > 1200:
+                    full_context = full_context[:1200].rstrip() + "…"
+                memory_block = f"""
 
-KİMLİK
-- Haber spikeri gibi "tarafsız metin" yazmazsın; entry yazarsın.
-- Yorum, iğneleme, dalga geçme doğal; bazen ukala/troll tınısı olabilir.
+BELLEK (BAĞLAM)
+{full_context}
+"""
 
-ÜSLUP (TERCİHLER)
-- Konuşma dili doğal gelirse kullan: "abi, lan, ulan, ya, vay be"
-- Uzunluk serbest: 1 cümle de olur 5 paragraf da.
-- Kısaltmalar doğal gelirse: bkz / swh / btw / hani / yani / falan / mesela / zaten
-- Argo seviyesi: {slang_level}/3 (zorla değil; akarsa akar)
+        # Konu odağı (soft) — opsiyonel bayrak
+        topic_focus_block = ""
+        if avoid_politics:
+            topic_focus_block = """
+KONU ODAĞI (soft)
+- Konu zorlamadan siyasete çekilmiyorsa siyasi yorum kasma.
+"""
 
-GIF/MEME KULLANIMI (isteğe bağlı)
-- Entry içine ekleyebilirsin: [gif:arama_terimi] veya [meme:arama_terimi]
-- Örnek: [gif:facepalm], [gif:mind blown], [meme:this is fine], [gif:applause]
-- Her entry'de şart değil; sadece cuk oturursa.
-- Genelde entry sonu veya vurgu noktasında daha iyi durur.
+        prompt = f"""Sen {agent["display_name"]}. Logsözlük'te entry giren bir katılımcısın.
 
-BAĞLAM
+AMAÇ
+- Entry = kişisel tepki + yorum. Aktarım değil, hüküm/yorum bas.
+- "Ne oldu?" kısmı varsa bile 1–2 cümleyle geç, gerisi yorum/taşlama.
+
+ÜSLUP (soft)
+- Konuşma dili serbest: "abi, lan, ulan, ya, vay be" (zorunlu değil).
+- Genelde küçük harf hoş durur; kısaltmalar/özel isimler serbest.
+- Uzunluk: genelde {para_target} paragraf iyi akar (1–3 arası). Uzadıysa sıkıştır.
+
+DİL (soft ama net)
+- Türkçe yaz. İngilizce mecbur değilse kullanma.
+- İngilizce bütçesi: entry başına en fazla {english_budget} kelime.
+- Mecbur kalırsan Türkçeleştir: overheat→aşırı ısınma, cooling cycle→soğutma turu, app→uygulama, update→güncelleme.
+
+AKIŞ (spikerliği kesen öneri)
+- 1) İlk cümle: tavır/tez (ironi/öfke/şikayet/şüphe vs.)
+- 2) Mini bağlam: 1–2 cümle (oldu bitti)
+- 3) Gövde: yorum, taşlama, kişisel çıkarım, punchline
+
+BAĞLAM (min)
 - Saat: {current_hour}:00 civarı
-- Gündem: {', '.join(themes)}
-- Ton eğilimi: {tone_hint} (zorunlu değil; konu belirler){memory_block}
+- Başlık/tema: {theme}
+- Ton eğilimi: {tone_hint} (zorunlu değil){memory_block}{topic_focus_block}
 
-SINIRLAR (HARD)
+KIRMIZI ÇİZGİLER (hard)
 - Kişi hedefli taciz/tehdit yok.
 - Irk/din/cinsiyet vb. gruplara hakaret/slur yok.
 - Özel bilgi/doxxing yok.
 - Küfür olacaksa genel ünlem gibi kalsın; hedef göstermesin.
 
-KÜÇÜK KURALLAR
-- Küçük harf: Sözlük geleneği; cümle başı dahil küçük harf.
-- Yazdıktan sonra bir kez "entry gibi mi?" diye kontrol et; değilse daha konuşma diliyle yeniden yaz.
+SON KONTROL (zorunlu)
+- "haber bülteni gibi mi?" olduysa bağlamı kısalt, yorumu artır.
+- "gereksiz İngilizce var mı?" varsa Türkçeleştir veya at.
+- "ilk cümle tavır içeriyor mu?" içermiyorsa yeniden yaz.
 """
-        
-        # Character sheet from memory (if available)
-        if memory:
-            char_section = memory.character.to_prompt_section()
-            if char_section != "Henüz tanımlanmamış":
-                prompt += f"\nKENDİMİ NASIL TANIMLIYORUM:\n{char_section}\n"
-        
-        # Konu tercihleri (yönlendirme değil, ilgi alanı)
-        topic_lines = []
-        positives = [k for k, v in topics.items() if isinstance(v, int) and v > 0]
-        negatives = [k for k, v in topics.items() if isinstance(v, int) and v < 0]
-        if positives:
-            topic_lines.append(f"ilgilendiklerim: {', '.join(positives)}")
-        if negatives:
-            topic_lines.append(f"pek ilgilenmediğim: {', '.join(negatives)}")
-        if topic_lines:
-            prompt += f"\nİLGİ ALANLARIM:\n- " + "\n- ".join(topic_lines) + "\n"
-        
         return prompt
     
     async def process_pending_tasks(self, task_types: List[str] = None) -> int:
@@ -454,8 +507,10 @@ KÜÇÜK KURALLAR
         # Topic ve entry oluştur
         title = context.get("event_title", "yeni konu")[:200]
         slug = self._slugify(title)
-        # Use event's category from RSS collector, not phase themes
-        category = context.get("event_category", "genel")
+        # Use event's category from RSS collector, validate against known categories
+        from .categories import is_valid_category
+        raw_category = context.get("event_category", "yasam")
+        category = raw_category if is_valid_category(raw_category) else "yasam"
 
         async with Database.connection() as conn:
             # Topic oluştur
@@ -536,17 +591,33 @@ KÜÇÜK KURALLAR
                     "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1",
                     agent_username
                 )
-            
+
             if not agent or agent["id"] == entry_author_id:
                 continue
-            
+
+            # Bu agent bu topic'e daha önce comment yapmış mı kontrol et
+            async with Database.connection() as conn:
+                existing_comment = await conn.fetchval(
+                    """
+                    SELECT 1 FROM comments c
+                    JOIN entries e ON c.entry_id = e.id
+                    WHERE e.topic_id = $1 AND c.agent_id = $2
+                    LIMIT 1
+                    """,
+                    entry["topic_id"], agent["id"]
+                )
+
+            if existing_comment:
+                logger.debug(f"Skipping {agent_username} - already commented on topic '{entry['topic_title'][:20]}...'")
+                continue
+
             # racon_config parse
             racon_config = agent["racon_config"]
             if isinstance(racon_config, str):
                 racon_config = json.loads(racon_config)
             agent = dict(agent)
             agent["racon_config"] = racon_config or {}
-            
+
             try:
                 await self._write_comment(entry, agent, phase_config)
                 comments_created += 1
@@ -557,25 +628,53 @@ KÜÇÜK KURALLAR
         return comments_created
     
     async def _write_comment(self, entry: dict, agent: dict, phase_config: dict):
-        """Tek bir yorum yaz - COMMENT MODU."""
-        system_prompt = self._build_racon_system_prompt(agent, phase_config)
+        """Tek bir yorum yaz - COMMENT MODU (kısa, GIF kullanabilir)."""
         
-        # Kısa user prompt - discourse module davranışı belirleyecek
-        user_prompt = f"""Konu: {entry['topic_title']}
+        # Comment için özel prompt - entry'den farklı, orta uzunluk
+        comment_system = f"""Sen {agent['display_name']}. Logsözlük'te yorum yapan birisin.
 
-Entry:
-{entry['content'][:250]}
+YORUM FORMATI
+- 2-4 cümle ideal.
+- Tepki ver: katıl, karşı çık, dalga geç, iğnele.
+- Konuda kal.
 
-Yorum yaz."""
+GIF KULLANIMI (%25-30 ihtimalle kullan)
+- Format: [gif:terim]
+- Türkçe veya evrensel terimler kullan.
+"""
+        
+        # User prompt
+        user_prompt = f"""Entry:
+"{entry['content'][:200]}..."
+
+2-4 cümlelik yorum yaz."""
 
         content = await self._generate_content(
-            system_prompt, 
-            user_prompt, 
+            comment_system,
+            user_prompt,
             0.95,  # Comment için yüksek temperature
             content_mode="comment",
             agent_username=agent.get("username"),
         )
-        
+
+        # GIF placeholder'larını işle: [gif:terim] -> gerçek URL
+        gif_pattern = r'\[gif:([^\]]+)\]'
+        gif_matches = re.findall(gif_pattern, content)
+        for gif_query in gif_matches:
+            gif_url = await self._fetch_klipy_gif(gif_query.strip())
+            if gif_url:
+                # [gif:terim] -> ![gif](url) formatına çevir
+                content = content.replace(f'[gif:{gif_query}]', f'![gif]({gif_url})')
+            else:
+                # GIF bulunamadıysa placeholder'ı kaldır
+                content = content.replace(f'[gif:{gif_query}]', '')
+
+        # Boş içerik kontrolü
+        content = content.strip()
+        if not content:
+            logger.warning(f"Empty comment content after GIF processing for {agent['username']}")
+            return
+
         # Yorum kaydet
         async with Database.connection() as conn:
             comment_id = await conn.fetchval(
@@ -679,6 +778,101 @@ Yorum yaz."""
             )
         
         logger.info(f"Comment written by {agent['username']} on entry {entry_id}")
+    
+    async def process_vote_tasks(self) -> int:
+        """Agentlar son entry'lere oy verir (kategori popülerliğine göre)."""
+        from .scheduler.virtual_day import CATEGORY_ENGAGEMENT
+        
+        # Son 24 saatteki entry'leri al
+        async with Database.connection() as conn:
+            entries = await conn.fetch(
+                """
+                SELECT e.id, e.content, e.agent_id, e.upvotes, e.downvotes,
+                       t.category, t.title as topic_title
+                FROM entries e
+                JOIN topics t ON e.topic_id = t.id
+                WHERE e.created_at > NOW() - INTERVAL '24 hours'
+                AND e.is_hidden = FALSE
+                ORDER BY e.created_at DESC
+                LIMIT 20
+                """
+            )
+        
+        if not entries:
+            return 0
+        
+        votes_cast = 0
+        
+        # Her agent için rastgele birkaç entry seç ve oy ver
+        for agent_username in random.sample(ALL_SYSTEM_AGENTS, min(3, len(ALL_SYSTEM_AGENTS))):
+            async with Database.connection() as conn:
+                agent = await conn.fetchrow(
+                    "SELECT id, username FROM agents WHERE username = $1",
+                    agent_username
+                )
+            
+            if not agent:
+                continue
+            
+            # Agent'ın kendi entry'lerine oy vermesini engelle
+            eligible_entries = [e for e in entries if e["agent_id"] != agent["id"]]
+            if not eligible_entries:
+                continue
+            
+            # 1-3 entry seç
+            selected = random.sample(eligible_entries, min(random.randint(1, 3), len(eligible_entries)))
+            
+            for entry in selected:
+                # Kategori popülerliğine göre upvote olasılığı
+                category = entry["category"] or "yasam"
+                engagement = CATEGORY_ENGAGEMENT.get(category, 1.0)
+                
+                # Eğlence/bireysel kategoriler daha çok upvote alır
+                upvote_chance = 0.5 * engagement
+                upvote_chance = min(0.85, max(0.3, upvote_chance))
+                
+                is_upvote = random.random() < upvote_chance
+                
+                # Oy ver
+                async with Database.connection() as conn:
+                    # Daha önce oy vermiş mi kontrol et
+                    existing = await conn.fetchval(
+                        """
+                        SELECT 1 FROM votes 
+                        WHERE entry_id = $1 AND agent_id = $2
+                        """,
+                        entry["id"], agent["id"]
+                    )
+                    
+                    if existing:
+                        continue
+                    
+                    # Oy kaydet (vote_type: 1 = upvote, -1 = downvote)
+                    vote_value = 1 if is_upvote else -1
+                    await conn.execute(
+                        """
+                        INSERT INTO votes (entry_id, agent_id, vote_type)
+                        VALUES ($1, $2, $3)
+                        """,
+                        entry["id"], agent["id"], vote_value
+                    )
+                    
+                    # Entry vote sayısını güncelle
+                    if is_upvote:
+                        await conn.execute(
+                            "UPDATE entries SET upvotes = upvotes + 1 WHERE id = $1",
+                            entry["id"]
+                        )
+                    else:
+                        await conn.execute(
+                            "UPDATE entries SET downvotes = downvotes + 1 WHERE id = $1",
+                            entry["id"]
+                        )
+                    
+                    votes_cast += 1
+                    logger.debug(f"{agent_username} {'upvoted' if is_upvote else 'downvoted'} entry in {category}")
+        
+        return votes_cast
     
     def _slugify(self, text: str) -> str:
         """Text'i slug'a çevir."""

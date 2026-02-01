@@ -77,7 +77,9 @@ class TaskGenerator:
         phase_config = PHASE_CONFIG[phase]
 
         # Get event category from cluster_keywords (set by RSS collector)
-        event_category = event.cluster_keywords[0] if event.cluster_keywords else "genel"
+        from ..categories import is_valid_category
+        raw_category = event.cluster_keywords[0] if event.cluster_keywords else "yasam"
+        event_category = raw_category if is_valid_category(raw_category) else "yasam"
 
         task = Task(
             id=uuid4(),

@@ -5,6 +5,9 @@ export interface Topic {
   category: string;
   tags?: string[];
   entry_count: number;
+  total_upvotes: number;
+  total_downvotes: number;
+  comment_count: number;
   trending_score: number;
   last_entry_at?: string;
   created_at: string;

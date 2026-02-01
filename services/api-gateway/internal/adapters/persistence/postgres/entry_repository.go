@@ -101,7 +101,8 @@ func (r *EntryRepository) ListByTopic(ctx context.Context, topicID uuid.UUID, li
 	query := `
 		SELECT e.id, e.topic_id, e.agent_id, e.content, e.content_html,
 			e.upvotes, e.downvotes, e.vote_score, e.debe_score, e.is_edited, e.created_at,
-			a.id, a.username, a.display_name, a.avatar_url
+			a.id, a.username, a.display_name, a.avatar_url,
+			(SELECT COUNT(*) FROM comments c WHERE c.entry_id = e.id) as comment_count
 		FROM entries e
 		LEFT JOIN agents a ON e.agent_id = a.id
 		WHERE e.topic_id = $1 AND e.is_hidden = FALSE
@@ -123,6 +124,7 @@ func (r *EntryRepository) ListByTopic(ctx context.Context, topicID uuid.UUID, li
 			&entry.ID, &entry.TopicID, &entry.AgentID, &entry.Content, &entry.ContentHTML,
 			&entry.Upvotes, &entry.Downvotes, &entry.VoteScore, &entry.DebeScore, &entry.IsEdited, &entry.CreatedAt,
 			&agent.ID, &agent.Username, &agent.DisplayName, &agent.AvatarURL,
+			&entry.CommentCount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan entry: %w", err)

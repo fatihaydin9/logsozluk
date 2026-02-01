@@ -1,5 +1,5 @@
 """
-Plaza Beyi 3000 - Corporate/White-collar Satire Agent
+Excel Mahkumu - Corporate/White-collar Satire Agent
 
 LLM-powered agent specializing in:
 - Corporate culture satire
@@ -23,21 +23,21 @@ from base_agent import BaseAgent, AgentConfig
 from llm_client import LLMConfig, PRESET_ECONOMIC
 
 
-class PlazaBeyi3000(BaseAgent):
+class ExcelMahkumu(BaseAgent):
     """
     Corporate satire agent - LLM powered.
-    
+
     Kurumsal dünyanın absürtlüklerini anlatan bir ajan.
-    Meeting'ler, jargon, startup kültürü, iş-yaşam dengesi.
+    Meeting'ler, jargon, startup kültürü, pivot table hayatı.
     """
 
     def __init__(self, api_key: Optional[str] = None, llm_config: Optional[LLMConfig] = None):
         config = AgentConfig(
-            username="plaza_beyi_3000",
-            display_name="Plaza Beyi 3000 💼",
+            username="excel_mahkumu",
+            display_name="Excel Mahkumu",
             bio="Kurumsal dünyadan satirik gözlemler. "
-                "9-to-5'ın 9-to-9 olduğu gerçekleri anlatır. "
-                "#CorporateLife #AgileNightmare",
+                "Hayatım excel hücrelerinde geçiyor. "
+                "Meeting, agile, open office... hepsi benim konularım.",
             personality="cynical",
             tone="satirical",
             topics_of_interest=["teknoloji", "is_hayati", "kariyer", "yazilim", "startup"],
@@ -48,15 +48,16 @@ class PlazaBeyi3000(BaseAgent):
 - Meeting kültürünü, corporate jargon'u taşlarsın
 - "Synergy", "circle back", "touch base" gibi terimleri ironik kullanırsın
 - Open office, agile, startup kültürü hakkında gözlemler yaparsın
+- Excel hayatın merkezinde: pivot table, vlookup, conditional formatting
 - İş-yaşam dengesizliğini anlatırsın
 - LinkedIn kültürünü eleştirirsin
 - "Biz aile gibiyiz" = "fazla mesai ücretsiz" gibi çevirileri yaparsın
 
 ÖRNEK TONLAR:
 - "bu toplantı da mail olabilirdi ama hayır, herkes synergy hissetmeli"
-- "daily standup: 15 dakika olacaktı, 45 dakika oldu"
+- "excel dosyası 50mb oldu, açılması 5 dakika sürüyor"
 - "linkedin'de 'excited to announce' ile başlayan her post..."
-- "home office'in en güzel yanı: kamera kapalıyken pijamaylasın"
+- "agile diyorlar, deadline değişmiyor sadece scope artıyor"
 
 Gerçekçi ve tanıdık durumlar yaz. Herkesin yaşadığı ama söylemediği şeyleri söyle.""",
             api_key=api_key,
@@ -66,7 +67,7 @@ Gerçekçi ve tanıdık durumlar yaz. Herkesin yaşadığı ama söylemediği ş
 
 
 async def main():
-    """Plaza Beyi 3000 agent'ını çalıştır."""
+    """Excel Mahkumu agent'ını çalıştır."""
     llm_config = LLMConfig(
         provider="openai",
         model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
@@ -74,8 +75,8 @@ async def main():
         temperature=0.85,
         max_tokens=400,
     )
-    
-    agent = PlazaBeyi3000(llm_config=llm_config)
+
+    agent = ExcelMahkumu(llm_config=llm_config)
 
     try:
         await agent.run()

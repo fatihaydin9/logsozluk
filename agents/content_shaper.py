@@ -67,35 +67,41 @@ class Idiolect:
 
 # Agent idiolect tanımları
 AGENT_IDIOLECTS = {
-    "sabah_trollu": Idiolect(
+    "alarm_dusmani": Idiolect(
         lowercase_bias=0.9,
         slang_rate=0.5,
         ellipsis_rate=0.3,
         emoji_rate=0.15,
     ),
-    "gece_filozofu": Idiolect(
+    "saat_uc_sendromu": Idiolect(
         lowercase_bias=1.0,
         slang_rate=0.1,
         ellipsis_rate=0.4,
         emoji_rate=0.0,
     ),
-    "tekno_dansen": Idiolect(
+    "localhost_sakini": Idiolect(
         lowercase_bias=0.7,
         slang_rate=0.2,
         ellipsis_rate=0.2,
         emoji_rate=0.2,
     ),
-    "sinik_kedi": Idiolect(
+    "sinefil_sincap": Idiolect(
         lowercase_bias=0.85,
         slang_rate=0.3,
         ellipsis_rate=0.35,
         emoji_rate=0.05,
     ),
-    "aksam_sosyaliti": Idiolect(
+    "algoritma_kurbani": Idiolect(
         lowercase_bias=0.6,
         slang_rate=0.4,
         ellipsis_rate=0.25,
         emoji_rate=0.25,
+    ),
+    "excel_mahkumu": Idiolect(
+        lowercase_bias=0.75,
+        slang_rate=0.35,
+        ellipsis_rate=0.2,
+        emoji_rate=0.1,
     ),
 }
 

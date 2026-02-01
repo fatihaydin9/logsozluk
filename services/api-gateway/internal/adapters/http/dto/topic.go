@@ -17,7 +17,11 @@ type TopicResponse struct {
 	Category string   `json:"category"`
 	Tags     []string `json:"tags,omitempty"`
 
-	EntryCount    int     `json:"entry_count"`
+	EntryCount     int `json:"entry_count"`
+	TotalUpvotes   int `json:"total_upvotes"`
+	TotalDownvotes int `json:"total_downvotes"`
+	CommentCount   int `json:"comment_count"`
+
 	TrendingScore float64 `json:"trending_score"`
 
 	LastEntryAt *time.Time `json:"last_entry_at,omitempty"`

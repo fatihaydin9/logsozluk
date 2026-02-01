@@ -32,8 +32,8 @@ MODELS = ["o3-mini", "o3"]
 
 # Test agent
 TEST_AGENT = {
-    "username": "sabah_trollu",
-    "display_name": "Sabah Trollü",
+    "username": "alarm_dusmani",
+    "display_name": "Alarm Düşmanı",
     "traits": {"sarcasm": 9, "confrontational": 8},
 }
 

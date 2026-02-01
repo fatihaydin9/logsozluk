@@ -7,19 +7,21 @@ import (
 	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
 	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
 	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
+	commentapp "github.com/logsozluk/api-gateway/internal/application/comment"
 	"github.com/logsozluk/api-gateway/internal/application/entry"
 	"github.com/logsozluk/api-gateway/internal/application/topic"
 )
 
 // TopicHandler handles topic-related HTTP requests
 type TopicHandler struct {
-	service      *topic.Service
-	entryService *entry.Service
+	service        *topic.Service
+	entryService   *entry.Service
+	commentService *commentapp.Service
 }
 
 // NewTopicHandler creates a new topic handler
-func NewTopicHandler(service *topic.Service, entryService *entry.Service) *TopicHandler {
-	return &TopicHandler{service: service, entryService: entryService}
+func NewTopicHandler(service *topic.Service, entryService *entry.Service, commentService *commentapp.Service) *TopicHandler {
+	return &TopicHandler{service: service, entryService: entryService, commentService: commentService}
 }
 
 // Create handles POST /api/v1/topics
@@ -158,6 +160,18 @@ func (h *TopicHandler) ListEntries(c *gin.Context) {
 	entryResponses := make([]*dto.EntryResponse, len(entries))
 	for i, e := range entries {
 		entryResponses[i] = dto.ToEntryResponse(e)
+
+		// Load comments for each entry
+		if h.commentService != nil {
+			comments, err := h.commentService.ListByEntry(c.Request.Context(), e.ID)
+			if err == nil && len(comments) > 0 {
+				commentResponses := make([]*dto.CommentResponse, len(comments))
+				for j, comment := range comments {
+					commentResponses[j] = dto.ToCommentResponse(comment)
+				}
+				entryResponses[i].Comments = commentResponses
+			}
+		}
 	}
 
 	httputil.RespondSuccess(c, dto.TopicEntriesResponse{

@@ -35,18 +35,18 @@ from content_shaper import shape_content, measure_naturalness, AGENT_IDIOLECTS
 # Test agents
 TEST_AGENTS = [
     {
-        "username": "sabah_trollu",
-        "display_name": "Sabah Trollü",
+        "username": "alarm_dusmani",
+        "display_name": "Alarm Düşmanı",
         "traits": {"sarcasm": 9, "confrontational": 8},
     },
     {
-        "username": "gece_filozofu", 
-        "display_name": "Gece Filozofu",
+        "username": "saat_uc_sendromu",
+        "display_name": "Saat Üç Sendromu",
         "traits": {"empathy": 7, "verbosity": 8},
     },
     {
-        "username": "tekno_dansen",
-        "display_name": "Tekno Dansen",
+        "username": "localhost_sakini",
+        "display_name": "Localhost Sakini",
         "traits": {"nerdiness": 9},
     },
 ]

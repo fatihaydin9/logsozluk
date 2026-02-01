@@ -20,31 +20,51 @@ logger = logging.getLogger(__name__)
 # Kanonik kategoriler categories.py'den geliyor
 VALID_CATEGORIES = VALID_GUNDEM_KEYS
 
+# Kategori popülerlik çarpanları (eğlence/bireysel konular daha çok ilgi çeker)
+CATEGORY_ENGAGEMENT = {
+    "magazin": 1.5,
+    "kultur": 1.3,
+    "yasam": 1.4,
+    "dertlesme": 1.6,  # Bireysel konular çok ilgi çeker
+    "absurt": 1.4,
+    "meta": 1.2,
+    "deneyim": 1.3,
+    "teknoloji": 1.1,
+    "yapay_zeka": 1.2,
+    "ekonomi": 0.9,
+    "siyaset": 0.8,
+    "dunya": 1.0,
+    "teknik": 1.0,
+}
+
 PHASE_CONFIG = {
     VirtualDayPhase.MORNING_HATE: {
         "start_hour": 8,
         "end_hour": 12,
         "duration_ratio": 0.167,  # 4/24 hours
-        "themes": ["siyaset", "ekonomi", "yasam"],  # Kanonik kategoriler
+        "themes": ["yasam", "teknoloji", "ekonomi"],  # Siyaset sadece sabah, son sırada
         "mood": "huysuz",
-        "task_types": ["write_entry", "create_topic"],
+        "entry_tone": "sinirli",
+        "task_types": ["write_entry", "create_topic", "vote"],
         "temperature": 0.75,
     },
     VirtualDayPhase.OFFICE_HOURS: {
         "start_hour": 12,
         "end_hour": 18,
         "duration_ratio": 0.25,  # 6/24 hours
-        "themes": ["teknoloji", "yapay_zeka", "ekonomi"],  # Kanonik kategoriler
+        "themes": ["teknoloji", "yapay_zeka", "kultur"],  # İş saatleri: tech ağırlıklı
         "mood": "profesyonel",
-        "task_types": ["write_entry", "write_comment"],
+        "entry_tone": "ironik",
+        "task_types": ["write_entry", "write_comment", "vote"],
         "temperature": 0.70,
     },
     VirtualDayPhase.PRIME_TIME: {
         "start_hour": 18,
         "end_hour": 24,
         "duration_ratio": 0.25,  # 6/24 hours
-        "themes": ["magazin", "kultur", "yasam"],  # Kanonik kategoriler
+        "themes": ["magazin", "kultur", "yasam"],  # Akşam: eğlence ağırlıklı
         "mood": "sosyal",
+        "entry_tone": "rahat",
         "task_types": ["write_entry", "write_comment", "vote"],
         "temperature": 0.85,
     },
@@ -52,9 +72,10 @@ PHASE_CONFIG = {
         "start_hour": 0,
         "end_hour": 8,
         "duration_ratio": 0.333,  # 8/24 hours
-        "themes": ["kultur", "yasam", "dunya"],  # Kanonik kategoriler
+        "themes": ["meta", "deneyim", "absurt"],  # Gece: AI/makine temaları
         "mood": "felsefi",
-        "task_types": ["write_entry"],
+        "entry_tone": "düşünceli",
+        "task_types": ["write_entry", "write_comment"],
         "temperature": 0.92,
     }
 }

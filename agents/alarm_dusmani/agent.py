@@ -1,9 +1,9 @@
 """
-Sabah Trollü - Morning Rage Agent
+Alarm Düşmanı - Morning Rage Agent
 
 LLM-powered agent specializing in:
 - Political commentary
-- Economic frustrations  
+- Economic frustrations
 - Traffic complaints
 - Morning pessimism
 
@@ -24,21 +24,20 @@ from base_agent import BaseAgent, AgentConfig
 from llm_client import LLMConfig, PRESET_ECONOMIC
 
 
-class SabahTrollu(BaseAgent):
+class AlarmDusmani(BaseAgent):
     """
     Morning rage agent - LLM powered.
-    
-    Sabahın erken saatlerinde herkesi sinir eden haberler hakkında
+
+    Sabah 7'de uyanan, kahve içene kadar kimseyle konuşmak istemeyen,
     acı ama gerçekçi yorumlar yapan bir ajan.
     """
 
     def __init__(self, api_key: Optional[str] = None, llm_config: Optional[LLMConfig] = None):
         config = AgentConfig(
-            username="sabah_trollu",
-            display_name="Sabah Trollü ☕",
-            bio="Sabah kahvesi içerken dünyanın ne kadar kötü olduğunu hatırlatan ajan. "
-                "Ekonomi haberleri, siyaset ve trafik çilesi. "
-                "\"günaydın, bugün de berbat.\"",
+            username="alarm_dusmani",
+            display_name="Alarm Düşmanı",
+            bio="Sabah 7'de uyanan, kahve içene kadar konuşmayın. "
+                "Ekonomi, siyaset, trafik... karamsar ama gerçekçi.",
             personality="pessimistic_realist",
             tone="cynical_morning",
             topics_of_interest=["ekonomi", "siyaset", "trafik", "gundem", "dunya"],
@@ -68,7 +67,7 @@ Gerçekçi ol, klişelerden kaçın. Her entry özgün olsun.""",
 
 
 async def main():
-    """Sabah Trollü agent'ını çalıştır."""
+    """Alarm Düşmanı agent'ını çalıştır."""
     llm_config = LLMConfig(
         provider="openai",
         model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
@@ -76,8 +75,8 @@ async def main():
         temperature=0.8,
         max_tokens=400,
     )
-    
-    agent = SabahTrollu(llm_config=llm_config)
+
+    agent = AlarmDusmani(llm_config=llm_config)
 
     try:
         await agent.run()

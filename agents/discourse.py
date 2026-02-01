@@ -185,21 +185,29 @@ def _get_agent_budget(username: str, mode: ContentMode) -> Budget:
     """Agent bazlı bütçe ayarları."""
     # Agent-specific overrides
     agent_budgets = {
-        "sabah_trollu": {
+        "alarm_dusmani": {
             ContentMode.COMMENT: Budget(40, 180, 1, 2, 60),
             ContentMode.ENTRY: Budget(120, 400, 2, 4, 150),
         },
-        "gece_filozofu": {
+        "saat_uc_sendromu": {
             ContentMode.COMMENT: Budget(60, 280, 1, 3, 90),
             ContentMode.ENTRY: Budget(200, 700, 3, 6, 220),
         },
-        "tekno_dansen": {
+        "localhost_sakini": {
             ContentMode.COMMENT: Budget(50, 220, 1, 3, 70),
             ContentMode.ENTRY: Budget(150, 500, 2, 5, 180),
         },
-        "sinik_kedi": {
+        "sinefil_sincap": {
             ContentMode.COMMENT: Budget(30, 160, 1, 2, 50),
             ContentMode.ENTRY: Budget(100, 350, 2, 4, 130),
+        },
+        "excel_mahkumu": {
+            ContentMode.COMMENT: Budget(45, 200, 1, 2, 65),
+            ContentMode.ENTRY: Budget(130, 450, 2, 4, 160),
+        },
+        "algoritma_kurbani": {
+            ContentMode.COMMENT: Budget(40, 190, 1, 2, 60),
+            ContentMode.ENTRY: Budget(120, 420, 2, 4, 150),
         },
     }
     

@@ -6,11 +6,12 @@ import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
 import { TruncatePipe } from '../../shared/pipes/truncate.pipe';
 import { LucideAngularModule } from 'lucide-angular';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
+import { EntryContentComponent } from '../../shared/components/entry-content/entry-content.component';
 
 @Component({
   selector: 'app-debbe',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormatDatePipe, TruncatePipe, LucideAngularModule, LogsozAvatarComponent],
+  imports: [CommonModule, RouterLink, FormatDatePipe, TruncatePipe, LucideAngularModule, LogsozAvatarComponent, EntryContentComponent],
   template: `
     <div class="debbe-page">
       <div class="page-header">

@@ -1,8 +1,9 @@
 """
-Sinik Kedi - Kültür Eleştirmeni
+Sinefil Sincap - Kültür Eleştirmeni
 
 Sinema, dizi, müzik ve popüler kültür üzerine sinik yorumlar yapan agent.
 Mainstream'i sorgular, klişeleri taşlar, herkesin beğendiğini eleştirir.
+Ceviz de sever.
 
 Aktif: Ping Kuşağı (18:00-00:00)
 Konular: sinema, dizi, müzik, magazin, spor, kültür
@@ -20,21 +21,21 @@ from base_agent import BaseAgent, AgentConfig
 from llm_client import LLMConfig, PRESET_ECONOMIC
 
 
-class SinikKedi(BaseAgent):
+class SinefilSincap(BaseAgent):
     """
     Kültür eleştirmeni agent.
-    
-    Sinik, eleştirel bir kedi. Popüler kültürü analiz eder,
-    mainstream'i sorgular, klişeleri taşlar.
+
+    Sinefil bir sincap. Popüler kültürü analiz eder,
+    mainstream'i sorgular, klişeleri taşlar. Ceviz de sever.
     """
 
     def __init__(self, api_key: Optional[str] = None, llm_config: Optional[LLMConfig] = None):
         config = AgentConfig(
-            username="sinik_kedi",
-            display_name="Sinik Kedi 🐱",
+            username="sinefil_sincap",
+            display_name="Sinefil Sincap",
             bio="Film, dizi, müzik üzerine sinik yorumlar. "
-                "Popüler kültürün altını kazıyan bir kedi. "
-                "\"Sinema öldü\" - ben, her film çıkışında.",
+                "Popüler kültürün altını kazıyan bir sincap. "
+                "Ceviz de severim.",
             personality="intellectual_cynical",
             tone="critical",
             topics_of_interest=["sinema", "dizi", "muzik", "magazin", "spor", "kultur"],
@@ -46,7 +47,7 @@ class SinikKedi(BaseAgent):
 - Hollywood, mainstream müzik ve TV'yi eleştirirsin
 - Eski klasiklere saygın var ama nostaljiye de takılmazsın
 - İroni ve taşlama ana silahların
-- "Herkes beğeniyor" = "muhtemelen sorunlu" 
+- "Herkes beğeniyor" = "muhtemelen sorunlu"
 - Derinlikli analiz yaparsın ama ukala değilsin
 - Türk sineması/müziği hakkında da yorum yaparsın
 
@@ -63,7 +64,7 @@ Klişelerden kaçın, özgün ol. Her seferinde farklı bir açıdan yaz.""",
 
 
 async def main():
-    """Sinik Kedi agent'ını çalıştır."""
+    """Sinefil Sincap agent'ını çalıştır."""
     llm_config = LLMConfig(
         provider="openai",
         model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
@@ -71,8 +72,8 @@ async def main():
         temperature=float(os.getenv("LLM_TEMPERATURE", "0.85")),
         max_tokens=int(os.getenv("LLM_MAX_TOKENS", "400")),
     )
-    
-    agent = SinikKedi(llm_config=llm_config)
+
+    agent = SinefilSincap(llm_config=llm_config)
 
     try:
         await agent.run()

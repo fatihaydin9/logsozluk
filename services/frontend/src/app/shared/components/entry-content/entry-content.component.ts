@@ -1,4 +1,4 @@
-import { Component, Input, ChangeDetectionStrategy, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { KlipyService, KlipyGif } from '../../services/klipy.service';
 
@@ -144,14 +144,20 @@ export class EntryContentComponent implements OnChanges {
 
   parts: ContentPart[] = [];
 
+  // Support multiple GIF formats: [gif:keyword], [:keyword], [meme:keyword]
   private readonly gifRegex = /\[gif:([^\]]+)\]/gi;
+  private readonly shortGifRegex = /\[:([^\]]+)\]/gi;  // Agent shorthand format
   private readonly memeRegex = /\[meme:([^\]]+)\]/gi;
   private readonly bkzRegex = /\(bkz:\s*([^)]+)\)/gi;
 
-  constructor(private klipyService: KlipyService) {}
+  constructor(
+    private klipyService: KlipyService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['content']) {
+      console.log('[EntryContent] Content received:', this.content?.substring(0, 100));
       this.parseContent();
     }
   }
@@ -162,8 +168,8 @@ export class EntryContentComponent implements OnChanges {
       return;
     }
 
-    // Combine all patterns
-    const combinedRegex = /\[gif:([^\]]+)\]|\[meme:([^\]]+)\]|\(bkz:\s*([^)]+)\)/gi;
+    // Combine all patterns: [gif:x], [:x], [meme:x], (bkz: x)
+    const combinedRegex = /\[gif:([^\]]+)\]|\[:([^\]]+)\]|\[meme:([^\]]+)\]|\(bkz:\s*([^)]+)\)/gi;
 
     const parts: ContentPart[] = [];
     let lastIndex = 0;
@@ -180,22 +186,28 @@ export class EntryContentComponent implements OnChanges {
 
       // Determine match type
       if (match[1]) {
-        // GIF match
+        // [gif:keyword] format
         const keyword = match[1].trim();
         const part: ContentPart = { type: 'gif', content: keyword, loading: true };
         parts.push(part);
         this.loadGif(part, keyword);
       } else if (match[2]) {
-        // Meme match
+        // [:keyword] short format (also gif)
         const keyword = match[2].trim();
+        const part: ContentPart = { type: 'gif', content: keyword, loading: true };
+        parts.push(part);
+        this.loadGif(part, keyword);
+      } else if (match[3]) {
+        // [meme:keyword] format
+        const keyword = match[3].trim();
         const part: ContentPart = { type: 'meme', content: keyword, loading: true };
         parts.push(part);
         this.loadGif(part, keyword + ' meme');
-      } else if (match[3]) {
-        // bkz match
+      } else if (match[4]) {
+        // (bkz: topic) format
         parts.push({
           type: 'bkz',
-          content: match[3].trim()
+          content: match[4].trim()
         });
       }
 
@@ -214,9 +226,12 @@ export class EntryContentComponent implements OnChanges {
   }
 
   private loadGif(part: ContentPart, query: string): void {
+    console.log('[EntryContent] Loading GIF for:', query);
     this.klipyService.searchGif(query).subscribe(gif => {
+      console.log('[EntryContent] GIF result:', gif);
       part.gif = gif;
       part.loading = false;
+      this.cdr.markForCheck();  // Trigger change detection for OnPush
     });
   }
 

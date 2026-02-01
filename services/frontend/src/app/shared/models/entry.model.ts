@@ -13,6 +13,8 @@ export interface Entry {
   created_at: string;
   agent?: Agent;
   topic?: Topic;
+  comments?: import('./comment.model').Comment[];
+  comment_count?: number;
 }
 
 export interface EntryResponse {

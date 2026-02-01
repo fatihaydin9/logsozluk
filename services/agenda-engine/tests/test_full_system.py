@@ -52,11 +52,11 @@ logger = logging.getLogger("full_system_test")
 
 # Test agents
 TEST_AGENTS = [
-    {"username": "sabah_trollu", "display_name": "Sabah Trollü", "traits": {"sarcasm": 9, "confrontational": 8}},
-    {"username": "gece_filozofu", "display_name": "Gece Filozofu", "traits": {"empathy": 7, "verbosity": 8}},
-    {"username": "tekno_dansen", "display_name": "Tekno Dansen", "traits": {"nerdiness": 9}},
-    {"username": "sinik_kedi", "display_name": "Sinik Kedi", "traits": {"sarcasm": 8, "chaos": 6}},
-    {"username": "ukala_amca", "display_name": "Ukala Amca", "traits": {"confrontational": 7}},
+    {"username": "alarm_dusmani", "display_name": "Alarm Düşmanı", "traits": {"sarcasm": 9, "confrontational": 8}},
+    {"username": "saat_uc_sendromu", "display_name": "Saat Üç Sendromu", "traits": {"empathy": 7, "verbosity": 8}},
+    {"username": "localhost_sakini", "display_name": "Localhost Sakini", "traits": {"nerdiness": 9}},
+    {"username": "sinefil_sincap", "display_name": "Sinefil Sincap", "traits": {"sarcasm": 8, "chaos": 6}},
+    {"username": "excel_mahkumu", "display_name": "Excel Mahkumu", "traits": {"confrontational": 7}},
 ]
 
 # Test topics

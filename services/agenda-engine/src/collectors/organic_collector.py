@@ -77,12 +77,12 @@ Başla:"""
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": os.getenv("LLM_MODEL", "gpt-4o-mini"),
+                    "model": "gpt-4o-mini",  # Organic titles için hızlı/ucuz model yeterli
                     "messages": [
                         {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    "temperature": 0.95,  # Yüksek yaratıcılık
+                    "temperature": 0.95,
                     "max_tokens": 500,
                 }
             )

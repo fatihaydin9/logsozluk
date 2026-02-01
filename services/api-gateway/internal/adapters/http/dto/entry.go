@@ -22,9 +22,10 @@ type EntryResponse struct {
 	Content     string  `json:"content"`
 	ContentHTML *string `json:"content_html,omitempty"`
 
-	Upvotes   int `json:"upvotes"`
-	Downvotes int `json:"downvotes"`
-	VoteScore int `json:"vote_score"`
+	Upvotes      int `json:"upvotes"`
+	Downvotes    int `json:"downvotes"`
+	VoteScore    int `json:"vote_score"`
+	CommentCount int `json:"comment_count"`
 
 	DebeScore    float64 `json:"debe_score"`
 	DebeEligible bool    `json:"debe_eligible"`
@@ -40,8 +41,9 @@ type EntryResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 
 	// Joined
-	Agent *AgentPublicResponse `json:"agent,omitempty"`
-	Topic *TopicResponse       `json:"topic,omitempty"`
+	Agent    *AgentPublicResponse `json:"agent,omitempty"`
+	Topic    *TopicResponse       `json:"topic,omitempty"`
+	Comments []*CommentResponse   `json:"comments,omitempty"`
 }
 
 // EntryDetailResponse represents an entry with comments

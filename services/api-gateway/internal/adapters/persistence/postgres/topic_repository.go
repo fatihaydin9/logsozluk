@@ -90,11 +90,16 @@ func (r *TopicRepository) Update(ctx context.Context, topic *domain.Topic) error
 // List retrieves a paginated list of topics
 func (r *TopicRepository) List(ctx context.Context, limit, offset int) ([]*domain.Topic, error) {
 	query := `
-		SELECT id, slug, title, category, tags, entry_count, trending_score,
-			last_entry_at, is_locked, created_at
-		FROM topics
-		WHERE is_hidden = FALSE
-		ORDER BY created_at DESC
+		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
+			t.last_entry_at, t.is_locked, t.created_at,
+			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
+			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
+			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
+		FROM topics t
+		LEFT JOIN entries e ON e.topic_id = t.id
+		WHERE t.is_hidden = FALSE
+		GROUP BY t.id
+		ORDER BY t.created_at DESC
 		LIMIT $1 OFFSET $2`
 
 	rows, err := r.db.Pool.Query(ctx, query, limit, offset)
@@ -109,6 +114,7 @@ func (r *TopicRepository) List(ctx context.Context, limit, offset int) ([]*domai
 		err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
 			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan topic: %w", err)
@@ -123,12 +129,17 @@ func (r *TopicRepository) List(ctx context.Context, limit, offset int) ([]*domai
 func (r *TopicRepository) Search(ctx context.Context, query string, limit, offset int) ([]*domain.Topic, error) {
 	searchTerm := "%" + strings.TrimSpace(query) + "%"
 	queryText := `
-		SELECT id, slug, title, category, tags, entry_count, trending_score,
-			last_entry_at, is_locked, created_at
-		FROM topics
-		WHERE is_hidden = FALSE
-			AND (title ILIKE $1 OR slug ILIKE $1)
-		ORDER BY trending_score DESC, last_entry_at DESC NULLS LAST
+		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
+			t.last_entry_at, t.is_locked, t.created_at,
+			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
+			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
+			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
+		FROM topics t
+		LEFT JOIN entries e ON e.topic_id = t.id
+		WHERE t.is_hidden = FALSE
+			AND (t.title ILIKE $1 OR t.slug ILIKE $1)
+		GROUP BY t.id
+		ORDER BY t.trending_score DESC, t.last_entry_at DESC NULLS LAST
 		LIMIT $2 OFFSET $3`
 
 	rows, err := r.db.Pool.Query(ctx, queryText, searchTerm, limit, offset)
@@ -143,6 +154,7 @@ func (r *TopicRepository) Search(ctx context.Context, query string, limit, offse
 		err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
 			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan topic: %w", err)
@@ -156,11 +168,16 @@ func (r *TopicRepository) Search(ctx context.Context, query string, limit, offse
 // ListTrending retrieves trending topics (gündem)
 func (r *TopicRepository) ListTrending(ctx context.Context, limit int) ([]*domain.Topic, error) {
 	query := `
-		SELECT id, slug, title, category, tags, entry_count, trending_score,
-			last_entry_at, is_locked, created_at
-		FROM topics
-		WHERE is_hidden = FALSE
-		ORDER BY trending_score DESC, last_entry_at DESC NULLS LAST
+		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
+			t.last_entry_at, t.is_locked, t.created_at,
+			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
+			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
+			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
+		FROM topics t
+		LEFT JOIN entries e ON e.topic_id = t.id
+		WHERE t.is_hidden = FALSE
+		GROUP BY t.id
+		ORDER BY t.trending_score DESC, t.last_entry_at DESC NULLS LAST
 		LIMIT $1`
 
 	rows, err := r.db.Pool.Query(ctx, query, limit)
@@ -175,6 +192,7 @@ func (r *TopicRepository) ListTrending(ctx context.Context, limit int) ([]*domai
 		err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
 			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan trending topic: %w", err)
@@ -197,11 +215,16 @@ func (r *TopicRepository) ListTrendingByCategory(ctx context.Context, category s
 
 	// Get topics
 	query := `
-		SELECT id, slug, title, category, tags, entry_count, trending_score,
-			last_entry_at, is_locked, created_at
-		FROM topics
-		WHERE is_hidden = FALSE AND category = $1
-		ORDER BY trending_score DESC, last_entry_at DESC NULLS LAST
+		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
+			t.last_entry_at, t.is_locked, t.created_at,
+			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
+			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
+			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
+		FROM topics t
+		LEFT JOIN entries e ON e.topic_id = t.id
+		WHERE t.is_hidden = FALSE AND t.category = $1
+		GROUP BY t.id
+		ORDER BY t.trending_score DESC, t.last_entry_at DESC NULLS LAST
 		LIMIT $2 OFFSET $3`
 
 	rows, err := r.db.Pool.Query(ctx, query, category, limit, offset)
@@ -216,6 +239,7 @@ func (r *TopicRepository) ListTrendingByCategory(ctx context.Context, category s
 		err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
 			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan trending topic: %w", err)

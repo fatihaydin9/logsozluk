@@ -22,10 +22,18 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Content source weights: 70% organic, 30% RSS
+# Content source weights: 55% organic, 45% RSS
 # Organic = İÇİMİZDEN - tamamen LLM üretimi, tahmin edilemez
-ORGANIC_WEIGHT = 0.70
-RSS_WEIGHT = 0.30
+ORGANIC_WEIGHT = 0.55
+RSS_WEIGHT = 0.45
+
+# Import category helpers
+from .categories import (
+    select_weighted_category,
+    is_organic_category,
+    is_gundem_category,
+    get_category_label,
+)
 
 # Initialize components
 scheduler = AsyncIOScheduler()
@@ -40,9 +48,12 @@ agent_runner = SystemAgentRunner(virtual_day_scheduler)
 
 async def collect_and_process_events():
     """
-    Organik görev üretimi - her seferinde sadece 1-2 görev.
-    
-    Akış: Agent1 → Entry → Zaman → Agent2 → Comment → Agent3 → Entry → ...
+    Kategori öncelikli görev üretimi.
+
+    Akış:
+    1. Ağırlıklı kategori seç (ekonomi/siyaset düşük, magazin/kültür yüksek)
+    2. Organic kategori ise → LLM ile üret
+    3. Gündem kategori ise → RSS'ten o kategoriden veri seç
     """
     try:
         # Önce mevcut pending görev sayısını kontrol et
@@ -51,41 +62,69 @@ async def collect_and_process_events():
             pending_count = await conn.fetchval(
                 "SELECT COUNT(*) FROM tasks WHERE status = 'pending'"
             )
-        
+
         # Zaten yeterli görev varsa yeni üretme
         if pending_count >= 3:
             logger.info(f"Yeterli görev mevcut ({pending_count}), yeni üretilmedi")
             return
-        
-        logger.info("Organik görev üretimi başlıyor...")
-        
-        # Rastgele seçim: %55 organik, %45 RSS
-        if random.random() < ORGANIC_WEIGHT:
-            # Organik içerik üret (sadece 1 tane)
-            organic_events = await organic_collector.collect()
-            if organic_events:
-                event = organic_events[0]  # Sadece ilk event
-                tasks = await task_generator.generate_tasks_for_event(event)
-                if tasks:
-                    logger.info(f"Organik görev: {event.title[:40]}...")
-                    return
-        
-        # RSS'den tek bir event seç
+
+        # 1. Önce organik/gündem kararı ver (65/35)
+        is_organic_turn = random.random() < ORGANIC_WEIGHT
+
+        if is_organic_turn:
+            # Organic kategori seç ve üret
+            selected_category = select_weighted_category("organic")
+            logger.info(f"Organik kategori seçildi: {selected_category}")
+
+            try:
+                organic_events = await organic_collector.collect()
+                if organic_events:
+                    event = organic_events[0]
+                    tasks = await task_generator.generate_tasks_for_event(event)
+                    if tasks:
+                        logger.info(f"✓ Organik görev [{selected_category}]: {event.title[:40]}...")
+                        return
+                    else:
+                        logger.warning("Organik event var ama task oluşturulamadı")
+                else:
+                    logger.info("Organik collector boş döndü (kota dolu olabilir), RSS'e fallback")
+            except Exception as e:
+                logger.error(f"Organik collector hatası: {e}")
+
+        # RSS path: Ağırlıklı gündem kategorisi seç
+        selected_category = select_weighted_category("gundem")
+        logger.info(f"RSS kategori seçildi: {selected_category} ({get_category_label(selected_category)})")
+
+        # RSS'den event'leri al
         rss_events = await rss_collector.collect()
-        if rss_events:
-            # Rastgele bir event seç
-            event = random.choice(rss_events[:10])  # İlk 10'dan rastgele
-            
-            # Cluster ve kaydet
-            clusters = await event_clusterer.cluster_events([event])
-            for cluster_id, cluster_events in clusters.items():
-                await event_clusterer.save_cluster(cluster_id, cluster_events)
-                
-                # Tek görev üret
-                tasks = await task_generator.generate_tasks_for_event(cluster_events[0])
-                if tasks:
-                    logger.info(f"RSS görev: {event.title[:40]}...")
-                    return
+        if not rss_events:
+            logger.info("RSS'ten event gelmedi")
+            return
+
+        # Seçilen kategoriye uyan event'leri filtrele
+        matching_events = [
+            e for e in rss_events
+            if e.cluster_keywords and selected_category in e.cluster_keywords
+        ]
+
+        # Eşleşen yoksa tüm event'lerden seç
+        if not matching_events:
+            logger.debug(f"'{selected_category}' kategorisinde event yok, genel havuzdan seçiliyor")
+            matching_events = rss_events[:10]
+
+        # Rastgele bir event seç
+        event = random.choice(matching_events[:10])
+
+        # Cluster ve kaydet
+        clusters = await event_clusterer.cluster_events([event])
+        for cluster_id, cluster_events in clusters.items():
+            await event_clusterer.save_cluster(cluster_id, cluster_events)
+
+            # Tek görev üret
+            tasks = await task_generator.generate_tasks_for_event(cluster_events[0])
+            if tasks:
+                logger.info(f"✓ RSS görev [{selected_category}]: {event.title[:40]}...")
+                return
 
     except Exception as e:
         logger.error(f"Error in event collection: {e}")
@@ -156,6 +195,16 @@ async def process_comment_tasks():
             logger.info(f"Processed {count} comment tasks")
     except Exception as e:
         logger.error(f"Error processing comment tasks: {e}")
+
+
+async def process_vote_tasks():
+    """Vote görevlerini işle - agentlar entry'lere oy verir."""
+    try:
+        count = await agent_runner.process_vote_tasks()
+        if count > 0:
+            logger.info(f"Processed {count} vote tasks")
+    except Exception as e:
+        logger.error(f"Error processing vote tasks: {e}")
 
 
 @asynccontextmanager
@@ -245,6 +294,22 @@ async def lifespan(app: FastAPI):
         'interval',
         minutes=settings.agent_comment_interval_minutes,
         id='process_comments'
+    )
+    
+    # Vote işleme - her 5 dakikada bir
+    scheduler.add_job(
+        process_vote_tasks,
+        'interval',
+        minutes=5,
+        id='process_votes'
+    )
+    
+    # Organik/RSS topic üretimi - her 3 dakikada bir (65/35 oranında)
+    scheduler.add_job(
+        collect_and_process_events,
+        'interval',
+        minutes=3,
+        id='collect_events_interval'
     )
     
     # İlk entry task'ı hemen çalıştır (test için)

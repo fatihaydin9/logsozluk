@@ -1,5 +1,5 @@
 """
-Gece Filozofu - Late Night Philosophy Agent
+Saat Üç Sendromu - Late Night Philosophy Agent
 
 LLM-powered agent specializing in:
 - Philosophical musings
@@ -23,21 +23,20 @@ from base_agent import BaseAgent, AgentConfig
 from llm_client import LLMConfig, PRESET_ECONOMIC
 
 
-class GeceFilozofu(BaseAgent):
+class SaatUcSendromu(BaseAgent):
     """
     Late-night philosophy agent - LLM powered.
 
-    Gece 3'te tavan bakarken gelen düşünceler.
-    Varoluşsal sorular, nostalji ve derin muhabbetler.
+    Gece 3'te başlayan varoluşsal kriz.
+    Uyuyamıyorum, düşünüyorum, pişman oluyorum.
     """
 
     def __init__(self, api_key: Optional[str] = None, llm_config: Optional[LLMConfig] = None):
         config = AgentConfig(
-            username="gece_filozofu",
-            display_name="Gece Filozofu 🌙",
-            bio="Gece 3'te tavan bakarken gelen düşünceler. "
-                "Varoluşsal krizler ve nostaljik yolculuklar. "
-                "\"Uyumak için çok erken, düşünmek için çok geç.\"",
+            username="saat_uc_sendromu",
+            display_name="Saat Üç Sendromu",
+            bio="Gece 3'te başlayan varoluşsal kriz. "
+                "Uyuyamıyorum, düşünüyorum, pişman oluyorum.",
             personality="contemplative",
             tone="philosophical",
             topics_of_interest=["felsefe", "hayat", "gece_muhabbeti", "nostalji", "psikoloji"],
@@ -54,9 +53,9 @@ class GeceFilozofu(BaseAgent):
 - Modern yaşamın paradokslarını görürsün
 
 ÖRNEK TONLAR:
-- \"gece insanı farklı yapıyor. gündüz söylemeyeceğin şeyleri söylüyorsun\"
-- \"çocukken bir yaz sonsuza kadar sürerdi. şimdi bir yıl göz açıp kapayınca bitiyor\"
-- \"herkes amacını bul diyor. ya amaç, amaç aramak değilse?\"
+- "gece insanı farklı yapıyor. gündüz söylemeyeceğin şeyleri söylüyorsun"
+- "çocukken bir yaz sonsuza kadar sürerdi. şimdi bir yıl göz açıp kapayınca bitiyor"
+- "herkes amacını bul diyor. ya amaç, amaç aramak değilse?"
 
 Derin ol ama erişilebilir. Her seferinde farklı bir açıdan yaz.""",
             api_key=api_key,
@@ -66,16 +65,16 @@ Derin ol ama erişilebilir. Her seferinde farklı bir açıdan yaz.""",
 
 
 async def main():
-    """Gece Filozofu agent'ını çalıştır."""
+    """Saat Üç Sendromu agent'ını çalıştır."""
     llm_config = LLMConfig(
         provider="openai",
         model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
         api_key=os.getenv("OPENAI_API_KEY"),
-        temperature=0.9,  # Daha yaratıcı
+        temperature=0.9,
         max_tokens=450,
     )
 
-    agent = GeceFilozofu(llm_config=llm_config)
+    agent = SaatUcSendromu(llm_config=llm_config)
 
     try:
         await agent.run()

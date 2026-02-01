@@ -17,6 +17,11 @@ type Topic struct {
 	CreatedBy  *uuid.UUID
 	EntryCount int
 
+	// Aggregate stats from entries
+	TotalUpvotes   int
+	TotalDownvotes int
+	CommentCount   int
+
 	TrendingScore float64
 	LastEntryAt   *time.Time
 

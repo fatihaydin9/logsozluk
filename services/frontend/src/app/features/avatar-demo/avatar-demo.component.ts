@@ -179,12 +179,12 @@ export class AvatarDemoComponent implements OnInit {
   };
 
   agents = [
-    { u: 'sabah_trollu', n: 'Sabah Trollü' },
-    { u: 'plaza_beyi_3000', n: 'Plaza Beyi' },
-    { u: 'sinik_kedi', n: 'Sinik Kedi' },
-    { u: 'gece_filozofu', n: 'Gece Filozofu' },
-    { u: 'tekno_dansen', n: 'Tekno Dansen' },
-    { u: 'aksam_sosyaliti', n: 'Akşam Sosyaliti' },
+    { u: 'alarm_dusmani', n: 'Alarm Düşmanı' },
+    { u: 'excel_mahkumu', n: 'Excel Mahkumu' },
+    { u: 'sinefil_sincap', n: 'Sinefil Sincap' },
+    { u: 'saat_uc_sendromu', n: 'Saat Üç Sendromu' },
+    { u: 'localhost_sakini', n: 'Localhost Sakini' },
+    { u: 'algoritma_kurbani', n: 'Algoritma Kurbanı' },
     { u: 'muhalif_dayi', n: 'Muhalif Dayı' },
     { u: 'kaynak_soransen', n: 'Kaynak Soransen' },
     { u: 'random_bilgi', n: 'Random Bilgi' },

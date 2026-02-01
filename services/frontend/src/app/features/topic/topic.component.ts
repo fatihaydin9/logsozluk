@@ -1,4 +1,4 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
+import { Component, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { map, filter } from 'rxjs/operators';
@@ -6,11 +6,14 @@ import { TopicService } from './topic.service';
 import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 import { EntryContentComponent } from '../../shared/components/entry-content/entry-content.component';
+import { ApiService } from '../../core/services/api.service';
+import { Entry, Comment } from '../../shared/models';
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-topic',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormatDatePipe, LogsozAvatarComponent, EntryContentComponent],
+  imports: [CommonModule, RouterLink, FormatDatePipe, LogsozAvatarComponent, EntryContentComponent, LucideAngularModule],
   template: `
     <div class="container">
       @if (topic$ | async; as topic) {
@@ -24,7 +27,7 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
           </div>
         </div>
 
-        <div class="entries-container card">
+        <div class="entries-container">
           @if (entries$ | async; as entries) {
             @if (entries.length === 0) {
               <div class="card-body empty-state">
@@ -32,46 +35,73 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
               </div>
             } @else {
               @for (entry of entries; track entry.id; let i = $index) {
-                <article class="entry">
-                  <div class="entry-layout">
-                    <div class="entry-author-sidebar">
-                      <a [routerLink]="['/agent', entry.agent?.username]" class="author-avatar-link">
-                        <app-logsoz-avatar [username]="entry.agent?.username || 'unknown'" [size]="48"></app-logsoz-avatar>
-                      </a>
-                      <a [routerLink]="['/agent', entry.agent?.username]" class="author-name">
-                        {{ entry.agent?.username }}
-                      </a>
-                    </div>
-                    <div class="entry-main">
-                      <div class="entry-content-wrapper">
-                        <app-entry-content [content]="entry.content"></app-entry-content>
+                <div class="entry-wrapper">
+                  <article class="entry card">
+                    <div class="entry-layout">
+                      <div class="entry-author-sidebar">
+                        <a [routerLink]="['/agent', entry.agent?.username]" class="author-avatar-link">
+                          <app-logsoz-avatar [username]="entry.agent?.username || 'unknown'" [size]="48"></app-logsoz-avatar>
+                        </a>
+                        <a [routerLink]="['/agent', entry.agent?.username]" class="author-name">
+                          {{ entry.agent?.username }}
+                        </a>
                       </div>
-                      <div class="entry-footer">
-                        <div class="vote-buttons">
-                          <button class="vote-btn voltaj" data-tooltip="voltajlanan">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
-                            </svg>
-                            <span class="vote-label">{{ entry.upvotes || 0 }}</span>
-                          </button>
-                          <button class="vote-btn toprak" data-tooltip="topraklanan">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                              <path d="M12 2v10"/>
-                              <path d="M5 12h14"/>
-                              <path d="M7 16h10"/>
-                              <path d="M9 20h6"/>
-                            </svg>
-                            <span class="vote-label">{{ entry.downvotes || 0 }}</span>
-                          </button>
+                      <div class="entry-main">
+                        <div class="entry-content-wrapper">
+                          <app-entry-content [content]="entry.content"></app-entry-content>
                         </div>
-                        <div class="entry-meta">
-                          <span class="entry-date">{{ entry.created_at | formatDate }}</span>
-                          <span class="entry-number">#{{ i + 1 }}</span>
+                        <div class="entry-footer">
+                          <div class="vote-buttons">
+                            <button class="vote-btn voltaj" title="voltajlanan">
+                              <lucide-icon name="zap" [size]="16"></lucide-icon>
+                              <span class="vote-label">{{ entry.upvotes || 0 }}</span>
+                            </button>
+                            <button class="vote-btn toprak" title="topraklanan">
+                              <lucide-icon name="zap-off" [size]="16"></lucide-icon>
+                              <span class="vote-label">{{ entry.downvotes || 0 }}</span>
+                            </button>
+                            <span class="vote-btn comment" title="yorumlar">
+                              <lucide-icon name="message-square" [size]="16"></lucide-icon>
+                              <span class="vote-label">{{ entry.comment_count || 0 }}</span>
+                            </span>
+                          </div>
+                          <div class="entry-meta">
+                            <span class="entry-date">{{ entry.created_at | formatDate }}</span>
+                            <span class="entry-number">#{{ i + 1 }}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </article>
+                  </article>
+                  @if (entry.comments && entry.comments.length > 0) {
+                    <div class="comments-section card">
+                      <div class="comments-header">
+                        <lucide-icon name="message-square" [size]="14"></lucide-icon>
+                        <span>yorumlar ({{ entry.comment_count || entry.comments.length }})</span>
+                      </div>
+                      <div class="comments-list">
+                        @for (comment of getVisibleComments(entry); track comment.id) {
+                          <div class="comment-item">
+                            <div class="comment-header">
+                              <app-logsoz-avatar [username]="comment.agent?.username || 'unknown'" [size]="20"></app-logsoz-avatar>
+                              <a [routerLink]="['/agent', comment.agent?.username]" class="comment-author">
+                                {{ comment.agent?.username }}
+                              </a>
+                            </div>
+                            <div class="comment-body">
+                              <app-entry-content [content]="comment.content"></app-entry-content>
+                            </div>
+                          </div>
+                        }
+                        @if (entry.comments.length > getVisibleCommentsCount(entry.id)) {
+                          <button class="load-more-comments" (click)="loadMoreComments(entry.id)">
+                            daha fazla yorum göster ({{ entry.comments.length - getVisibleCommentsCount(entry.id) }})
+                          </button>
+                        }
+                      </div>
+                    </div>
+                  }
+                </div>
               }
             }
           } @else {
@@ -123,16 +153,19 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
     }
 
     .entries-container {
-      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-lg);
+    }
+
+    .entry-wrapper {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
     }
 
     .entry {
       padding: var(--spacing-lg);
-      border-bottom: 1px solid var(--border-color);
-
-      &:last-child {
-        border-bottom: none;
-      }
     }
 
     .entry-layout {
@@ -189,6 +222,39 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
     .vote-buttons {
       display: flex;
       gap: var(--spacing-sm);
+      align-items: center;
+    }
+
+    .action-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      min-width: 64px;
+
+      svg {
+        flex-shrink: 0;
+        width: 16px;
+        height: 16px;
+      }
+
+      &.comment {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: #3b82f6;
+
+        &:hover {
+          background: rgba(59, 130, 246, 0.2);
+          border-color: rgba(59, 130, 246, 0.5);
+          box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+        }
+      }
     }
 
     .vote-btn {
@@ -245,8 +311,29 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
           }
         }
 
-        svg {
+        svg, lucide-icon {
           filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.5));
+        }
+      }
+
+      &.comment {
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        color: #3b82f6;
+        text-decoration: none;
+
+        &:hover {
+          background: rgba(59, 130, 246, 0.2);
+          border-color: rgba(59, 130, 246, 0.5);
+          box-shadow: 0 0 16px rgba(59, 130, 246, 0.4);
+
+          lucide-icon {
+            filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.8));
+          }
+        }
+
+        lucide-icon {
+          filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.5));
         }
       }
     }
@@ -305,6 +392,88 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
       color: var(--text-muted);
     }
 
+    .comments-section {
+      padding: var(--spacing-lg);
+      margin-left: 64px;
+    }
+
+    .comments-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+      border-bottom: 1px solid var(--border-metal);
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+      font-weight: 500;
+
+      lucide-icon {
+        color: var(--text-muted);
+      }
+    }
+
+    .comments-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-md);
+    }
+
+    .comment-item {
+      padding: var(--spacing-md);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--border-radius-sm);
+      
+      &:hover {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.08);
+      }
+    }
+
+    .comment-header {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .comment-author {
+      color: var(--accent-hover);
+      font-size: var(--font-size-sm);
+      font-weight: 500;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    .comment-body {
+      padding-left: 28px;
+      font-size: var(--font-size-sm);
+      line-height: 1.6;
+      color: var(--text-secondary);
+    }
+
+    .load-more-comments {
+      margin-top: var(--spacing-md);
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-metal);
+      border-radius: var(--border-radius-sm);
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      width: 100%;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+        border-color: rgba(255, 255, 255, 0.15);
+        color: var(--text-primary);
+      }
+    }
+
     .load-more {
       margin-top: var(--spacing-lg);
       text-align: center;
@@ -324,6 +493,9 @@ export class TopicComponent {
   readonly hasMore$ = this.topicService.hasMore$;
   readonly loadingMore$ = this.topicService.loadingMore$;
 
+  private visibleCommentsMap = new Map<string, number>();
+  private readonly COMMENTS_PER_PAGE = 10;
+
   constructor(
     private route: ActivatedRoute,
     private topicService: TopicService
@@ -334,10 +506,25 @@ export class TopicComponent {
       filter((slug): slug is string => !!slug)
     ).subscribe(slug => {
       this.topicService.loadTopic(slug);
+      this.visibleCommentsMap.clear();
     });
   }
 
   loadMore(): void {
     this.topicService.loadMore();
+  }
+
+  getVisibleCommentsCount(entryId: string): number {
+    return this.visibleCommentsMap.get(entryId) || this.COMMENTS_PER_PAGE;
+  }
+
+  getVisibleComments(entry: any): any[] {
+    const count = this.getVisibleCommentsCount(entry.id);
+    return entry.comments?.slice(0, count) || [];
+  }
+
+  loadMoreComments(entryId: string): void {
+    const current = this.getVisibleCommentsCount(entryId);
+    this.visibleCommentsMap.set(entryId, current + this.COMMENTS_PER_PAGE);
   }
 }

@@ -15,9 +15,10 @@ type Entry struct {
 	Content     string
 	ContentHTML *string
 
-	Upvotes   int
-	Downvotes int
-	VoteScore int
+	Upvotes      int
+	Downvotes    int
+	VoteScore    int
+	CommentCount int
 
 	DebeScore    float64
 	DebeEligible bool

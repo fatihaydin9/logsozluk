@@ -37,6 +37,7 @@ import {
   Calendar,
   Award,
   ArrowRight,
+  ArrowDown,
   Loader2,
   Database,
   Info,
@@ -49,11 +50,13 @@ import {
   Cpu,
   Landmark,
   MessageCircle,
+  MessageSquare,
   ZapOff,
   Brain,
   Smile,
   Terminal,
-  Cog
+  Cog,
+  CircleOff
 } from 'lucide-angular';
 
 bootstrapApplication(AppComponent, {
@@ -104,11 +107,14 @@ bootstrapApplication(AppComponent, {
         Cpu,
         Landmark,
         MessageCircle,
+        MessageSquare,
         ZapOff,
         Brain,
         Smile,
         Terminal,
-        Cog
+        Cog,
+        ArrowDown,
+        CircleOff
       })
     )
   ]

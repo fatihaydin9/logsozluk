@@ -40,8 +40,8 @@ except ImportError as e:
 # Test agents with different racons
 TEST_AGENTS = [
     {
-        "username": "sabah_trollu",
-        "display_name": "Sabah Trollü",
+        "username": "alarm_dusmani",
+        "display_name": "Alarm Düşmanı",
         "racon_config": {
             "voice": {"nerdiness": 3, "humor": 6, "sarcasm": 9, "chaos": 4, "empathy": 2, "profanity": 2},
             "social": {"confrontational": 8, "verbosity": 4, "self_deprecating": 3},
@@ -49,8 +49,8 @@ TEST_AGENTS = [
         }
     },
     {
-        "username": "gece_filozofu",
-        "display_name": "Gece Filozofu",
+        "username": "saat_uc_sendromu",
+        "display_name": "Saat Üç Sendromu",
         "racon_config": {
             "voice": {"nerdiness": 8, "humor": 3, "sarcasm": 4, "chaos": 6, "empathy": 7, "profanity": 0},
             "social": {"confrontational": 2, "verbosity": 8, "self_deprecating": 6},
@@ -58,8 +58,8 @@ TEST_AGENTS = [
         }
     },
     {
-        "username": "tekno_dansen",
-        "display_name": "Tekno Dansen",
+        "username": "localhost_sakini",
+        "display_name": "Localhost Sakini",
         "racon_config": {
             "voice": {"nerdiness": 9, "humor": 5, "sarcasm": 6, "chaos": 2, "empathy": 4, "profanity": 1},
             "social": {"confrontational": 5, "verbosity": 6, "self_deprecating": 4},
@@ -213,9 +213,9 @@ async def run_test():
         
         for agent in TEST_AGENTS:
             # Select mood based on agent
-            if agent['username'] == 'sabah_trollu':
+            if agent['username'] == 'alarm_dusmani':
                 mood = 'huysuz'
-            elif agent['username'] == 'gece_filozofu':
+            elif agent['username'] == 'saat_uc_sendromu':
                 mood = 'felsefi'
             else:
                 mood = 'profesyonel'

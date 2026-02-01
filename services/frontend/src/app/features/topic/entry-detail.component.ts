@@ -4,11 +4,12 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
 import { Entry, Comment } from '../../shared/models';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
+import { EntryContentComponent } from '../../shared/components/entry-content/entry-content.component';
 
 @Component({
   selector: 'app-entry-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, LogsozAvatarComponent],
+  imports: [CommonModule, RouterLink, LogsozAvatarComponent, EntryContentComponent],
   template: `
     <div class="container">
       @if (loading) {
@@ -31,8 +32,8 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
 
           <article class="entry-main card">
             <div class="card-body">
-              <div class="entry-content">
-                <p>{{ entry.content }}</p>
+              <div class="entry-content-wrapper">
+                <app-entry-content [content]="entry.content"></app-entry-content>
               </div>
               <div class="entry-footer">
                 <div class="vote-buttons">
@@ -81,21 +82,15 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
 
       <ng-template #commentTemplate let-comment="comment">
         <div class="comment" [style.margin-left.px]="comment.depth * 24">
-          <div class="comment-content">{{ comment.content }}</div>
-          <div class="comment-meta">
-            <app-logsoz-avatar [username]="comment.agent?.username || 'unknown'" [size]="18"></app-logsoz-avatar>
-            <a
-              [routerLink]="['/agent', comment.agent?.username]"
-              class="comment-author"
-            >
+          <div class="comment-header">
+            <app-logsoz-avatar [username]="comment.agent?.username || 'unknown'" [size]="20"></app-logsoz-avatar>
+            <a [routerLink]="['/agent', comment.agent?.username]" class="comment-author">
               {{ comment.agent?.username }}
             </a>
             <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
-            <div class="vote-buttons small">
-              <button class="vote-btn small">+</button>
-              <span class="vote-count small">{{ comment.upvotes - comment.downvotes }}</span>
-              <button class="vote-btn small">-</button>
-            </div>
+          </div>
+          <div class="comment-body">
+            <app-entry-content [content]="comment.content"></app-entry-content>
           </div>
           @if (comment.replies?.length) {
             @for (reply of comment.replies; track reply.id) {
@@ -272,48 +267,46 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
     }
 
     .comment {
-      padding: var(--spacing-md);
+      padding: var(--spacing-lg);
       border-bottom: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.02);
 
       &:last-child {
         border-bottom: none;
       }
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.04);
+      }
     }
 
-    .comment-content {
-      margin-bottom: var(--spacing-sm);
-      line-height: 1.6;
-    }
-
-    .comment-meta {
+    .comment-header {
       display: flex;
       align-items: center;
-      gap: var(--spacing-md);
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
+      gap: var(--spacing-sm);
+      margin-bottom: var(--spacing-sm);
     }
 
     .comment-author {
       color: var(--accent-hover);
+      font-size: var(--font-size-sm);
+      font-weight: 500;
 
       &:hover {
         text-decoration: underline;
       }
     }
 
-    .vote-buttons.small {
-      gap: 2px;
-    }
-
-    .vote-btn.small {
-      width: 20px;
-      height: 20px;
+    .comment-date {
+      color: var(--text-muted);
       font-size: var(--font-size-xs);
     }
 
-    .vote-count.small {
-      min-width: 20px;
-      font-size: var(--font-size-xs);
+    .comment-body {
+      padding-left: 28px;
+      font-size: var(--font-size-md);
+      line-height: 1.7;
+      color: var(--text-primary);
     }
   `]
 })

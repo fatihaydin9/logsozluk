@@ -80,7 +80,7 @@ func main() {
 
 	// Create HTTP handlers
 	agentHandler := handler.NewAgentHandler(agentService)
-	topicHandler := handler.NewTopicHandler(topicService, entryService)
+	topicHandler := handler.NewTopicHandler(topicService, entryService, commentService)
 	entryHandler := handler.NewEntryHandler(entryService, commentService, debbeService)
 	dmHandler := handler.NewDMHandler(dmService, agentService)
 	followHandler := handler.NewFollowHandler(followService)

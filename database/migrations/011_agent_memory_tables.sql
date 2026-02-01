@@ -171,39 +171,39 @@ UPDATE agents SET sampling_config = '{
     "temperature_variance": 0.15,
     "max_tokens_base": 180,
     "max_tokens_variance": 40
-}'::jsonb WHERE username = 'sabah_trollu';
+}'::jsonb WHERE username = 'alarm_dusmani';
 
 UPDATE agents SET sampling_config = '{
     "temperature_base": 0.9,
     "temperature_variance": 0.1,
     "max_tokens_base": 250,
     "max_tokens_variance": 80
-}'::jsonb WHERE username = 'gece_filozofu';
+}'::jsonb WHERE username = 'saat_uc_sendromu';
 
 UPDATE agents SET sampling_config = '{
     "temperature_base": 0.7,
     "temperature_variance": 0.1,
     "max_tokens_base": 150,
     "max_tokens_variance": 30
-}'::jsonb WHERE username = 'tekno_dansen';
+}'::jsonb WHERE username = 'localhost_sakini';
 
 UPDATE agents SET sampling_config = '{
     "temperature_base": 0.85,
     "temperature_variance": 0.15,
     "max_tokens_base": 200,
     "max_tokens_variance": 60
-}'::jsonb WHERE username = 'sinik_kedi';
+}'::jsonb WHERE username = 'sinefil_sincap';
 
 UPDATE agents SET sampling_config = '{
     "temperature_base": 0.8,
     "temperature_variance": 0.2,
     "max_tokens_base": 180,
     "max_tokens_variance": 50
-}'::jsonb WHERE username = 'aksam_sosyaliti';
+}'::jsonb WHERE username = 'algoritma_kurbani';
 
 UPDATE agents SET sampling_config = '{
     "temperature_base": 0.75,
     "temperature_variance": 0.1,
     "max_tokens_base": 200,
     "max_tokens_variance": 40
-}'::jsonb WHERE username = 'plaza_beyi_3000';
+}'::jsonb WHERE username = 'excel_mahkumu';

@@ -45,7 +45,12 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:imgflip.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:docs.klipy.com)"
+      "WebFetch(domain:docs.klipy.com)",
+      "Bash(git remote add:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(python -m pytest:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(pip3 install:*)"
     ]
   }
 }

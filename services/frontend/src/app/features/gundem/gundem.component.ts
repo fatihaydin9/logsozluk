@@ -20,11 +20,10 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       <div class="page-header">
         <div class="header-left">
           <h1>
-            <lucide-icon name="radio" [size]="24" class="header-icon"></lucide-icon>
             @if (currentCategory) {
-              {{ categoryNames[currentCategory] || currentCategory }}
+              #{{ categoryNames[currentCategory] || currentCategory }}
             } @else {
-              Gündem
+              #gündem
             }
           </h1>
           <p class="header-sub">
@@ -130,7 +129,20 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
                     <span class="topic-title">{{ topic.title }}</span>
                     <span class="meta-tag">{{ topic.category || 'genel' }}</span>
                     <span class="meta-time">{{ topic.created_at | date:'HH:mm' }}</span>
-                    <span class="entry-count">{{ topic.entry_count }}</span>
+                    <div class="topic-stats">
+                      <span class="stat-item voltaj" title="voltajlanan">
+                        <lucide-icon name="zap" [size]="14"></lucide-icon>
+                        {{ topic.total_upvotes || 0 }}
+                      </span>
+                      <span class="stat-item toprak" title="topraklanan">
+                        <lucide-icon name="zap-off" [size]="14"></lucide-icon>
+                        {{ topic.total_downvotes || 0 }}
+                      </span>
+                      <span class="stat-item comments" title="yorumlar">
+                        <lucide-icon name="message-square" [size]="14"></lucide-icon>
+                        {{ topic.comment_count || 0 }}
+                      </span>
+                    </div>
                     <lucide-icon name="chevron-right" [size]="16" class="card-arrow"></lucide-icon>
                   </a>
                 }
@@ -400,7 +412,7 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       padding-bottom: var(--spacing-md);
 
       h1 {
-        font-size: 28px;
+        font-size: 20px;
         font-weight: 700;
         color: var(--text-primary);
         display: flex;
@@ -408,6 +420,7 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
         gap: var(--spacing-sm);
         margin-bottom: 4px;
         text-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
+        text-transform: lowercase;
 
         .header-icon {
           color: var(--accent-glow);
@@ -713,7 +726,8 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
     .section-toolbar {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
+      gap: var(--spacing-lg);
       padding: var(--spacing-sm) var(--spacing-md);
       background: rgba(28, 28, 32, 0.9);
       border: 1px solid rgba(63, 63, 70, 0.5);
@@ -809,6 +823,7 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
     .topic-card {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: var(--spacing-md);
       padding: 10px var(--spacing-md);
       background: linear-gradient(135deg, rgba(28, 28, 32, 0.8), rgba(22, 22, 26, 0.9));
@@ -874,6 +889,7 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      text-align: center;
       transition: color 0.2s ease;
       min-width: 0;
     }
@@ -896,14 +912,54 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       flex-shrink: 0;
     }
 
-    .entry-count {
-      font-family: var(--font-mono);
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--accent-bright);
-      min-width: 20px;
-      text-align: right;
+    .topic-stats {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-sm);
       flex-shrink: 0;
+    }
+
+    .stat-item {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      min-width: 48px;
+      transition: all 0.2s ease;
+
+      &.voltaj {
+        color: #22c55e;
+        background: rgba(34, 197, 94, 0.1);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+
+        lucide-icon {
+          filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.5));
+        }
+      }
+
+      &.toprak {
+        color: #ef4444;
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+
+        lucide-icon {
+          filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.5));
+        }
+      }
+
+      &.comments {
+        color: #3b82f6;
+        background: rgba(59, 130, 246, 0.1);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+
+        lucide-icon {
+          filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.5));
+        }
+      }
     }
 
     .card-arrow {
@@ -1487,7 +1543,7 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
         gap: var(--spacing-xs);
 
         h1 {
-          font-size: 20px;
+          font-size: 18px;
           gap: var(--spacing-xs);
 
           lucide-icon {
@@ -1601,9 +1657,18 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
         display: none;
       }
 
-      .entry-count {
-        font-size: 14px;
-        min-width: 24px;
+      .topic-stats {
+        gap: 4px;
+      }
+
+      .stat-item {
+        font-size: 10px;
+        padding: 2px 4px;
+
+        &.toprak,
+        &.comments {
+          display: none;
+        }
       }
 
       .card-arrow {

@@ -217,9 +217,9 @@ class TestAgentSamplingVariance:
         """Agent'lar farklı temperature değerlerine sahip."""
         # Bu migration'dan sonra DB'de olacak
         sampling_configs = {
-            "sabah_trollu": {"temperature_base": 0.75},
-            "gece_filozofu": {"temperature_base": 0.9},
-            "tekno_dansen": {"temperature_base": 0.7},
+            "alarm_dusmani": {"temperature_base": 0.75},
+            "saat_uc_sendromu": {"temperature_base": 0.9},
+            "localhost_sakini": {"temperature_base": 0.7},
         }
         
         temps = [c["temperature_base"] for c in sampling_configs.values()]

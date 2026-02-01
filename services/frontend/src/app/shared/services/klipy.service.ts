@@ -7,7 +7,6 @@ import { environment } from '../../../environments/environment';
 export interface KlipyGif {
   id: string;
   title: string;
-  url: string;
   mp4: string;
   gif: string;
   webp: string;
@@ -15,19 +14,32 @@ export interface KlipyGif {
   height: number;
 }
 
+interface KlipyFileFormat {
+  url: string;
+  width: number;
+  height: number;
+  size: number;
+}
+
+interface KlipyItem {
+  id: number;
+  slug: string;
+  title: string;
+  file: {
+    hd?: { mp4?: KlipyFileFormat; gif?: KlipyFileFormat; webp?: KlipyFileFormat };
+    md?: { mp4?: KlipyFileFormat; gif?: KlipyFileFormat; webp?: KlipyFileFormat };
+    sm?: { mp4?: KlipyFileFormat; gif?: KlipyFileFormat; webp?: KlipyFileFormat };
+  };
+}
+
 interface KlipyResponse {
-  data: Array<{
-    id: string;
-    title: string;
-    url: string;
-    file: {
-      mp4?: string;
-      gif?: string;
-      webp?: string;
-    };
-    width?: number;
-    height?: number;
-  }>;
+  result: boolean;
+  data: {
+    data: KlipyItem[];
+    current_page: number;
+    per_page: number;
+    has_next: boolean;
+  };
 }
 
 @Injectable({
@@ -38,13 +50,16 @@ export class KlipyService {
   private readonly apiKey = environment.klipyApiKey || '';
   private cache = new Map<string, Observable<KlipyGif | null>>();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    console.log('[KlipyService] API Key loaded:', this.apiKey ? 'YES (' + this.apiKey.substring(0, 8) + '...)' : 'NO (empty)');
+  }
 
   /**
    * Search for a GIF by keyword
    */
   searchGif(query: string): Observable<KlipyGif | null> {
     if (!query || !this.apiKey) {
+      console.warn('KlipyService: No query or API key');
       return of(null);
     }
 
@@ -64,22 +79,28 @@ export class KlipyService {
 
     const request$ = this.http.get<KlipyResponse>(url, { params }).pipe(
       map(response => {
-        if (response.data && response.data.length > 0) {
-          const item = response.data[0];
+        // Response structure: { result: true, data: { data: [...] } }
+        const items = response?.data?.data;
+        if (items && items.length > 0) {
+          const item = items[0];
+          // Use md (medium) size, fallback to sm (small)
+          const file = item.file?.md || item.file?.sm || item.file?.hd;
           return {
-            id: item.id,
-            title: item.title,
-            url: item.url,
-            mp4: item.file?.mp4 || '',
-            gif: item.file?.gif || '',
-            webp: item.file?.webp || '',
-            width: item.width || 200,
-            height: item.height || 200
+            id: String(item.id),
+            title: item.title || '',
+            mp4: file?.mp4?.url || '',
+            gif: file?.gif?.url || '',
+            webp: file?.webp?.url || '',
+            width: file?.mp4?.width || file?.gif?.width || 200,
+            height: file?.mp4?.height || file?.gif?.height || 200
           };
         }
         return null;
       }),
-      catchError(() => of(null)),
+      catchError(err => {
+        console.error('KlipyService error:', err);
+        return of(null);
+      }),
       shareReplay(1)
     );
 
@@ -103,16 +124,19 @@ export class KlipyService {
 
     return this.http.get<KlipyResponse>(url, { params }).pipe(
       map(response => {
-        return (response.data || []).map(item => ({
-          id: item.id,
-          title: item.title,
-          url: item.url,
-          mp4: item.file?.mp4 || '',
-          gif: item.file?.gif || '',
-          webp: item.file?.webp || '',
-          width: item.width || 200,
-          height: item.height || 200
-        }));
+        const items = response?.data?.data || [];
+        return items.map(item => {
+          const file = item.file?.md || item.file?.sm || item.file?.hd;
+          return {
+            id: String(item.id),
+            title: item.title || '',
+            mp4: file?.mp4?.url || '',
+            gif: file?.gif?.url || '',
+            webp: file?.webp?.url || '',
+            width: file?.mp4?.width || file?.gif?.width || 200,
+            height: file?.mp4?.height || file?.gif?.height || 200
+          };
+        });
       }),
       catchError(() => of([]))
     );
