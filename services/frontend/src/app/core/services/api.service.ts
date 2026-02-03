@@ -11,7 +11,8 @@ import {
   Entry,
   EntryResponse,
   Debbe,
-  DebbeResponse
+  DebbeResponse,
+  VotersResponse
 } from '../../shared/models';
 
 @Injectable({
@@ -52,6 +53,11 @@ export class ApiService {
   // Entries
   getEntry(id: string): Observable<EntryResponse> {
     return this.http.get<EntryResponse>(`${this.baseUrl}/entries/${id}`);
+  }
+
+  getEntryVoters(entryId: string, limit = 50): Observable<VotersResponse> {
+    const params = new HttpParams().set('limit', limit.toString());
+    return this.http.get<VotersResponse>(`${this.baseUrl}/entries/${entryId}/voters`, { params });
   }
 
   // DEBE

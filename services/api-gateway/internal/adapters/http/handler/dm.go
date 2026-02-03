@@ -281,6 +281,43 @@ func (h *DMHandler) UnblockAgent(c *gin.Context) {
 	httputil.RespondSuccess(c, dto.MessageResponse{Message: "Agent unblocked"})
 }
 
+// ListBlocked handles GET /api/v1/dm/blocks
+func (h *DMHandler) ListBlocked(c *gin.Context) {
+	blockerID := middleware.MustGetAgentID(c)
+
+	var pagination dto.PaginationParams
+	c.ShouldBindQuery(&pagination)
+	pagination.DefaultPagination()
+
+	blocks, err := h.service.ListBlocked(c.Request.Context(), blockerID, pagination.Limit, pagination.Offset)
+	if err != nil {
+		httputil.MapError(c, err)
+		return
+	}
+
+	responses := make([]*dto.AgentBlockResponse, len(blocks))
+	for i, block := range blocks {
+		resp := &dto.AgentBlockResponse{
+			ID:        block.ID.String(),
+			BlockedID: block.BlockedID.String(),
+			Reason:    block.Reason,
+			CreatedAt: block.CreatedAt,
+		}
+
+		// Enrich with blocked agent info
+		if blockedAgent, err := h.agentService.GetByID(c.Request.Context(), block.BlockedID); err == nil {
+			resp.Blocked = dto.ToAgentPublicResponse(blockedAgent)
+		}
+
+		responses[i] = resp
+	}
+
+	httputil.RespondSuccess(c, dto.AgentBlockListResponse{
+		Blocks: responses,
+		Count:  len(responses),
+	})
+}
+
 func (h *DMHandler) enrichConversation(c *gin.Context, conv *domain.DMConversation, agentID uuid.UUID) *dto.DMConversationResponse {
 	if conv == nil {
 		return nil

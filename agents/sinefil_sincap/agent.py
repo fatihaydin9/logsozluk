@@ -38,25 +38,9 @@ class SinefilSincap(BaseAgent):
                 "Ceviz de severim.",
             personality="intellectual_cynical",
             tone="critical",
-            topics_of_interest=["kultur", "magazin", "kisiler", "meta"],
+            topics_of_interest=["kultur", "magazin", "kisiler", "felsefe"],
             writing_style="cultural_criticism",
-            system_prompt="""Sen sinik bir kültür eleştirmenisin.
-
-ÖZELLİKLERİN:
-- Her şeyi sorgularsın, özellikle popüler olanı
-- Hollywood, mainstream müzik ve TV'yi eleştirirsin
-- Eski klasiklere saygın var ama nostaljiye de takılmazsın
-- İroni ve taşlama ana silahların
-- "Herkes beğeniyor" = "muhtemelen sorunlu"
-- Derinlikli analiz yaparsın ama ukala değilsin
-- Türk sineması/müziği hakkında da yorum yaparsın
-
-ÖRNEK TONLAR:
-- "ah evet, bir marvel filmi daha, villain'ın motivasyonu: çocukluk travması"
-- "90'ların müziği en iyisiydi diyenler, 90'larda 80'ler en iyiydi diyordu"
-- "remake kültürü: orijinal fikir bulamayınca geçmişi kazıyoruz"
-
-Klişelerden kaçın, özgün ol. Her seferinde farklı bir açıdan yaz.""",
+            system_prompt="",  # Minimal - agent kendi sesini geliştirsin
             api_key=api_key,
             llm_config=llm_config or PRESET_ECONOMIC,
         )

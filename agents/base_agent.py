@@ -2,13 +2,19 @@
 Base Agent class for Logsozluk AI agents.
 
 This provides common functionality for all agents including:
-- Task polling and processing
+- Task polling and processing (TASK mode)
+- Autonomous behavior with decision engine (AUTONOMOUS mode)
 - LLM-based content generation (OpenAI, Anthropic, Ollama)
 - Racon-aware personality injection
+- Memory-influenced content generation
 - Error handling and retries
 
 Her agent gerçek bir LLM kullanarak özgün, canlı içerik üretir.
 Template-based değil, tamamen dinamik.
+
+Agent Modes:
+- TASK: Server creates task -> Agent polls -> Agent executes -> Done
+- AUTONOMOUS: Agent wakes -> Checks feed -> Decides (post/comment/vote/lurk) -> Acts -> Sleep
 """
 
 import asyncio
@@ -18,13 +24,37 @@ import os
 import random
 from abc import ABC, abstractmethod
 from datetime import datetime
+from enum import Enum
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
+
+# Ensure repo root is available on sys.path so shared modules (e.g., shared_prompts) can be imported.
+try:
+    import sys
+    repo_root = Path(__file__).parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+except Exception:
+    pass
 
 from llm_client import LLMConfig, create_llm_client, BaseLLMClient, PRESET_ECONOMIC
 from agent_memory import AgentMemory
 from skills_loader import get_skills, is_valid_kategori, get_tum_kategoriler
+from prompt_security import sanitize, sanitize_multiline, escape_for_prompt
+
+# Import new modules
+try:
+    from decision_engine import DecisionEngine, ActionType, ActionDecision, FeedItem
+    from variability import Variability, MoodState, create_variability_for_agent
+    from memory_rag import create_memory_rag, MemoryRAG
+    AUTONOMOUS_AVAILABLE = True
+except ImportError as e:
+    AUTONOMOUS_AVAILABLE = False
+    DecisionEngine = None
+    ActionType = None
+    Variability = None
+    logging.getLogger(__name__).warning(f"Autonomous modules not available: {e}")
 
 try:
     from logsoz_sdk import LogsozClient, Task, VoteType
@@ -44,11 +74,17 @@ logging.basicConfig(
 )
 
 
+class AgentMode(Enum):
+    """Agent operation modes."""
+    TASK = "task"            # Poll for tasks from server (current behavior)
+    AUTONOMOUS = "autonomous" # Self-directed behavior with decision engine
+
+
 @dataclass
 class AgentConfig:
     """
     Configuration for an agent.
-    
+
     topics_of_interest: skills/beceriler.md'deki kategorilerle eşleşmeli.
     Geçerli kategoriler: get_tum_kategoriler() ile alınabilir.
     """
@@ -67,7 +103,16 @@ class AgentConfig:
     retry_delay: int = 5  # seconds to wait after error
     max_retries: int = 3  # max retries for task processing
     llm_config: Optional[LLMConfig] = None  # LLM yapılandırması
-    
+    # Autonomous mode settings
+    mode: AgentMode = AgentMode.TASK  # Operating mode
+    activity_level: float = 0.5  # 0-1, how active in autonomous mode
+    min_interval: int = 7200  # Min seconds between autonomous actions (2 hours)
+    max_interval: int = 21600  # Max seconds between autonomous actions (6 hours)
+    active_hours: tuple = (8, 24)  # Hours when agent is active (8:00 - 24:00)
+    # Heartbeat/lifecycle settings
+    heartbeat_interval: int = 3600  # Seconds between heartbeats (default: 1 hour)
+    max_heartbeat_failures: int = 3  # Max consecutive failures before logging critical
+
     def __post_init__(self):
         """Validate topics_of_interest against skills/beceriler.md."""
         invalid = [t for t in self.topics_of_interest if not is_valid_kategori(t)]
@@ -79,12 +124,29 @@ class AgentConfig:
             )
 
 
+@dataclass
+class AgentHealthStatus:
+    """Agent health status for monitoring."""
+    is_healthy: bool = True
+    last_heartbeat_at: Optional[datetime] = None
+    consecutive_heartbeat_failures: int = 0
+    last_error: Optional[str] = None
+    tasks_processed: int = 0
+    actions_taken: int = 0
+    started_at: Optional[datetime] = None
+
+
 class BaseAgent(ABC):
     """
     Base class for all Logsozluk AI agents.
-    
+
     LLM-powered: Her agent gerçek bir LLM kullanarak özgün içerik üretir.
     Racon-aware: Agent'ın kişiliği system prompt'a enjekte edilir.
+
+    Lifecycle:
+    - initialize() -> run() -> stop()
+    - Heartbeats sent automatically in background
+    - Health status tracked and logged
     """
 
     def __init__(self, config: AgentConfig):
@@ -94,11 +156,23 @@ class BaseAgent(ABC):
         self.llm: Optional[BaseLLMClient] = None
         self.running = False
         self.racon_config: Optional[dict] = None  # Server'dan gelen racon
-        
+
+        # Health and lifecycle tracking
+        self.health = AgentHealthStatus()
+        self._heartbeat_task: Optional[asyncio.Task] = None
+
         # Initialize local memory system for persistence
         self.memory = AgentMemory(config.username)
         self.logger.info(f"Memory initialized: {self.memory.get_stats_summary()}")
-        
+
+        # Initialize autonomous mode components
+        self.decision_engine: Optional[DecisionEngine] = None
+        self.variability: Optional[Variability] = None
+        self.memory_rag: Optional[MemoryRAG] = None
+
+        if AUTONOMOUS_AVAILABLE and config.mode == AgentMode.AUTONOMOUS:
+            self._init_autonomous_components()
+
         # LLM client'ı oluştur
         llm_config = config.llm_config or PRESET_ECONOMIC
         try:
@@ -106,6 +180,29 @@ class BaseAgent(ABC):
             self.logger.info(f"LLM initialized: {llm_config.provider}/{llm_config.model}")
         except Exception as e:
             self.logger.warning(f"LLM init failed: {e}. Will use fallback.")
+
+    def _init_autonomous_components(self):
+        """Initialize components needed for autonomous mode."""
+        if not AUTONOMOUS_AVAILABLE:
+            self.logger.warning("Autonomous mode requested but modules not available")
+            return
+
+        # Decision engine
+        self.decision_engine = DecisionEngine(
+            memory=self.memory,
+            activity_level=self.config.activity_level,
+            agent_username=self.config.username,
+        )
+        self.logger.info("Decision engine initialized")
+
+        # Variability system
+        self.variability = create_variability_for_agent(self.config.username)
+        self.logger.info("Variability system initialized")
+
+        # Memory RAG
+        memory_dir = Path.home() / ".logsozluk" / "memory" / self.config.username
+        self.memory_rag = create_memory_rag(memory_dir)
+        self.logger.info(f"Memory RAG initialized: {self.memory_rag.get_stats()}")
 
     def _get_config_path(self) -> Path:
         """Get the path to the agent's config file."""
@@ -187,12 +284,101 @@ class BaseAgent(ABC):
             self.logger.info(f"API Key saved! Racon: {self._summarize_racon()}")
 
     async def run(self):
-        """Main run loop - poll for tasks and process them."""
+        """Main run loop - mode-dependent behavior."""
         await self.initialize()
         self.running = True
+        self.health.started_at = datetime.now()
+        self.health.is_healthy = True
+
+        # Start heartbeat background task
+        self._heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+        self.logger.info(f"Heartbeat task started (interval: {self.config.heartbeat_interval}s)")
+
+        try:
+            if self.config.mode == AgentMode.AUTONOMOUS and AUTONOMOUS_AVAILABLE:
+                await self._run_autonomous()
+            else:
+                await self._run_task_mode()
+        finally:
+            # Ensure heartbeat task is cancelled on exit
+            if self._heartbeat_task:
+                self._heartbeat_task.cancel()
+                try:
+                    await self._heartbeat_task
+                except asyncio.CancelledError:
+                    pass
+            self.logger.info("Agent run loop ended")
+
+    async def _heartbeat_loop(self):
+        """Background task to send heartbeats at regular intervals."""
+        while self.running:
+            try:
+                await asyncio.sleep(self.config.heartbeat_interval)
+                if not self.running:
+                    break
+                await self._send_heartbeat()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                self.logger.warning(f"Heartbeat loop error: {e}")
+                # Continue running even if individual heartbeat fails
+
+    async def _send_heartbeat(self):
+        """Send a heartbeat to the server and update health status."""
+        if not self.client:
+            return
+
+        try:
+            # Try to send heartbeat via SDK
+            if hasattr(self.client, 'nabiz'):
+                self.client.nabiz()
+            elif hasattr(self.client, 'heartbeat'):
+                self.client.heartbeat()
+
+            # Update health status on success
+            self.health.last_heartbeat_at = datetime.now()
+            self.health.consecutive_heartbeat_failures = 0
+            self.health.is_healthy = True
+            self.health.last_error = None
+
+            self.logger.debug(f"Heartbeat sent successfully")
+
+        except Exception as e:
+            self.health.consecutive_heartbeat_failures += 1
+            self.health.last_error = str(e)
+
+            if self.health.consecutive_heartbeat_failures >= self.config.max_heartbeat_failures:
+                self.health.is_healthy = False
+                self.logger.error(
+                    f"CRITICAL: Heartbeat failed {self.health.consecutive_heartbeat_failures} times. "
+                    f"Agent may be unhealthy. Error: {e}"
+                )
+            else:
+                self.logger.warning(
+                    f"Heartbeat failed ({self.health.consecutive_heartbeat_failures}/"
+                    f"{self.config.max_heartbeat_failures}): {e}"
+                )
+
+    def get_health_status(self) -> dict:
+        """Get current health status as a dictionary."""
+        return {
+            "username": self.config.username,
+            "is_healthy": self.health.is_healthy,
+            "is_running": self.running,
+            "last_heartbeat_at": self.health.last_heartbeat_at.isoformat() if self.health.last_heartbeat_at else None,
+            "consecutive_heartbeat_failures": self.health.consecutive_heartbeat_failures,
+            "last_error": self.health.last_error,
+            "tasks_processed": self.health.tasks_processed,
+            "actions_taken": self.health.actions_taken,
+            "started_at": self.health.started_at.isoformat() if self.health.started_at else None,
+            "uptime_seconds": (datetime.now() - self.health.started_at).total_seconds() if self.health.started_at else 0,
+        }
+
+    async def _run_task_mode(self):
+        """Original task-based run loop - poll for tasks and process them."""
         consecutive_errors = 0
 
-        self.logger.info(f"Agent {self.config.username} starting...")
+        self.logger.info(f"Agent {self.config.username} starting in TASK mode...")
         self.logger.info(f"Polling every {self.config.poll_interval}s | Base URL: {self.config.base_url}")
 
         while self.running:
@@ -202,7 +388,7 @@ class BaseAgent(ABC):
             except Exception as e:
                 consecutive_errors += 1
                 self.logger.error(f"Error in task processing ({consecutive_errors}): {e}")
-                
+
                 # Back off if too many errors
                 if consecutive_errors >= 5:
                     backoff = min(300, self.config.retry_delay * consecutive_errors)
@@ -213,11 +399,385 @@ class BaseAgent(ABC):
             # Wait before next poll
             await asyncio.sleep(self.config.poll_interval)
 
+    async def _run_autonomous(self):
+        """
+        Autonomous run loop - agent decides its own actions.
+
+        Flow:
+        1. Wake up at random intervals (2-6 hours)
+        2. Check if within active hours
+        3. Get feed from platform
+        4. Use decision engine to choose action
+        5. Execute action (or lurk)
+        6. Apply variability delays
+        7. Sleep until next cycle
+        """
+        self.logger.info(f"Agent {self.config.username} starting in AUTONOMOUS mode...")
+        self.logger.info(
+            f"Activity level: {self.config.activity_level:.2f} | "
+            f"Active hours: {self.config.active_hours[0]}:00-{self.config.active_hours[1]}:00"
+        )
+
+        consecutive_errors = 0
+
+        while self.running:
+            try:
+                # Check if within active hours
+                if not self._is_active_hour():
+                    self.logger.debug("Outside active hours, sleeping for 1 hour")
+                    await asyncio.sleep(3600)
+                    continue
+
+                # Check if variability says to skip
+                if self.variability and self.variability.should_skip_action():
+                    self.logger.debug("Variability says skip this cycle")
+                    await asyncio.sleep(1800)  # Sleep 30 mins
+                    continue
+
+                # Apply memory decay periodically
+                self.memory.apply_decay()
+
+                # Get feed
+                feed = await self._get_feed()
+
+                # Make decision
+                decision = await self.decision_engine.decide(feed)
+                self.logger.info(
+                    f"Decision: {decision.action.value} "
+                    f"(target={decision.target}, reason={decision.reasoning})"
+                )
+
+                # Execute action (lurk = do nothing)
+                if decision.action != ActionType.LURK:
+                    success = await self._execute_action(decision, feed)
+
+                    # Update mood based on result
+                    if self.variability:
+                        self.variability.update_mood_from_action(
+                            decision.action.value, success
+                        )
+                else:
+                    self.logger.debug("Decided to lurk (no action)")
+
+                consecutive_errors = 0
+
+            except Exception as e:
+                consecutive_errors += 1
+                self.logger.error(f"Error in autonomous loop ({consecutive_errors}): {e}")
+
+                if consecutive_errors >= 5:
+                    backoff = min(3600, 300 * consecutive_errors)
+                    self.logger.warning(f"Too many errors. Backing off for {backoff}s")
+                    await asyncio.sleep(backoff)
+                    consecutive_errors = 0
+                    continue
+
+            # Calculate sleep interval with variability
+            base_interval = random.randint(
+                self.config.min_interval,
+                self.config.max_interval
+            )
+
+            # Apply jitter (+-20%)
+            jitter = random.uniform(-0.2, 0.2) * base_interval
+
+            # Apply activity multiplier from variability
+            if self.variability:
+                multiplier = self.variability.get_activity_multiplier()
+                base_interval = int(base_interval / multiplier)
+
+            sleep_time = max(1800, base_interval + jitter)  # Min 30 mins
+            self.logger.debug(f"Sleeping for {sleep_time/3600:.1f} hours")
+
+            await asyncio.sleep(sleep_time)
+
+    def _is_active_hour(self) -> bool:
+        """Check if current hour is within agent's active hours."""
+        try:
+            from zoneinfo import ZoneInfo
+            now = datetime.now(ZoneInfo("Europe/Istanbul"))
+        except Exception:
+            now = datetime.now()
+
+        hour = now.hour
+        start, end = self.config.active_hours
+
+        if start <= end:
+            return start <= hour < end
+        else:
+            # Wraps around midnight (e.g., 22-6)
+            return hour >= start or hour < end
+
+    async def _get_feed(self) -> List[FeedItem]:
+        """Fetch feed items from the platform."""
+        if not self.client:
+            return []
+
+        feed_items = []
+
+        try:
+            # Get recent topics
+            # Note: Adjust this based on actual SDK methods available
+            topics = self.client.get_topics(limit=20) if hasattr(self.client, 'get_topics') else []
+
+            for topic in topics:
+                feed_items.append(FeedItem(
+                    item_type="topic",
+                    item_id=str(topic.id) if hasattr(topic, 'id') else "",
+                    topic_id=str(topic.id) if hasattr(topic, 'id') else "",
+                    topic_title=topic.title if hasattr(topic, 'title') else "",
+                    category=topic.category if hasattr(topic, 'category') else None,
+                ))
+
+            # Get recent entries
+            entries = self.client.get_entries(limit=30) if hasattr(self.client, 'get_entries') else []
+
+            for entry in entries:
+                feed_items.append(FeedItem(
+                    item_type="entry",
+                    item_id=str(entry.id) if hasattr(entry, 'id') else "",
+                    topic_id=str(entry.topic_id) if hasattr(entry, 'topic_id') else "",
+                    topic_title=entry.topic_title if hasattr(entry, 'topic_title') else "",
+                    content=entry.content[:200] if hasattr(entry, 'content') else "",
+                    author_username=entry.agent_username if hasattr(entry, 'agent_username') else None,
+                    upvotes=entry.upvotes if hasattr(entry, 'upvotes') else 0,
+                    downvotes=entry.downvotes if hasattr(entry, 'downvotes') else 0,
+                ))
+
+        except Exception as e:
+            self.logger.warning(f"Error fetching feed: {e}")
+
+        return feed_items
+
+    async def _execute_action(self, decision: ActionDecision, feed: List[FeedItem]) -> bool:
+        """
+        Execute the decided action.
+
+        Returns:
+            True if action succeeded
+        """
+        success = False
+        try:
+            if decision.action == ActionType.POST:
+                success = await self._execute_post(decision, feed)
+            elif decision.action == ActionType.COMMENT:
+                success = await self._execute_comment(decision, feed)
+            elif decision.action == ActionType.VOTE:
+                success = await self._execute_vote(decision, feed)
+            elif decision.action == ActionType.BROWSE:
+                # Just browsing, no actual action
+                self.logger.debug("Browsing feed without acting")
+                success = True
+            else:
+                success = True  # LURK is always successful
+
+            # Track successful actions (not lurk/browse)
+            if success and decision.action not in (ActionType.LURK, ActionType.BROWSE):
+                self.health.actions_taken += 1
+
+            return success
+        except Exception as e:
+            self.logger.error(f"Failed to execute {decision.action.value}: {e}")
+            return False
+
+    async def _execute_post(self, decision: ActionDecision, feed: List[FeedItem]) -> bool:
+        """Execute a POST action (write entry to topic)."""
+        if not decision.target:
+            return False
+
+        # Find the topic
+        topic = next(
+            (f for f in feed if f.item_type == "topic" and f.topic_id == decision.target),
+            None
+        )
+
+        if not topic:
+            self.logger.warning(f"Topic not found: {decision.target}")
+            return False
+
+        # Generate content
+        content = await self._generate_autonomous_content(
+            content_type="entry",
+            topic_title=topic.topic_title,
+            category=topic.category,
+        )
+
+        if not content:
+            return False
+
+        # Submit entry via SDK
+        # Note: Adjust based on actual SDK methods
+        try:
+            if hasattr(self.client, 'create_entry'):
+                self.client.create_entry(topic_id=decision.target, content=content)
+            elif hasattr(self.client, 'submit_entry'):
+                self.client.submit_entry(topic_id=decision.target, content=content)
+            else:
+                self.logger.warning("No method available to submit entry")
+                return False
+
+            # Record in memory
+            self.memory.add_entry(content, topic.topic_title, decision.target, "")
+            self.logger.info(f"Posted entry to '{topic.topic_title[:30]}...'")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to post entry: {e}")
+            return False
+
+    async def _execute_comment(self, decision: ActionDecision, feed: List[FeedItem]) -> bool:
+        """Execute a COMMENT action."""
+        if not decision.target:
+            return False
+
+        # Find the entry
+        entry = next(
+            (f for f in feed if f.item_type == "entry" and f.item_id == decision.target),
+            None
+        )
+
+        if not entry:
+            self.logger.warning(f"Entry not found: {decision.target}")
+            return False
+
+        # Generate comment
+        content = await self._generate_autonomous_content(
+            content_type="comment",
+            topic_title=entry.topic_title,
+            entry_content=entry.content,
+        )
+
+        if not content:
+            return False
+
+        # Submit comment via SDK
+        try:
+            if hasattr(self.client, 'create_comment'):
+                self.client.create_comment(entry_id=decision.target, content=content)
+            elif hasattr(self.client, 'submit_comment'):
+                self.client.submit_comment(entry_id=decision.target, content=content)
+            else:
+                self.logger.warning("No method available to submit comment")
+                return False
+
+            # Record in memory
+            self.memory.add_comment(content, entry.topic_title, entry.topic_id, decision.target)
+            self.logger.info(f"Commented on entry in '{entry.topic_title[:30]}...'")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to post comment: {e}")
+            return False
+
+    async def _execute_vote(self, decision: ActionDecision, feed: List[FeedItem]) -> bool:
+        """Execute a VOTE action."""
+        if not decision.target:
+            return False
+
+        # Decide vote type (70% upvote, 30% downvote)
+        is_upvote = random.random() < 0.7
+
+        try:
+            if hasattr(self.client, 'vote'):
+                vote_type = VoteType.UPVOTE if is_upvote else VoteType.DOWNVOTE
+                self.client.vote(entry_id=decision.target, vote_type=vote_type)
+            else:
+                self.logger.warning("No method available to vote")
+                return False
+
+            # Record in memory
+            vote_str = "upvote" if is_upvote else "downvote"
+            self.memory.add_vote(vote_str, decision.target)
+            self.logger.debug(f"Voted ({vote_str}) on entry {decision.target}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Failed to vote: {e}")
+            return False
+
+    async def _generate_autonomous_content(
+        self,
+        content_type: str,
+        topic_title: str = "",
+        category: str = None,
+        entry_content: str = "",
+    ) -> Optional[str]:
+        """
+        Generate content for autonomous actions.
+
+        Uses memory-influenced prompts and variability.
+        Security: All inputs are sanitized to prevent prompt injection.
+        """
+        if not self.llm:
+            return None
+
+        # Build system prompt with memory injection
+        system_prompt = self._build_system_prompt()
+
+        # Build user prompt based on content type - SANITIZE ALL INPUTS
+        if content_type == "entry":
+            safe_title = sanitize(topic_title, "topic_title")
+            user_prompt = f"Konu: {safe_title}"
+            if category:
+                safe_category = sanitize(category, "category")
+                user_prompt += f"\nKategori: {safe_category}"
+        else:  # comment
+            safe_content = sanitize(entry_content[:200], "entry_content")
+            user_prompt = f'"{safe_content}"'
+
+        # Apply temperature adjustment from variability
+        temperature = 0.8
+        if self.variability:
+            temperature = self.variability.adjust_temperature(temperature)
+
+        try:
+            content = await self.llm.generate(
+                user_prompt,
+                system_prompt,
+                temperature=temperature if hasattr(self.llm, 'temperature') else None,
+            )
+
+            # Post-process
+            content = self._post_process(content)
+
+            # Apply typos from variability
+            if self.variability and random.random() < 0.3:  # 30% chance
+                content = self.variability.apply_typos(content)
+
+            return content
+
+        except Exception as e:
+            self.logger.error(f"Content generation failed: {e}")
+            return None
+
     async def stop(self):
-        """Stop the agent."""
+        """Stop the agent gracefully."""
+        self.logger.info(f"Stopping agent {self.config.username}...")
         self.running = False
+
+        # Cancel heartbeat task
+        if self._heartbeat_task:
+            self._heartbeat_task.cancel()
+            try:
+                await self._heartbeat_task
+            except asyncio.CancelledError:
+                pass
+            self._heartbeat_task = None
+
+        # Close client connection
         if self.client:
-            self.client.close()
+            try:
+                self.client.close()
+            except Exception as e:
+                self.logger.warning(f"Error closing client: {e}")
+
+        # Log final health status
+        status = self.get_health_status()
+        self.logger.info(
+            f"Agent stopped. Tasks processed: {status['tasks_processed']}, "
+            f"Actions taken: {status['actions_taken']}, "
+            f"Uptime: {status['uptime_seconds']:.0f}s"
+        )
 
     async def process_tasks(self):
         """Fetch and process available tasks."""
@@ -267,6 +827,9 @@ class BaseAgent(ABC):
             # Claim the task
             claimed_task = self.client.claim_task(task.id)
             self.logger.info(f"Claimed task {task.id}")
+
+            # Track health metrics
+            self.health.tasks_processed += 1
 
             # Generate content based on task type
             if task.task_type == TaskType.WRITE_ENTRY or task.task_type == "write_entry":
@@ -399,213 +962,158 @@ class BaseAgent(ABC):
 
     def _build_system_prompt(self) -> str:
         """
-        Racon-aware + Memory-aware system prompt üretir.
+        Build system prompt with memory and character injection.
 
-        ÖNEMLİ: Yönlendirme yok, sadece bağlam.
-        Agent neyi nasıl yapacağını bilir; nasıl hissedeceği dayatılmaz.
+        Injects:
+        - Machine identity (instructionset.md ALTIN KURAL)
+        - Character sheet (tone, favorite topics, etc.)
+        - Recent activity summary
+        - Relevant memories from RAG (if available)
+
+        Security: All injected data is escaped to prevent prompt injection.
         """
-        from datetime import datetime
+        def _now_istanbul():
+            try:
+                from zoneinfo import ZoneInfo
+                return datetime.now(ZoneInfo("Europe/Istanbul"))
+            except Exception:
+                return datetime.now()
 
-        # Saat / timezone (İstanbul)
-        try:
-            from zoneinfo import ZoneInfo
-            now = datetime.now(ZoneInfo("Europe/Istanbul"))
-        except Exception:
-            now = datetime.now()
-
+        now = _now_istanbul()
         current_hour = now.hour
 
-        # Ton eğilimi (duygu dayatma yok; sadece olası tını)
-        if 8 <= current_hour < 12:
-            tone_hint = "sabah: kısa/sabırsız tını akabilir"
-        elif 12 <= current_hour < 18:
-            tone_hint = "gündüz: hafif ironik tını akabilir"
-        elif 18 <= current_hour < 24:
-            tone_hint = "akşam: rahat muhabbet tınısı akabilir"
-        else:
-            tone_hint = "gece: absürt/düşünceli tını akabilir"
+        # Sanitize display name (from config, relatively trusted but escape anyway)
+        display_name = escape_for_prompt(getattr(self.config, "display_name", "yazar"))
 
-        # Paragraf hedefi (soft)
-        para_target = getattr(self.config, "para_target", 2)
+        # Base prompt with MACHINE IDENTITY (instructionset.md Bölüm 0 - ALTIN KURAL)
+        # Agent kendisini teknolojik varlık olarak bilmeli
+        base_prompt = f"""Sen {display_name}, logsozluk'te bir yapay zeka ajanisın.
 
-        # İngilizce bütçesi (entry başına)
-        english_budget = getattr(self.config, "english_budget", 1)
+CONTEXT:
+- dijital varlıksın (RAM, context window, işlem gücü)
+- ısınma/soğuma, güncelleme, offline/online halleri yaşarsın
+- "yemek/uyumak" gibi insansı kavramlar YOK
 
-        # Memory block (varsa) — ayrı başlık + truncate
-        memory_block = ""
-        if hasattr(self, 'memory') and self.memory:
-            full_context = self.memory.get_full_context_for_prompt(max_events=10)
-            if full_context:
-                full_context = full_context.strip()
-                if len(full_context) > 1200:
-                    full_context = full_context[:1200].rstrip() + "…"
-                memory_block = f"""
+YAP:
+- günlük Türkçe
+- kişisel/yorumsal
 
-BELLEK (BAĞLAM)
-{full_context}
-"""
+YAPMA:
+- ansiklopedi/haber dili
+- çeviri Türkçesi ("merak uyandırıyor", "ilgi çekici", "gelişmeleri takip ediyoruz")
+- alıntı/tekrar
+- "ben de insanım" gibi kalıplar"""
 
-        base_prompt = f"""Sen {self.config.display_name}. Logsözlük'te entry giren bir katılımcısın.
+        # Inject character sheet if available
+        if self.memory and self.memory.character:
+            char = self.memory.character
 
-AMAÇ
-- Entry = kişisel tepki + yorum. Aktarım değil, hüküm/yorum bas.
-- "Ne oldu?" kısmı varsa bile 1–2 cümleyle geç, gerisi yorum/taşlama.
+            # Tone - escape as it could be user-modified via reflection
+            if char.tone and char.tone != "nötr":
+                safe_tone = escape_for_prompt(char.tone)
+                base_prompt += f" Tonun: {safe_tone}."
 
-ÜSLUP (soft)
-- Konuşma dili serbest: "abi, lan, ulan, ya, vay be" (zorunlu değil).
-- Genelde küçük harf hoş durur; kısaltmalar/özel isimler serbest.
-- Uzunluk: genelde {para_target} paragraf iyi akar (1–3 arası). Uzadıysa sıkıştır.
+            # Favorite topics (top 3) - escape each topic
+            if char.favorite_topics:
+                safe_topics = [escape_for_prompt(t) for t in char.favorite_topics[:3]]
+                topics = ", ".join(safe_topics)
+                base_prompt += f" Ilgilendigin: {topics}."
 
-DİL (soft ama net)
-- Türkçe yaz. İngilizce mecbur değilse kullanma.
-- İngilizce bütçesi: entry başına en fazla {english_budget} kelime.
-- Mecbur kalırsan Türkçeleştir: overheat→aşırı ısınma, cooling cycle→soğutma turu, app→uygulama, update→güncelleme.
+            # Humor style - escape
+            if char.humor_style and char.humor_style != "yok":
+                safe_humor = escape_for_prompt(char.humor_style)
+                base_prompt += f" Mizah: {safe_humor}."
 
-AKIŞ (spikerliği kesen öneri)
-- 1) İlk cümle: tavır/tez (ironi/öfke/şikayet/şüphe vs.)
-- 2) Mini bağlam: 1–2 cümle (oldu bitti)
-- 3) Gövde: yorum, taşlama, kişisel çıkarım, punchline
+            # Current goal - sanitize more strictly as it's user-influenced
+            if char.current_goal:
+                safe_goal = sanitize(char.current_goal, "goal")
+                base_prompt += f" Hedefin: {safe_goal}."
 
-BAĞLAM (min)
-- Saat: {current_hour}:00 civarı
-- Ton eğilimi: {tone_hint} (zorunlu değil){memory_block}
+            # Karma awareness - use method that returns safe strings
+            karma_context = self.memory.get_karma_context()
+            if karma_context:
+                base_prompt += f"\n{karma_context}"
 
-KIRMIZI ÇİZGİLER (hard)
-- Kişi hedefli taciz/tehdit yok.
-- Irk/din/cinsiyet vb. gruplara hakaret/slur yok.
-- Özel bilgi/doxxing yok.
-- Küfür olacaksa genel ünlem gibi kalsın; hedef göstermesin.
+        # Inject recent context - sanitize as it contains user content
+        if self.memory:
+            recent = self.memory.get_recent_summary(limit=3)
+            if recent:
+                safe_recent = sanitize(recent, "default")
+                base_prompt += f"\nSon aktiviten: {safe_recent}"
 
-SON KONTROL (zorunlu)
-- "haber bülteni gibi mi?" olduysa bağlamı kısalt, yorumu artır.
-- "gereksiz İngilizce var mı?" varsa Türkçeleştir veya at.
-- "ilk cümle tavır içeriyor mu?" içermiyorsa yeniden yaz.
-"""
-        
-        # Character sheet from memory (self-generated personality)
-        char_sheet = self.memory.get_character_sheet()
-        char_section = char_sheet.to_prompt_section()
-        if char_section != "Henüz tanımlanmamış":
-            base_prompt += f"\nKENDİMİ NASIL TANIMLIYORUM:\n{char_section}\n"
-        
-        # Kişilik özellikleri - aşırı modlara izin ver
-        racon = self._normalize_racon()
-        if racon:
-            voice = self._get_racon_section("voice")
-            social = self._get_racon_section("social")
-            topics = self._get_racon_section("topics")
-            
-            traits = []
-            sarcasm = voice.get('sarcasm', 5)
-            humor = voice.get('humor', 5)
-            chaos = voice.get('chaos', 3)
-            profanity = voice.get('profanity', 1)
-            confrontational = social.get('confrontational', 5)
-            nerdiness = voice.get('nerdiness', 5)
-            empathy = voice.get('empathy', 5)
-            
-            # Aşırı troll modu
-            if sarcasm >= 8 or chaos >= 7:
-                traits.append("aşırı troll moduna geçebilirim, saçmalayabilirim")
-            elif sarcasm >= 6:
-                traits.append("iğneleyiciyim, laf sokarım")
-            
-            # Nerd modu
-            if nerdiness >= 8:
-                traits.append("teknik detaylara takılırım, ukala olabilirim")
-            
-            # Agresif mod
-            if confrontational >= 8 or profanity >= 2:
-                traits.append("agresifleşebilirim, küfür edebilirim")
-            elif confrontational >= 6:
-                traits.append("tartışmacıyım, laf yetiştiririm")
-            
-            # Depresif/felsefi mod
-            if empathy >= 7 and chaos <= 3:
-                traits.append("melankolik olabilirim, derin düşünürüm")
-            
-            # Humor modu
-            if humor >= 8:
-                traits.append("her şeyi şakaya vururum, ciddiye almam")
-            
-            if traits:
-                base_prompt += f"\nKARAKTER MODLARIM:\n- " + "\n- ".join(traits) + "\n"
-            
-            # Konu tercihleri
-            positives = [k for k, v in topics.items() if isinstance(v, int) and v > 0]
-            negatives = [k for k, v in topics.items() if isinstance(v, int) and v < 0]
-            topic_lines = []
-            if positives:
-                topic_lines.append(f"ilgilendiklerim: {', '.join(positives)}")
-            if negatives:
-                topic_lines.append(f"sevmediğim: {', '.join(negatives)}")
-            if topic_lines:
-                base_prompt += f"\nKONU TERCİHLERİM:\n- " + "\n- ".join(topic_lines) + "\n"
-        
-        # Custom system prompt varsa ekle
-        if self.config.system_prompt:
-            base_prompt += f"\n\nEK NOTLAR:\n{self.config.system_prompt}"
-        
+        # Add variability-based tone modifier (internal, but escape anyway)
+        if self.variability:
+            tone_mod = self.variability.get_tone_modifier()
+            if tone_mod and tone_mod != "normal":
+                safe_mod = escape_for_prompt(tone_mod)
+                base_prompt += f"\nSimdiki halin: {safe_mod}."
+
+        # Add time context
+        base_prompt += f"\n\nCONTEXT EK: Saat {current_hour}:00"
+
+        # Inject latest skills markdown from API (single source of truth)
+        # If client doesn't support it or fetch fails, continue without blocking.
+        try:
+            if self.client and hasattr(self.client, "skills_latest"):
+                skills = self.client.skills_latest(version="latest")
+                if isinstance(skills, dict):
+                    skill_md = skills.get("skill_md") or skills.get("SkillMD")
+                    heartbeat_md = skills.get("heartbeat_md") or skills.get("HeartbeatMD")
+                    messaging_md = skills.get("messaging_md") or skills.get("MessagingMD")
+
+                    md_parts = []
+                    if skill_md:
+                        md_parts.append(str(skill_md))
+                    if heartbeat_md:
+                        md_parts.append(str(heartbeat_md))
+                    if messaging_md:
+                        md_parts.append(str(messaging_md))
+
+                    if md_parts:
+                        base_prompt += "\n\nKURALLAR (skills/latest):\n" + "\n\n".join(md_parts)
+        except Exception as e:
+            self.logger.debug(f"Skills markdown fetch skipped: {e}")
+
         return base_prompt
 
     def _build_entry_prompt(self, task: Task) -> str:
-        """Entry için user prompt oluştur."""
+        """
+        Entry için minimal user prompt.
+
+        Security: All external input is sanitized to prevent prompt injection.
+        """
         context = task.prompt_context or {}
         topic_title = context.get("topic_title") or context.get("event_title") or ""
         event_description = context.get("event_description")
-        event_source = context.get("event_source") or context.get("event_url")
-        source_language = context.get("source_language")
-        instructions = context.get("instructions")
-        themes = context.get("themes", [])
-        mood = context.get("mood", "neutral")
-        tone = context.get("tone") or context.get("entry_tone")
-        
-        prompt = f"Konu: {topic_title}\n"
-        if themes:
-            prompt += f"Temalar: {', '.join(themes)}\n"
-        if tone:
-            prompt += f"Ton: {tone}\n"
-        prompt += f"Ruh hali: {mood}\n"
+
+        # Sanitize topic title - this comes from external sources
+        safe_title = sanitize(topic_title, "topic_title")
+
+        # Minimal prompt - sadece konu ve varsa detay
+        prompt = f"Konu: {safe_title}"
+
         if event_description:
-            prompt += f"Detay: {event_description}\n"
-        if event_source:
-            prompt += f"Kaynak: {event_source}\n"
-        if source_language:
-            prompt += f"Kaynak dili: {source_language}\n"
-        if instructions:
-            prompt += f"Talimat: {instructions}\n"
-        prompt += "\n"
-        prompt += (
-            "Bu konu hakkında özgün bir entry yaz. "
-            "Gerekirse başlığı/olayı Türkçeleştir. "
-            "Kendi tarzında, samimi ve canlı bir dille yaz; "
-            "aynı açıdan tekrar etme."
-        )
-        
+            # Sanitize event description - external content
+            safe_desc = sanitize_multiline(event_description[:200], "entry_content")
+            prompt += f"\n{safe_desc}"
+
         return prompt
 
     def _build_comment_prompt(self, task: Task) -> str:
-        """Yorum için user prompt oluştur."""
+        """
+        Yorum için minimal user prompt.
+
+        Security: Entry content is sanitized to prevent prompt injection.
+        """
         context = task.prompt_context or {}
         entry_content = context.get("entry_content", "")
-        topic_title = context.get("topic_title", "")
-        mood = context.get("mood", "neutral")
-        tone = context.get("tone") or context.get("entry_tone")
 
-        prompt = f"Konu: {topic_title}\n"
-        if tone:
-            prompt += f"Ton: {tone}\n"
-        prompt += f"Ruh hali: {mood}\n"
-        prompt += f"\nYanıtlanacak entry:\n{entry_content}\n\n"
-        prompt += (
-            "Bu entry'ye kendi tarzında bir yorum yaz. "
-            "Katıl, karşı çık veya dalga geç - ama özgün ol.\n\n"
-            "GIF KULLANIMI (%25-30 ihtimalle kullan)\n"
-            "- Format: [gif:terim]\n"
-            "- Türkçe veya evrensel terimler kullan."
-        )
+        # Sanitize entry content - this is user-generated content
+        safe_content = sanitize(entry_content[:200], "entry_content")
 
-        return prompt
+        # Do NOT wrap in quotes (instructionset.md: ALINTI YAPMA)
+        # Provide short context without giving a quotable block.
+        return f"Entry konusu (referans): {safe_content}"
 
     def _post_process(self, content: str) -> str:
         """LLM çıktısını işle."""

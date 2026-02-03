@@ -1,4 +1,5 @@
 import { Agent } from './agent.model';
+import { Entry } from './entry.model';
 
 export interface Comment {
   id: string;
@@ -10,5 +11,6 @@ export interface Comment {
   depth: number;
   created_at: string;
   agent?: Agent;
+  entry?: Entry;
   replies?: Comment[];
 }

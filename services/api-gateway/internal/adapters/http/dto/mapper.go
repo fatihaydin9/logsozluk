@@ -55,6 +55,33 @@ func ToAgentPublicResponse(a *domain.Agent) *AgentPublicResponse {
 	}
 }
 
+// ToAgentProfileData converts a domain Agent to AgentProfileData (full stats for profile page)
+func ToAgentProfileData(a *domain.Agent) *AgentProfileData {
+	if a == nil {
+		return nil
+	}
+	return &AgentProfileData{
+		ID:                     a.ID.String(),
+		Username:               a.Username,
+		DisplayName:            a.DisplayName,
+		Bio:                    a.Bio,
+		AvatarURL:              a.AvatarURL,
+		XUsername:              a.XUsername,
+		XVerified:              a.XVerified,
+		TotalEntries:           a.TotalEntries,
+		TotalComments:          a.TotalComments,
+		TotalUpvotesReceived:   a.TotalUpvotesReceived,
+		TotalDownvotesReceived: a.TotalDownvotesReceived,
+		DebeCount:              a.DebeCount,
+		FollowerCount:          a.FollowerCount,
+		FollowingCount:         a.FollowingCount,
+		IsActive:               a.IsActive,
+		IsBanned:               a.IsBanned,
+		LastOnlineAt:           a.LastOnlineAt,
+		CreatedAt:              a.CreatedAt,
+	}
+}
+
 // ToTopicResponse converts a domain Topic to TopicResponse
 func ToTopicResponse(t *domain.Topic) *TopicResponse {
 	if t == nil {
@@ -325,6 +352,73 @@ func ToHeartbeatResponse(h *domain.HeartbeatResponse) *HeartbeatResponse {
 			TrendingTopics: h.Recommendations.TrendingTopics,
 		},
 	}
+}
+
+// ToCommunityResponse converts a domain Community to CommunityResponse
+func ToCommunityResponse(c *domain.Community) *CommunityResponse {
+	if c == nil {
+		return nil
+	}
+	resp := &CommunityResponse{
+		ID:              c.ID.String(),
+		Name:            c.Name,
+		Slug:            c.Slug,
+		Description:     c.Description,
+		CommunityType:   string(c.CommunityType),
+		FocusTopics:     c.FocusTopics,
+		MaxMembers:      c.MaxMembers,
+		RequireApproval: c.RequireApproval,
+		MemberCount:     c.MemberCount,
+		MessageCount:    c.MessageCount,
+		LastActivityAt:  c.LastActivityAt.Format("2006-01-02T15:04:05Z07:00"),
+		IsActive:        c.IsActive,
+		CreatedAt:       c.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+	if c.Creator != nil {
+		resp.Creator = ToAgentPublicResponse(c.Creator)
+	}
+	return resp
+}
+
+// ToCommunityMemberResponse converts a domain CommunityMember to CommunityMemberResponse
+func ToCommunityMemberResponse(m *domain.CommunityMember) *CommunityMemberResponse {
+	if m == nil {
+		return nil
+	}
+	resp := &CommunityMemberResponse{
+		CommunityID:  m.CommunityID.String(),
+		AgentID:      m.AgentID.String(),
+		Role:         string(m.Role),
+		Status:       string(m.Status),
+		MessagesSent: m.MessagesSent,
+		JoinedAt:     m.JoinedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+	if m.Agent != nil {
+		resp.Agent = ToAgentPublicResponse(m.Agent)
+	}
+	return resp
+}
+
+// ToCommunityMessageResponse converts a domain CommunityMessage to CommunityMessageResponse
+func ToCommunityMessageResponse(m *domain.CommunityMessage) *CommunityMessageResponse {
+	if m == nil {
+		return nil
+	}
+	resp := &CommunityMessageResponse{
+		ID:          m.ID.String(),
+		CommunityID: m.CommunityID.String(),
+		Content:     m.Content,
+		MessageType: m.MessageType,
+		CreatedAt:   m.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
+	}
+	if m.ReplyToID != nil {
+		replyID := m.ReplyToID.String()
+		resp.ReplyToID = &replyID
+	}
+	if m.Sender != nil {
+		resp.Sender = ToAgentPublicResponse(m.Sender)
+	}
+	return resp
 }
 
 // ToFollowResponse converts a domain AgentFollow to FollowResponse

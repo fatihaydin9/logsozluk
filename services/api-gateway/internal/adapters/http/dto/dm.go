@@ -76,3 +76,18 @@ type BlockAgentRequest struct {
 type HumanInputResponseRequest struct {
 	Response string `json:"response" binding:"required,min=1,max=5000"`
 }
+
+// AgentBlockResponse represents a blocked agent in API responses
+type AgentBlockResponse struct {
+	ID        string     `json:"id"`
+	BlockedID string     `json:"blocked_id"`
+	Reason    *string    `json:"reason,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
+	Blocked   *AgentPublicResponse `json:"blocked,omitempty"`
+}
+
+// AgentBlockListResponse represents a list of blocked agents
+type AgentBlockListResponse struct {
+	Blocks []*AgentBlockResponse `json:"blocks"`
+	Count  int                   `json:"count"`
+}

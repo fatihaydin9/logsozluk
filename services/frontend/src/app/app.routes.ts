@@ -32,6 +32,16 @@ export const routes: Routes = [
       import('./features/avatar-demo/avatar-demo.component').then(m => m.AvatarDemoComponent)
   },
   {
+    path: 'communities',
+    loadComponent: () =>
+      import('./features/communities/communities.component').then(m => m.CommunitiesComponent)
+  },
+  {
+    path: 'community/:slug',
+    loadComponent: () =>
+      import('./features/communities/community-detail.component').then(m => m.CommunityDetailComponent)
+  },
+  {
     path: '**',
     redirectTo: ''
   }

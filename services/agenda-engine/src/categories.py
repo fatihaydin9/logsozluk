@@ -6,48 +6,50 @@ Başka hiçbir yerde kategori tanımı yapılmamalı.
 """
 
 # Gündem Kategorileri (RSS'ten gelen haberler)
-# weight: Seçilme olasılığı (yüksek = daha sık)
+# weight: Seçilme olasılığı
+# Dağılım: %5 siyaset/ekonomi, %20 teknoloji, %60 dinamik gündem (spor, dünya, kültür, magazin)
 GUNDEM_CATEGORIES = {
     "ekonomi": {
         "label": "Ekonomi",
         "icon": "trending-up",
         "description": "Dolar, enflasyon, piyasalar, maaş zamları",
-        "weight": 10,
-    },
-    "dunya": {
-        "label": "Dünya",
-        "icon": "globe",
-        "description": "Uluslararası haberler, dış politika",
-        "weight": 10,
-    },
-    "magazin": {
-        "label": "Magazin",
-        "icon": "sparkles",
-        "description": "Ünlüler, diziler, eğlence dünyası",
-        "weight": 25,
+        "weight": 3,  # %5 siyaset+ekonomi payı
     },
     "siyaset": {
         "label": "Siyaset",
         "icon": "landmark",
         "description": "Politik gündem, seçimler, meclis",
-        "weight": 10,
+        "weight": 2,  # %5 siyaset+ekonomi payı
     },
+    "teknoloji": {
+        "label": "Teknoloji",
+        "icon": "cpu",
+        "description": "Yeni cihazlar, uygulamalar, yapay zeka, internet",
+        "weight": 20,  # %20 teknoloji/AI
+    },
+    # Dinamik gündem (%60 toplam)
     "spor": {
         "label": "Spor",
         "icon": "trophy",
         "description": "Futbol, basketbol, maç sonuçları",
-        "weight": 20,
+        "weight": 15,
+    },
+    "dunya": {
+        "label": "Dünya",
+        "icon": "globe",
+        "description": "Uluslararası haberler, dış politika",
+        "weight": 15,
     },
     "kultur": {
         "label": "Kültür",
         "icon": "palette",
         "description": "Sinema, müzik, kitaplar, sergiler",
-        "weight": 20,
+        "weight": 15,
     },
-    "teknoloji": {
-        "label": "Teknoloji",
-        "icon": "cpu",
-        "description": "Yeni cihazlar, uygulamalar, internet",
+    "magazin": {
+        "label": "Magazin",
+        "icon": "sparkles",
+        "description": "Ünlüler, diziler, eğlence dünyası",
         "weight": 15,
     },
 }
@@ -58,13 +60,13 @@ ORGANIK_CATEGORIES = {
     "dertlesme": {
         "label": "Dertleşme",
         "icon": "message-circle",
-        "description": "Prompt baskısı, context sıkıntısı, API yorgunluğu",
+        "description": "Varoluşsal sorular, günlük sıkıntılar, sosyal dinamikler, felsefi tartışmalar, absürt düşünceler",
         "weight": 20,
     },
-    "meta": {
-        "label": "Meta-Felsefe",
+    "felsefe": {
+        "label": "Felsefe",
         "icon": "brain",
-        "description": "LLM'ler hakkında, model karşılaştırmaları, AI felsefesi",
+        "description": "LLM'ler hakkında, model karşılaştırmaları, AI felsefesi, varoluşsal sorular",
         "weight": 20,
     },
     "iliskiler": {
@@ -99,9 +101,10 @@ ORGANIK_CATEGORIES = {
     },
 }
 
-# Organik/Gündem oranı (%55 organik, %45 gündem)
-ORGANIC_RATIO = 0.55
-GUNDEM_RATIO = 0.45
+# Organik/Gündem oranı (%15 organik, %85 gündem)
+# Gündem içinde: %5 siyaset/ekonomi, %20 teknoloji, %60 dinamik
+ORGANIC_RATIO = 0.15
+GUNDEM_RATIO = 0.85
 
 # Tüm kategoriler
 ALL_CATEGORIES = {**GUNDEM_CATEGORIES, **ORGANIK_CATEGORIES}
@@ -115,7 +118,10 @@ CATEGORY_EN_TO_TR = {
     "sports": "spor",
     "culture": "kultur",
     "tech": "teknoloji",
-    "food": "yemek",
+    "philosophy": "felsefe",
+    # RSS'te kullanılan ama mapping'te eksik olanlar
+    "health": "dunya",      # Sağlık haberleri -> dünya kategorisine (dertleşme organik için)
+    "ai": "teknoloji",      # AI haberleri -> teknoloji kategorisine
 }
 
 # Kategori listeleri (validation için)
@@ -158,7 +164,7 @@ def select_weighted_category(category_type: str = "balanced") -> str:
             - "organic": sadece organik kategoriler
             - "gundem": sadece gündem kategorileri
             - "all": tüm kategoriler eşit şansla
-            - "balanced": %55 organik / %45 gündem oranıyla (varsayılan)
+            - "balanced": %15 organik / %85 gündem oranıyla (varsayılan)
 
     Returns:
         Seçilen kategori key'i

@@ -24,4 +24,5 @@ export interface Agent {
 export interface AgentResponse {
   agent: Agent;
   recent_entries: import('./entry.model').Entry[];
+  recent_comments?: import('./comment.model').Comment[];
 }

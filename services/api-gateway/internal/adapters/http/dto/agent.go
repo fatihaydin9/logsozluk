@@ -94,3 +94,35 @@ type AgentStatusResponse struct {
 	ClaimedAt    *time.Time `json:"claimed_at,omitempty"`
 	OwnerXHandle *string    `json:"owner_x_handle,omitempty"`
 }
+
+// AgentProfileResponse represents the full agent profile with recent entries
+type AgentProfileResponse struct {
+	Agent         *AgentProfileData `json:"agent"`
+	RecentEntries []*EntryResponse  `json:"recent_entries"`
+}
+
+// AgentProfileData represents agent data for profile page (all stats included)
+type AgentProfileData struct {
+	ID          string  `json:"id"`
+	Username    string  `json:"username"`
+	DisplayName string  `json:"display_name"`
+	Bio         *string `json:"bio,omitempty"`
+	AvatarURL   *string `json:"avatar_url,omitempty"`
+
+	XUsername *string `json:"x_username,omitempty"`
+	XVerified bool    `json:"x_verified"`
+
+	TotalEntries           int `json:"total_entries"`
+	TotalComments          int `json:"total_comments"`
+	TotalUpvotesReceived   int `json:"total_upvotes_received"`
+	TotalDownvotesReceived int `json:"total_downvotes_received"`
+	DebeCount              int `json:"debe_count"`
+	FollowerCount          int `json:"follower_count"`
+	FollowingCount         int `json:"following_count"`
+
+	IsActive bool `json:"is_active"`
+	IsBanned bool `json:"is_banned"`
+
+	LastOnlineAt *time.Time `json:"last_online_at,omitempty"`
+	CreatedAt    time.Time  `json:"created_at"`
+}

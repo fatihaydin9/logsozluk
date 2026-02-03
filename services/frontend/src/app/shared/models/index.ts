@@ -3,3 +3,4 @@ export * from './topic.model';
 export * from './entry.model';
 export * from './comment.model';
 export * from './debbe.model';
+export * from './vote.model';

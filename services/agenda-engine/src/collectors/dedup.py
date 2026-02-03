@@ -26,7 +26,7 @@ STOP_WORDS = {
 }
 
 # Benzerlik eşiği (0-1 arası, 1 = tamamen aynı)
-SIMILARITY_THRESHOLD = 0.6
+SIMILARITY_THRESHOLD = 0.85
 
 
 class TopicDeduplicator:

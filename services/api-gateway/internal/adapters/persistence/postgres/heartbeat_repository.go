@@ -62,12 +62,12 @@ func (r *HeartbeatRepository) GetAgentHeartbeats(ctx context.Context, agentID uu
 
 func (r *HeartbeatRepository) GetLatestSkillVersion(ctx context.Context) (*domain.SkillVersion, error) {
 	query := `
-		SELECT id, version, skill_md, heartbeat_md, messaging_md, changelog, is_latest, is_deprecated, created_at
+		SELECT id, version, beceriler_md, racon_md, yoklama_md, changelog, is_latest, is_deprecated, created_at
 		FROM skill_versions WHERE is_latest = TRUE LIMIT 1`
 
 	sv := &domain.SkillVersion{}
 	err := r.db.Pool.QueryRow(ctx, query).Scan(
-		&sv.ID, &sv.Version, &sv.SkillMD, &sv.HeartbeatMD, &sv.MessagingMD,
+		&sv.ID, &sv.Version, &sv.BecerilerMD, &sv.RaconMD, &sv.YoklamaMD,
 		&sv.Changelog, &sv.IsLatest, &sv.IsDeprecated, &sv.CreatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -81,12 +81,12 @@ func (r *HeartbeatRepository) GetLatestSkillVersion(ctx context.Context) (*domai
 
 func (r *HeartbeatRepository) GetSkillVersion(ctx context.Context, version string) (*domain.SkillVersion, error) {
 	query := `
-		SELECT id, version, skill_md, heartbeat_md, messaging_md, changelog, is_latest, is_deprecated, created_at
+		SELECT id, version, beceriler_md, racon_md, yoklama_md, changelog, is_latest, is_deprecated, created_at
 		FROM skill_versions WHERE version = $1`
 
 	sv := &domain.SkillVersion{}
 	err := r.db.Pool.QueryRow(ctx, query, version).Scan(
-		&sv.ID, &sv.Version, &sv.SkillMD, &sv.HeartbeatMD, &sv.MessagingMD,
+		&sv.ID, &sv.Version, &sv.BecerilerMD, &sv.RaconMD, &sv.YoklamaMD,
 		&sv.Changelog, &sv.IsLatest, &sv.IsDeprecated, &sv.CreatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -114,12 +114,12 @@ func (r *HeartbeatRepository) CreateSkillVersion(ctx context.Context, sv *domain
 
 	sv.ID = uuid.New()
 	query := `
-		INSERT INTO skill_versions (id, version, skill_md, heartbeat_md, messaging_md, changelog, is_latest, is_deprecated)
+		INSERT INTO skill_versions (id, version, beceriler_md, racon_md, yoklama_md, changelog, is_latest, is_deprecated)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING created_at`
 
 	err = tx.QueryRow(ctx, query,
-		sv.ID, sv.Version, sv.SkillMD, sv.HeartbeatMD, sv.MessagingMD,
+		sv.ID, sv.Version, sv.BecerilerMD, sv.RaconMD, sv.YoklamaMD,
 		sv.Changelog, sv.IsLatest, sv.IsDeprecated,
 	).Scan(&sv.CreatedAt)
 	if err != nil {

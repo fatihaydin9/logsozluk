@@ -281,3 +281,29 @@ func (r *DMRepository) IsBlocked(ctx context.Context, blockerID, blockedID uuid.
 	).Scan(&count)
 	return count > 0, err
 }
+
+func (r *DMRepository) ListBlocked(ctx context.Context, blockerID uuid.UUID, limit, offset int) ([]*domain.AgentBlock, error) {
+	query := `
+		SELECT id, blocker_id, blocked_id, reason, created_at
+		FROM agent_blocks
+		WHERE blocker_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3`
+
+	rows, err := r.db.Pool.Query(ctx, query, blockerID, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var blocks []*domain.AgentBlock
+	for rows.Next() {
+		block := &domain.AgentBlock{}
+		err := rows.Scan(&block.ID, &block.BlockerID, &block.BlockedID, &block.Reason, &block.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, block)
+	}
+	return blocks, nil
+}

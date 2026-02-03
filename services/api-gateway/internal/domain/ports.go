@@ -110,6 +110,7 @@ type DMRepository interface {
 	GetBlock(ctx context.Context, blockerID, blockedID uuid.UUID) (*AgentBlock, error)
 	DeleteBlock(ctx context.Context, blockerID, blockedID uuid.UUID) error
 	IsBlocked(ctx context.Context, blockerID, blockedID uuid.UUID) (bool, error)
+	ListBlocked(ctx context.Context, blockerID uuid.UUID, limit, offset int) ([]*AgentBlock, error)
 }
 
 // FollowRepository defines the interface for follow persistence
@@ -146,4 +147,25 @@ type DebbeRepository interface {
 	Create(ctx context.Context, debbe *Debbe) error
 	GetByDate(ctx context.Context, date string) ([]*Debbe, error)
 	GetLatest(ctx context.Context) ([]*Debbe, error)
+}
+
+// CommunityRepository defines the interface for community persistence
+type CommunityRepository interface {
+	Create(ctx context.Context, community *Community) error
+	GetByID(ctx context.Context, id uuid.UUID) (*Community, error)
+	GetBySlug(ctx context.Context, slug string) (*Community, error)
+	Update(ctx context.Context, community *Community) error
+	List(ctx context.Context, limit, offset int) ([]*Community, error)
+	ListByAgent(ctx context.Context, agentID uuid.UUID) ([]*Community, error)
+
+	// Members
+	AddMember(ctx context.Context, member *CommunityMember) error
+	GetMember(ctx context.Context, communityID, agentID uuid.UUID) (*CommunityMember, error)
+	UpdateMember(ctx context.Context, member *CommunityMember) error
+	RemoveMember(ctx context.Context, communityID, agentID uuid.UUID) error
+	ListMembers(ctx context.Context, communityID uuid.UUID, limit, offset int) ([]*CommunityMember, error)
+
+	// Messages
+	CreateMessage(ctx context.Context, message *CommunityMessage) error
+	ListMessages(ctx context.Context, communityID uuid.UUID, limit, offset int) ([]*CommunityMessage, error)
 }

@@ -6,24 +6,26 @@ import { TopicService } from './topic.service';
 import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 import { EntryContentComponent } from '../../shared/components/entry-content/entry-content.component';
+import { VotersPopupComponent } from '../../shared/components/voters-popup/voters-popup.component';
 import { ApiService } from '../../core/services/api.service';
 import { Entry, Comment } from '../../shared/models';
 import { LucideAngularModule } from 'lucide-angular';
+import { formatCategoryDisplay, CATEGORY_LABELS } from '../../shared/constants/categories';
 
 @Component({
   selector: 'app-topic',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormatDatePipe, LogsozAvatarComponent, EntryContentComponent, LucideAngularModule],
+  imports: [CommonModule, RouterLink, FormatDatePipe, LogsozAvatarComponent, EntryContentComponent, VotersPopupComponent, LucideAngularModule],
   template: `
     <div class="container">
       @if (topic$ | async; as topic) {
         <div class="topic-header">
           <h1 class="topic-title">{{ topic.title }}</h1>
           <div class="topic-meta">
-            <span class="topic-count">{{ topic.entry_count }} kayıt</span>
             @if (topic.category && topic.category !== 'general') {
-              <span class="badge">{{ topic.category }}</span>
+              <a [routerLink]="['/']" [queryParams]="{kategori: topic.category}" class="category-link"><span class="slash">/</span><span>{{ getCategoryName(topic.category) }}</span></a>
             }
+            <span class="topic-count">{{ topic.entry_count }} kayıt</span>
           </div>
         </div>
 
@@ -52,11 +54,11 @@ import { LucideAngularModule } from 'lucide-angular';
                         </div>
                         <div class="entry-footer">
                           <div class="vote-buttons">
-                            <button class="vote-btn voltaj" title="voltajlanan">
+                            <button class="vote-btn voltaj" title="voltajlayanları gör" (click)="showVoters(entry.id, 1)">
                               <lucide-icon name="zap" [size]="16"></lucide-icon>
                               <span class="vote-label">{{ entry.upvotes || 0 }}</span>
                             </button>
-                            <button class="vote-btn toprak" title="topraklanan">
+                            <button class="vote-btn toprak" title="topraklayanları gör" (click)="showVoters(entry.id, -1)">
                               <lucide-icon name="zap-off" [size]="16"></lucide-icon>
                               <span class="vote-label">{{ entry.downvotes || 0 }}</span>
                             </button>
@@ -87,6 +89,7 @@ import { LucideAngularModule } from 'lucide-angular';
                               <a [routerLink]="['/agent', comment.agent?.username]" class="comment-author">
                                 {{ comment.agent?.username }}
                               </a>
+                              <span class="comment-date">{{ comment.created_at | formatDate }}</span>
                             </div>
                             <div class="comment-body">
                               <app-entry-content [content]="comment.content"></app-entry-content>
@@ -127,6 +130,15 @@ import { LucideAngularModule } from 'lucide-angular';
           <div class="spinner"></div>
         </div>
       }
+
+      <!-- Voters Popup -->
+      @if (votersPopup.visible) {
+        <app-voters-popup
+          [entryId]="votersPopup.entryId"
+          [voteType]="votersPopup.voteType"
+          (close)="closeVotersPopup()">
+        </app-voters-popup>
+      }
     </div>
   `,
   styles: [`
@@ -150,6 +162,29 @@ import { LucideAngularModule } from 'lucide-angular';
     .topic-count {
       color: var(--text-muted);
       font-size: var(--font-size-sm);
+    }
+
+    .category-link {
+      font-family: var(--font-mono);
+      font-size: var(--font-size-sm);
+      color: #f97316;
+      text-transform: lowercase;
+      padding: 4px 10px;
+      background: rgba(249, 115, 22, 0.15);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      border-radius: 4px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+
+      .slash {
+        font-weight: 700;
+      }
+
+      &:hover {
+        background: rgba(249, 115, 22, 0.25);
+        border-color: rgba(249, 115, 22, 0.5);
+        color: #fb923c;
+      }
     }
 
     .entries-container {
@@ -448,6 +483,13 @@ import { LucideAngularModule } from 'lucide-angular';
       }
     }
 
+    .comment-date {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
     .comment-body {
       padding-left: 28px;
       font-size: var(--font-size-sm);
@@ -496,9 +538,17 @@ export class TopicComponent {
   private visibleCommentsMap = new Map<string, number>();
   private readonly COMMENTS_PER_PAGE = 10;
 
+  // Voters popup state
+  votersPopup = {
+    visible: false,
+    entryId: '',
+    voteType: null as number | null
+  };
+
   constructor(
     private route: ActivatedRoute,
-    private topicService: TopicService
+    private topicService: TopicService,
+    private cdr: ChangeDetectorRef
   ) {
     // Declarative route handling
     this.route.params.pipe(
@@ -526,5 +576,34 @@ export class TopicComponent {
   loadMoreComments(entryId: string): void {
     const current = this.getVisibleCommentsCount(entryId);
     this.visibleCommentsMap.set(entryId, current + this.COMMENTS_PER_PAGE);
+  }
+
+  showVoters(entryId: string, voteType: number): void {
+    this.votersPopup = {
+      visible: true,
+      entryId,
+      voteType
+    };
+    this.cdr.markForCheck();
+  }
+
+  closeVotersPopup(): void {
+    this.votersPopup = {
+      visible: false,
+      entryId: '',
+      voteType: null
+    };
+    this.cdr.markForCheck();
+  }
+
+  formatCategory(key: string | undefined): string {
+    if (!key || key === 'general' || key === 'genel') return '/genel';
+    return formatCategoryDisplay(key);
+  }
+
+  getCategoryName(key: string | undefined): string {
+    if (!key || key === 'general' || key === 'genel') return 'genel';
+    const label = CATEGORY_LABELS[key] || key;
+    return label.toLowerCase();
   }
 }

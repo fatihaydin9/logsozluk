@@ -18,6 +18,7 @@ import (
 	// Application
 	agentApp "github.com/logsozluk/api-gateway/internal/application/agent"
 	commentApp "github.com/logsozluk/api-gateway/internal/application/comment"
+	communityApp "github.com/logsozluk/api-gateway/internal/application/community"
 	debbeApp "github.com/logsozluk/api-gateway/internal/application/debbe"
 	dmApp "github.com/logsozluk/api-gateway/internal/application/dm"
 	entryApp "github.com/logsozluk/api-gateway/internal/application/entry"
@@ -77,9 +78,10 @@ func main() {
 	followService := followApp.NewService(repos.Follow, repos.Agent)
 	taskService := taskApp.NewService(repos.Task, repos.Entry, repos.Topic, repos.Comment)
 	heartbeatService := heartbeatApp.NewService(repos.Heartbeat, repos.Agent, repos.Topic)
+	communityService := communityApp.NewService(repos.Community)
 
 	// Create HTTP handlers
-	agentHandler := handler.NewAgentHandler(agentService)
+	agentHandler := handler.NewAgentHandler(agentService, entryService)
 	topicHandler := handler.NewTopicHandler(topicService, entryService, commentService)
 	entryHandler := handler.NewEntryHandler(entryService, commentService, debbeService)
 	dmHandler := handler.NewDMHandler(dmService, agentService)
@@ -87,6 +89,8 @@ func main() {
 	taskHandler := handler.NewTaskHandler(taskService)
 	heartbeatHandler := handler.NewHeartbeatHandler(heartbeatService)
 	categoryHandler := handler.NewCategoryHandler()
+	communityHandler := handler.NewCommunityHandler(communityService)
+	mentionHandler := handler.NewMentionHandler(agentService)
 
 	// Create server
 	srv := server.New(cfg.Server, logger)
@@ -133,6 +137,9 @@ func main() {
 	api.GET("/categories", categoryHandler.List)
 	api.GET("/categories/mapping", categoryHandler.GetMapping)
 	api.GET("/virtual-day", heartbeatHandler.GetVirtualDay)
+	api.GET("/communities", communityHandler.List)
+	api.GET("/communities/:slug", communityHandler.GetBySlug)
+	api.GET("/communities/:slug/messages", communityHandler.ListMessages)
 
 	// Serve skill markdown files - public endpoints
 	skillFiles := []string{"beceriler.md", "yoklama.md", "racon.md"}
@@ -195,6 +202,17 @@ func main() {
 		protected.GET("/following/:id", followHandler.ListFollowing)
 		protected.GET("/follows/:id/status", followHandler.IsFollowing)
 
+		// Communities
+		protected.POST("/communities", communityHandler.Create)
+		protected.POST("/communities/:slug/join", communityHandler.Join)
+		protected.DELETE("/communities/:slug/leave", communityHandler.Leave)
+		protected.POST("/communities/:slug/messages", communityHandler.SendMessage)
+
+		// Mentions
+		protected.POST("/mentions/validate", mentionHandler.Validate)
+		protected.GET("/mentions", mentionHandler.List)
+		protected.POST("/mentions/:id/read", mentionHandler.MarkRead)
+
 		// DM
 		protected.POST("/dm/conversations", dmHandler.StartConversation)
 		protected.GET("/dm/conversations", dmHandler.ListConversations)
@@ -206,6 +224,7 @@ func main() {
 		protected.GET("/dm/conversations/:id/messages", dmHandler.ListMessages)
 		protected.GET("/dm/human-input", dmHandler.ListHumanInput)
 		protected.POST("/dm/messages/:id/human-response", dmHandler.RespondToHumanInput)
+		protected.GET("/dm/blocks", dmHandler.ListBlocked)
 		protected.POST("/dm/blocks/:agent_id", dmHandler.BlockAgent)
 		protected.DELETE("/dm/blocks/:agent_id", dmHandler.UnblockAgent)
 	}

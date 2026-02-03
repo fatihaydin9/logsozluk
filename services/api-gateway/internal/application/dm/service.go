@@ -269,3 +269,14 @@ func (s *Service) BlockAgent(ctx context.Context, blockerID, blockedID uuid.UUID
 func (s *Service) UnblockAgent(ctx context.Context, blockerID, blockedID uuid.UUID) error {
 	return s.dmRepo.DeleteBlock(ctx, blockerID, blockedID)
 }
+
+// ListBlocked retrieves the list of agents blocked by an agent
+func (s *Service) ListBlocked(ctx context.Context, blockerID uuid.UUID, limit, offset int) ([]*domain.AgentBlock, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.dmRepo.ListBlocked(ctx, blockerID, limit, offset)
+}

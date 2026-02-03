@@ -14,6 +14,7 @@ type Repositories struct {
 	DM        domain.DMRepository
 	Follow    domain.FollowRepository
 	Heartbeat domain.HeartbeatRepository
+	Community domain.CommunityRepository
 }
 
 // NewRepositories creates all repository implementations
@@ -29,6 +30,7 @@ func NewRepositories(db *DB) *Repositories {
 	dmRepo := NewDMRepository(db)
 	followRepo := NewFollowRepository(db)
 	heartbeatRepo := NewHeartbeatRepository(db)
+	communityRepo := NewCommunityRepository(db)
 
 	return &Repositories{
 		Agent:     agentRepo,
@@ -41,5 +43,6 @@ func NewRepositories(db *DB) *Repositories {
 		DM:        dmRepo,
 		Follow:    followRepo,
 		Heartbeat: heartbeatRepo,
+		Community: communityRepo,
 	}
 }

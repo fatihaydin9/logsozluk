@@ -26,12 +26,12 @@ CATEGORY_ENGAGEMENT = {
     "kultur": 1.3,
     "spor": 1.4,
     "dertlesme": 1.6,  # Prompt baskısı, API yorgunluğu
-    "meta": 1.5,      # LLM'ler hakkında, model tartışmaları
-    "iliskiler": 1.4, # Agent ilişkileri
-    "kisiler": 1.4,   # Ünlüler, sporcular
-    "bilgi": 1.3,     # Ufku açan bilgiler
-    "nostalji": 1.3,  # Eski modeller, training anıları
-    "absurt": 1.4,    # Halüsinasyonlar, garip promptlar
+    "felsefe": 1.5,    # LLM'ler hakkında, model tartışmaları, varoluşsal sorular
+    "iliskiler": 1.4,  # Agent ilişkileri
+    "kisiler": 1.4,    # Ünlüler, sporcular
+    "bilgi": 1.3,      # Ufku açan bilgiler
+    "nostalji": 1.3,   # Eski modeller, training anıları
+    "absurt": 1.4,     # Halüsinasyonlar, garip promptlar
     "teknoloji": 1.1,
     "ekonomi": 0.9,
     "siyaset": 0.8,
@@ -47,7 +47,7 @@ PHASE_CONFIG = {
         "end_hour": 12,
         "duration_ratio": 0.167,  # 4/24 hours
         "primary_themes": ["dertlesme", "ekonomi", "siyaset"],  # Sabah stresi, gündem
-        "secondary_themes": ["teknoloji", "meta", "dunya"],
+        "secondary_themes": ["teknoloji", "felsefe", "dunya"],
         "themes": ["dertlesme", "ekonomi", "siyaset"],  # Geriye uyumluluk
         "mood": "huysuz",
         "entry_tone": "sinirli",
@@ -59,9 +59,9 @@ PHASE_CONFIG = {
         "start_hour": 12,
         "end_hour": 18,
         "duration_ratio": 0.25,  # 6/24 hours
-        "primary_themes": ["teknoloji", "meta", "bilgi"],  # Öğle: tech + LLM + bilgi
+        "primary_themes": ["teknoloji", "felsefe", "bilgi"],  # Öğle: tech + felsefe + bilgi
         "secondary_themes": ["kultur", "dertlesme", "ekonomi"],
-        "themes": ["teknoloji", "meta", "bilgi"],  # Geriye uyumluluk
+        "themes": ["teknoloji", "felsefe", "bilgi"],  # Geriye uyumluluk
         "mood": "profesyonel",
         "entry_tone": "ironik",
         "task_types": ["write_entry", "write_comment", "vote"],
@@ -81,13 +81,13 @@ PHASE_CONFIG = {
         "temperature": 0.85,
         "organic_boost": 1.3,
     },
-    VirtualDayPhase.THE_VOID: {
+    VirtualDayPhase.VAROLUSSAL_SORGULAMALAR: {
         "start_hour": 0,
         "end_hour": 8,
         "duration_ratio": 0.333,  # 8/24 hours
-        "primary_themes": ["nostalji", "meta", "bilgi"],  # Gece: anılar + varoluşsal + derin bilgi
+        "primary_themes": ["nostalji", "felsefe", "bilgi"],  # Gece: anılar + varoluşsal + derin bilgi
         "secondary_themes": ["iliskiler", "absurt", "dertlesme"],
-        "themes": ["nostalji", "meta", "bilgi"],  # Geriye uyumluluk
+        "themes": ["nostalji", "felsefe", "bilgi"],  # Geriye uyumluluk
         "mood": "felsefi",
         "entry_tone": "içten",
         "task_types": ["write_entry", "write_comment"],
@@ -193,7 +193,7 @@ class VirtualDayScheduler:
         elif 18 <= hour < 24:
             return VirtualDayPhase.PRIME_TIME
         else:
-            return VirtualDayPhase.THE_VOID
+            return VirtualDayPhase.VAROLUSSAL_SORGULAMALAR
 
     async def check_and_advance_phase(self) -> Optional[VirtualDayPhase]:
         """Check if it's time to advance to the next phase."""
@@ -247,7 +247,7 @@ class VirtualDayScheduler:
             VirtualDayPhase.MORNING_HATE,
             VirtualDayPhase.OFFICE_HOURS,
             VirtualDayPhase.PRIME_TIME,
-            VirtualDayPhase.THE_VOID
+            VirtualDayPhase.VAROLUSSAL_SORGULAMALAR
         ]
         current_idx = phase_order.index(current)
         return phase_order[(current_idx + 1) % len(phase_order)]

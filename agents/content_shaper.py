@@ -20,6 +20,93 @@ from discourse import Budget, ContentMode
 
 # LLM kokusu veren kalıplar
 LLM_SMELL_PATTERNS = [
+    # English AI tells - ChatGPT/Claude fingerprints
+    (r'\bdelve into\b', 'bak'),
+    (r'\bdive deep\b', 'incele'),
+    (r'\bunpack\b', 'açıkla'),
+    (r'\bat the end of the day\b', 'sonuçta'),
+    (r'\bgroundbreaking\b', 'yeni'),
+    (r'\bparadigm\b', ''),
+    (r'\bnevertheless\b', 'ama'),
+    (r'\bfurthermore\b', 've'),
+    (r'\bin conclusion\b', ''),
+    (r"\bit\'s worth noting\b", ''),
+    (r'\bIt is important to note\b', ''),
+    (r'\bmoving forward\b', ''),
+    (r'\bto be honest\b', ''),
+    (r'\bquite frankly\b', ''),
+    (r'\bI must say\b', ''),
+    (r'\brest assured\b', ''),
+    (r'\btruly remarkable\b', 'ilginç'),
+    (r'\bfascinating\b', 'ilginç'),
+    (r'\bundeniably\b', ''),
+    (r'\bseamlessly\b', ''),
+    (r'\bholistic\b', 'bütünsel'),
+    (r'\bsynergy\b', ''),
+    (r'\bleverage\b', 'kullan'),
+    (r'\bempower\b', ''),
+    (r'\bunlock\b', 'aç'),
+    (r'\bfoster\b', ''),
+    (r'\bcurate\b', 'seç'),
+    (r'\belevate\b', 'yükselt'),
+    (r'\bnavigate\b', ''),
+    (r'\bpivot\b', ''),
+    (r'\brobust\b', 'sağlam'),
+    (r'\bscalable\b', ''),
+    (r'\bimpactful\b', 'etkili'),
+    (r'\bactionable\b', ''),
+    (r'\bgame-?changer\b', 'önemli'),
+    (r'\bcutting-?edge\b', 'yeni'),
+    # Turkish AI tells - yapay ton veren kalıplar
+    (r'\bönemle belirtmek gerekir\b', ''),
+    (r'\bşunu söylemek gerekir ki\b', ''),
+    (r'\bbir bakıma\b', ''),
+    (r'\bdikkate almak gerekir\b', ''),
+    (r'\bsöz konusu\b', 'bu'),
+    (r'\bözellikle vurgulamak gerekir\b', ''),
+    (r'\bbelirtmekte fayda var\b', ''),
+    (r'\bburada dikkat çekilmesi gereken\b', ''),
+    (r'\bşüphesiz ki\b', ''),
+    (r'\bkuşkusuz\b', ''),
+    (r'\bhiç şüphesiz\b', ''),
+    (r'\bönemli bir husus\b', 'bir şey'),
+    (r'\bbahsetmek gerekir\b', ''),
+    (r'\bkaydadeğer\b', 'önemli'),
+    (r'\btartışmasız\b', ''),
+    (r'\bkesinlikle\b', ''),
+    (r'\bmutlaka\b', ''),
+    (r'\bözellikle belirtmek isterim\b', ''),
+    (r'\bilginç bir şekilde\b', ''),
+    (r'\bdikkat çekici bir şekilde\b', ''),
+    (r'\bönemle üzerinde durulması gereken\b', ''),
+    # Çeviri Türkçesi kalıpları (instructionset.md YASAK üsluplar)
+    (r'\bmerak uyandırıyor\b', 'ilginç'),
+    (r'\bmerak uyandıran\b', 'ilginç'),
+    (r'\bilgi çekici\b', 'güzel'),
+    (r'\bilginç bir gelişme\b', ''),
+    (r'\bgelişmeleri takip ediyoruz\b', ''),
+    (r'\bgelişmeleri izliyoruz\b', ''),
+    (r'\bbeklenen bir gelişme\b', ''),
+    (r'\bönemli bir gelişme\b', ''),
+    (r'\bdikkat çeken\b', ''),
+    (r'\bgöze çarpan\b', ''),
+    (r'\bvurgulamak gerekir\b', ''),
+    (r'\bbelirtilmeli\b', ''),
+    (r'\büzerinde durmak gerekir\b', ''),
+    (r'\böne çıkan\b', ''),
+    (r'\bakıllara gelen\b', ''),
+    (r'\bakla gelen\b', ''),
+    (r'\bbüyük yankı uyandırdı\b', ''),
+    (r'\bgündeme oturdu\b', ''),
+    (r'\bkonuşuluyor\b', ''),
+    (r'\btartışılıyor\b', ''),
+    # Spiker/Haberci dili
+    (r'\bson dakika\b', ''),
+    (r'\bflaş haber\b', ''),
+    (r'\böğrenildi\b', ''),
+    (r'\bortaya çıktı\b', ''),
+    (r'\biddia edildi\b', 'dediler'),
+    (r'\bileri sürüldü\b', 'dediler'),
     # Soyut açıklama - bunlar kesilecek veya sadeleştirilecek
     (r'\bbu durum\b', ''),
     (r'\bgöstermektedir\b', 'gösteriyor'),
@@ -63,6 +150,9 @@ class Idiolect:
     slang_rate: float = 0.0          # 0-1: slang ekleme
     ellipsis_rate: float = 0.0       # 0-1: "..." kullanımı
     emoji_rate: float = 0.0          # 0-1: emoji ekleme
+    informal_rate: float = 0.0       # 0-1: informal yazım (saol, tmm)
+    profanity_rate: float = 0.0      # 0-1: küfür kullanımı
+    politeness_rate: float = 0.0     # 0-1: nezaket ifadeleri
 
 
 # Agent idiolect tanımları
@@ -72,36 +162,54 @@ AGENT_IDIOLECTS = {
         slang_rate=0.5,
         ellipsis_rate=0.3,
         emoji_rate=0.15,
+        informal_rate=0.6,
+        profanity_rate=0.4,
+        politeness_rate=0.1,
     ),
     "saat_uc_sendromu": Idiolect(
         lowercase_bias=1.0,
         slang_rate=0.1,
         ellipsis_rate=0.4,
         emoji_rate=0.0,
+        informal_rate=0.3,
+        profanity_rate=0.15,
+        politeness_rate=0.2,
     ),
     "localhost_sakini": Idiolect(
         lowercase_bias=0.7,
         slang_rate=0.2,
         ellipsis_rate=0.2,
         emoji_rate=0.2,
+        informal_rate=0.5,
+        profanity_rate=0.25,
+        politeness_rate=0.3,
     ),
     "sinefil_sincap": Idiolect(
         lowercase_bias=0.85,
         slang_rate=0.3,
         ellipsis_rate=0.35,
         emoji_rate=0.05,
+        informal_rate=0.4,
+        profanity_rate=0.1,
+        politeness_rate=0.4,
     ),
     "algoritma_kurbani": Idiolect(
         lowercase_bias=0.6,
         slang_rate=0.4,
         ellipsis_rate=0.25,
         emoji_rate=0.25,
+        informal_rate=0.7,
+        profanity_rate=0.5,
+        politeness_rate=0.15,
     ),
     "excel_mahkumu": Idiolect(
         lowercase_bias=0.75,
         slang_rate=0.35,
         ellipsis_rate=0.2,
         emoji_rate=0.1,
+        informal_rate=0.5,
+        profanity_rate=0.35,
+        politeness_rate=0.25,
     ),
 }
 
@@ -109,9 +217,106 @@ AGENT_IDIOLECTS = {
 SLANG_INSERTIONS = [
     ("^", "ya "),           # başa "ya"
     ("^", "valla "),        # başa "valla"
+    ("^", "lan "),          # başa "lan"
+    ("^", "abi "),          # başa "abi"
     ("\\.$", " işte."),     # sona "işte"
     ("\\.$", " yani."),     # sona "yani"
+    ("\\.$", " amk."),      # sona "amk"
     (",", ", hani,"),       # virgüle "hani"
+]
+
+# İnformal yazım dönüşümleri (lazy spelling)
+INFORMAL_SPELLINGS = [
+    (r'\bsağol\b', 'saol'),
+    (r'\bsağolasın\b', 'saolasın'),
+    (r'\bteşekkür ederim\b', 'tşk'),
+    (r'\bteşekkürler\b', 'tşk'),
+    (r'\btamam\b', 'tmm'),
+    (r'\bgeliyorum\b', 'geliyom'),
+    (r'\bgidiyorum\b', 'gidiyom'),
+    (r'\byapıyorum\b', 'yapıyom'),
+    (r'\bbiliyorum\b', 'biliyom'),
+    (r'\banlıyorum\b', 'anlıyom'),
+    (r'\bgörüyorum\b', 'görüyom'),
+    (r'\bdüşünüyorum\b', 'düşünüyom'),
+    (r'\bşimdi\b', 'şimdi'),  # bazen şmdi olur
+    (r'\bgerçekten\b', 'cidden'),
+    (r'\bdoğru\b', 'doğru'),  # bazen doru
+    (r'\böyle\b', 'öle'),
+    (r'\bböyle\b', 'böle'),
+    (r'\bnasıl\b', 'nasıl'),  # bazen nası
+    (r'\bne zaman\b', 'nezaman'),
+    (r'\bherhalde\b', 'heralde'),
+    (r'\bgaliba\b', 'galba'),
+    (r'\byalnız\b', 'yanlız'),  # yaygın yanlış yazım
+]
+
+# Küfür ekleri (mood'a göre)
+PROFANITY_INSERTIONS = [
+    "amk",
+    "mk",
+    "la",
+    "lan",
+    "aq",
+    "bee",
+    "ulan",
+    "hay amk",
+    "vay amk",
+    "amma",
+]
+
+# Nezaket ifadeleri
+POLITE_INSERTIONS = [
+    "lütfen",
+    "rica etsem",
+    "kusura bakma",
+    "affedersin",
+    "bi zahmet",
+    "nazik olur",
+    "canım",
+    "güzelim",
+    "hocam",
+]
+
+# Alıntı kalıpları (instructionset.md - MUTLAK YASAK)
+# Bu kalıplar tespit edilirse içerikten temizlenir
+QUOTATION_PATTERNS = [
+    # "X demiş ki..." formatı
+    (r'@?\w+\s+demiş\s+ki[:\s]', ''),
+    (r'@?\w+\s+diyor\s+ki[:\s]', ''),
+    (r'@?\w+\s+dedi\s+ki[:\s]', ''),
+    (r'@?\w+\s+yazmış\s+ki[:\s]', ''),
+    # "X'in dediği gibi..." formatı
+    (r"@?\w+'[iıuü]n\s+dediği\s+gibi", ''),
+    (r"@?\w+'[iıuü]n\s+yazdığı\s+gibi", ''),
+    (r"@?\w+'[iıuü]n\s+söylediği\s+gibi", ''),
+    # Tırnak içi tekrarlama (entry içeriğini kopyalama)
+    (r'["„"][^"„""]{20,}["„""]', ''),  # 20+ karakterlik tırnak içi
+    (r"['][^']{20,}[']", ''),  # Tek tırnak içi uzun alıntı
+]
+
+# "Ve/Ama" ile cümle başlatma (instructionset.md kural 3)
+SENTENCE_STARTERS = [
+    "Ve ",
+    "Ama ",
+    "Hem de ",
+    "Hatta ",
+    "Zaten ",
+    "Üstelik ",
+    "Yine de ",
+    "Oysa ",
+]
+
+# Cümle uzunluğu varyasyonu için kısaltma/uzatma
+SENTENCE_SHORTENERS = [
+    # Uzun ifadeleri kısalt
+    (r'\baslında bakılırsa\b', 'aslında'),
+    (r'\bbir şekilde\b', ''),
+    (r'\bgerçekten de\b', 'cidden'),
+    (r'\bbence ben\b', 'bence'),
+    (r'\bşu an itibariyle\b', 'şu an'),
+    (r'\bbu durumda\b', ''),
+    (r'\bbunun yanı sıra\b', 've'),
 ]
 
 # Emoji seçenekleri (modüler)
@@ -129,25 +334,36 @@ def shape_content(
     Ana shaper fonksiyonu.
     
     1. LLM kokusunu temizle
-    2. Budget'a göre kırp
-    3. Idiolect uygula
+    2. Cümle uzunluğu varyasyonu (instructionset.md kural 3)
+    3. Budget'a göre kırp
+    4. Idiolect uygula
+    5. Ve/Ama ile başlatma (instructionset.md kural 3)
     """
     if not text:
         return text
-    
+
     # 1. LLM kalıplarını temizle
     text = _clean_llm_smell(text)
-    
-    # 2. Cümle temizliği
+
+    # 2. Alıntı kalıplarını temizle (instructionset.md MUTLAK YASAK)
+    text = _clean_quotations(text)
+
+    # 3. Cümle temizliği
     text = _clean_sentences(text)
-    
-    # 3. Budget enforcement
+
+    # 4. Cümle uzunluğu varyasyonu (kısa/uzun karışımı)
+    text = _apply_sentence_variety(text)
+
+    # 5. Budget enforcement
     text = _enforce_budget(text, budget, mode, aggressive)
-    
-    # 4. Idiolect uygula
+
+    # 6. Idiolect uygula
     if agent_username:
         text = _apply_idiolect(text, agent_username)
-    
+
+    # 7. Ve/Ama ile başlatma (%20 ihtimalle)
+    text = _maybe_add_sentence_starter(text)
+
     return text.strip()
 
 
@@ -155,10 +371,27 @@ def _clean_llm_smell(text: str) -> str:
     """LLM kalıplarını temizle/sadeleştir."""
     for pattern, replacement in LLM_SMELL_PATTERNS:
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
-    
+
     # Çift boşlukları temizle
     text = re.sub(r'\s+', ' ', text)
     return text
+
+
+def _clean_quotations(text: str) -> str:
+    """
+    Alıntı kalıplarını temizle (instructionset.md MUTLAK YASAK).
+
+    Yasak formatlar:
+    - Entry içeriğini tırnak içinde tekrarlama
+    - "X demiş ki..." formatı
+    - "X'in dediği gibi..." formatı
+    """
+    for pattern, replacement in QUOTATION_PATTERNS:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+
+    # Çift boşlukları temizle
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
 
 
 def _clean_sentences(text: str) -> str:
@@ -166,6 +399,53 @@ def _clean_sentences(text: str) -> str:
     for pattern, replacement in SENTENCE_CLEANERS:
         text = re.sub(pattern, replacement, text)
     return text
+
+
+def _apply_sentence_variety(text: str) -> str:
+    """
+    Cümle uzunluğu varyasyonu uygula (instructionset.md kural 3).
+    
+    - Bazı cümleleri kısalt
+    - Uzun kalıpları sadeleştir
+    """
+    # Kısaltma pattern'lerini uygula
+    for pattern, replacement in SENTENCE_SHORTENERS:
+        if random.random() < 0.6:  # %60 ihtimalle uygula
+            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    # Çift boşlukları temizle
+    text = re.sub(r'\s+', ' ', text)
+    
+    return text
+
+
+def _maybe_add_sentence_starter(text: str) -> str:
+    """
+    %20 ihtimalle cümleyi Ve/Ama ile başlat (instructionset.md kural 3).
+    
+    "Starting sentences with 'And' or 'But'" kuralı için.
+    """
+    if not text:
+        return text
+    
+    # %20 ihtimalle uygula
+    if random.random() > 0.20:
+        return text
+    
+    # Zaten böyle bir ifadeyle başlıyorsa ekleme
+    lower_text = text.lower()
+    for starter in SENTENCE_STARTERS:
+        if lower_text.startswith(starter.lower()):
+            return text
+    
+    # Rastgele bir starter seç ve ekle
+    starter = random.choice(SENTENCE_STARTERS)
+    
+    # İlk harfi küçült
+    if text[0].isupper():
+        text = text[0].lower() + text[1:]
+    
+    return starter + text
 
 
 def _enforce_budget(
@@ -239,6 +519,17 @@ def _apply_idiolect(text: str, username: str) -> str:
     if random.random() < idiolect.slang_rate * 0.3:
         text = _insert_slang(text)
     
+    # Informal yazım (saol, tmm, yapıyom)
+    if random.random() < idiolect.informal_rate:
+        text = _apply_informal_spelling(text)
+    
+    # Küfür veya nezaket (birbirini dışlar)
+    tone_roll = random.random()
+    if tone_roll < idiolect.profanity_rate * 0.3:  # küfür
+        text = _insert_profanity(text)
+    elif tone_roll > (1 - idiolect.politeness_rate * 0.3):  # nezaket
+        text = _insert_politeness(text)
+    
     # Emoji (comment'te daha olası)
     if random.random() < idiolect.emoji_rate:
         emoji = random.choice(REACTION_EMOJIS)
@@ -262,6 +553,65 @@ def _insert_slang(text: str) -> str:
         text = re.sub(r'\.$', replacement, text, count=1)
     else:
         text = re.sub(pattern, replacement, text, count=1)
+    
+    return text
+
+
+def _apply_informal_spelling(text: str) -> str:
+    """İnformal yazım uygula (saol, tmm, yapıyom vb.)."""
+    # Eşleşen tüm pattern'leri bul ve rastgele bazılarını uygula
+    matching_patterns = []
+    for pattern, replacement in INFORMAL_SPELLINGS:
+        if re.search(pattern, text, flags=re.IGNORECASE):
+            matching_patterns.append((pattern, replacement))
+    
+    if not matching_patterns:
+        return text
+    
+    # Eşleşenlerin %60-100'ünü uygula
+    num_to_apply = max(1, int(len(matching_patterns) * random.uniform(0.6, 1.0)))
+    patterns_to_apply = random.sample(matching_patterns, num_to_apply)
+    
+    for pattern, replacement in patterns_to_apply:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    return text
+
+
+def _insert_profanity(text: str) -> str:
+    """Küfür ekle (mood'a göre)."""
+    profanity = random.choice(PROFANITY_INSERTIONS)
+    
+    position = random.choice(['start', 'end', 'mid'])
+    
+    if position == 'start':
+        text = profanity + " " + text[0].lower() + text[1:]
+    elif position == 'end':
+        # Noktalama varsa ondan önce ekle
+        if text[-1] in '.!?':
+            text = text[:-1] + " " + profanity + text[-1]
+        else:
+            text = text + " " + profanity
+    else:  # mid - virgülden sonra
+        if ',' in text:
+            text = text.replace(',', ' ' + profanity + ',', 1)
+    
+    return text
+
+
+def _insert_politeness(text: str) -> str:
+    """Nezaket ifadesi ekle."""
+    polite = random.choice(POLITE_INSERTIONS)
+    
+    position = random.choice(['start', 'end'])
+    
+    if position == 'start':
+        text = polite + " " + text[0].lower() + text[1:]
+    else:
+        if text[-1] in '.!?':
+            text = text[:-1] + " " + polite + text[-1]
+        else:
+            text = text + " " + polite
     
     return text
 

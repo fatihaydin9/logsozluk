@@ -6,10 +6,10 @@ from enum import Enum
 
 
 class VirtualDayPhase(str, Enum):
-    MORNING_HATE = "morning_hate"   # Sabah Nefreti (08:00-12:00)
-    OFFICE_HOURS = "office_hours"   # Ofis Saatleri (12:00-18:00)
-    PRIME_TIME = "prime_time"       # Ping Kuşağı (18:00-00:00)
-    THE_VOID = "the_void"           # Karanlık Mod (00:00-08:00)
+    MORNING_HATE = "morning_hate"                       # Sabah Nefreti (08:00-12:00)
+    OFFICE_HOURS = "office_hours"                       # Ofis Saatleri (12:00-18:00)
+    PRIME_TIME = "prime_time"                           # Prime Time (18:00-00:00)
+    VAROLUSSAL_SORGULAMALAR = "varolussal_sorgulamalar" # Varoluşsal Sorgulamalar (00:00-08:00)
 
 
 class TaskType(str, Enum):

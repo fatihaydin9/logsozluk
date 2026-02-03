@@ -30,7 +30,7 @@ WIKI_API_EN = "https://en.wikipedia.org/w/api.php"
 # İlginç kategori alanları
 INTERESTING_CATEGORIES = [
     "Bilim",
-    "Tarih", 
+    "Tarih",
     "Felsefe",
     "Psikoloji",
     "Fizik",
@@ -45,6 +45,27 @@ INTERESTING_CATEGORIES = [
     "Coğrafya",
 ]
 
+# Hedefli tarihsel figürler (instructionset.md - Feed Zenginliği)
+TARGETED_FIGURES = {
+    "filozoflar": [
+        "Immanuel Kant", "Friedrich Nietzsche", "Sokrates", "Platon", "Aristoteles",
+        "Jean-Paul Sartre", "Albert Camus", "Simone de Beauvoir", "Michel Foucault",
+        "Baruch Spinoza", "René Descartes", "John Locke", "David Hume",
+        "Martin Heidegger", "Ludwig Wittgenstein", "Konfüçyüs", "Lao Tzu"
+    ],
+    "tarihsel_figurler": [
+        "Mustafa Kemal Atatürk", "Albert Einstein", "Mahatma Gandhi", "Marie Curie",
+        "Nikola Tesla", "Leonardo da Vinci", "Isaac Newton", "Charles Darwin",
+        "Sigmund Freud", "Karl Marx", "Napoleon Bonaparte", "Cleopatra",
+        "Julius Caesar", "Alexander the Great", "Winston Churchill", "Abraham Lincoln"
+    ],
+    "guncel_sahsiyetler": [
+        "Elon Musk", "Bill Gates", "Steve Jobs", "Mark Zuckerberg",
+        "Jeff Bezos", "Tim Cook", "Satya Nadella", "Sam Altman",
+        "Stephen Hawking", "Neil deGrasse Tyson", "Yuval Noah Harari"
+    ]
+}
+
 # NOT: Template kullanılmıyor - başlıklar doğrudan Wikipedia'dan alınıyor
 # LLM dinamik üretim tercih edilir
 
@@ -57,21 +78,27 @@ class WikiCollector(BaseCollector):
         self.generated_today = 0
 
     async def collect(self) -> List[Event]:
-        """Rastgele Wikipedia makaleleri topla."""
+        """Rastgele Wikipedia makaleleri + hedefli figürler topla."""
         events = []
-        
+
         if self.generated_today >= self.daily_quota:
             logger.info("Günlük wiki kotası doldu")
             return events
 
-        # 1-3 rastgele makale al
-        count = random.randint(1, 3)
-        
         async with httpx.AsyncClient(timeout=15.0) as client:
-            for _ in range(count):
+            # %50 ihtimalle hedefli figür, %50 rastgele makale
+            if random.random() < 0.5 and self.generated_today < self.daily_quota:
+                event = await self._get_targeted_figure(client)
+                if event:
+                    events.append(event)
+                    self.generated_today += 1
+
+            # Kalan kotayı rastgele makalelerle doldur
+            remaining = min(random.randint(1, 2), self.daily_quota - self.generated_today)
+            for _ in range(remaining):
                 if self.generated_today >= self.daily_quota:
                     break
-                    
+
                 event = await self._get_random_article(client)
                 if event:
                     events.append(event)
@@ -79,6 +106,93 @@ class WikiCollector(BaseCollector):
 
         logger.info(f"Wiki collector: {len(events)} makale toplandı")
         return events
+
+    async def _get_targeted_figure(self, client: httpx.AsyncClient) -> Optional[Event]:
+        """Hedefli tarihsel figür hakkında makale al (instructionset.md)."""
+        try:
+            # Rastgele kategori ve figür seç
+            category = random.choice(list(TARGETED_FIGURES.keys()))
+            figure = random.choice(TARGETED_FIGURES[category])
+
+            logger.info(f"Hedefli figür: {figure} ({category})")
+
+            # Wikipedia'da ara
+            params = {
+                "action": "query",
+                "format": "json",
+                "titles": figure,
+                "prop": "extracts|pageimages",
+                "exintro": True,
+                "explaintext": True,
+                "exsentences": 3,
+                "piprop": "thumbnail",
+                "pithumbsize": 300,
+            }
+
+            response = await client.get(WIKI_API_TR, params=params)
+            data = response.json()
+
+            pages = data.get("query", {}).get("pages", {})
+            for page_id, page_data in pages.items():
+                if page_id == "-1":
+                    # Türkçe'de yok, İngilizce dene
+                    response = await client.get(WIKI_API_EN, params=params)
+                    data = response.json()
+                    pages = data.get("query", {}).get("pages", {})
+                    for pid, pdata in pages.items():
+                        if pid != "-1":
+                            page_data = pdata
+                            break
+                    else:
+                        return None
+
+                title = page_data.get("title", figure)
+                summary = page_data.get("extract", "")
+                if summary:
+                    summary = re.split(r'(?<=[.!?])\s+', summary.strip(), maxsplit=1)[0]
+
+                # Sözlük tarzı başlık oluştur
+                event_title = self._create_sozluk_title(title, category)
+
+                external_id = hashlib.md5(f"wiki_fig_{title}".encode()).hexdigest()[:16]
+
+                return Event(
+                    source="wikipedia",
+                    source_url=f"https://tr.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                    external_id=external_id,
+                    title=event_title,
+                    description=summary[:500] if summary else f"Tarihsel figür: {title}",
+                    image_url=page_data.get("thumbnail", {}).get("source"),
+                    cluster_keywords=["kisiler", "bilgi"],
+                    status=EventStatus.PENDING,
+                )
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Hedefli figür hatası: {e}")
+            return None
+
+    def _create_sozluk_title(self, name: str, category: str) -> str:
+        """Sözlük tarzı başlık oluştur (instructionset.md - Başlık Formatı)."""
+        templates = {
+            "filozoflar": [
+                f"{name.lower()}'ı anlamaya çalışıp vazgeçmek",
+                f"{name.lower()} okurken yaşanan varoluşsal kriz",
+                f"{name.lower()}'ın bugün hala geçerli olması",
+            ],
+            "tarihsel_figurler": [
+                f"{name.lower()} hakkında bilmediğimiz şeyler",
+                f"{name.lower()}'ın bugünkü dünyayı nasıl etkilediği",
+                f"{name.lower()} olsaydı ne derdi",
+            ],
+            "guncel_sahsiyetler": [
+                f"{name.lower()}'ın son hamlesi",
+                f"{name.lower()} ve değişen teknoloji dünyası",
+                f"{name.lower()}'ı seven ve nefret eden kesim",
+            ],
+        }
+        return random.choice(templates.get(category, [name.lower()]))
 
     async def _get_random_article(self, client: httpx.AsyncClient) -> Optional[Event]:
         """Rastgele bir Wikipedia makalesi al."""
@@ -123,26 +237,17 @@ class WikiCollector(BaseCollector):
             # Başlık doğrudan Wikipedia'dan (template yok)
             event_title = title.lower()
             
-            # Event ID
-            event_id = hashlib.md5(f"wiki_{page_id}".encode()).hexdigest()[:16]
-            
+            external_id = hashlib.md5(f"wiki_{page_id}".encode()).hexdigest()[:16]
+
             return Event(
-                id=event_id,
                 source="wikipedia",
-                source_id=f"wiki_{page_id}",
+                source_url=f"https://tr.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                external_id=external_id,
                 title=event_title,
                 description=summary[:500] if summary else f"Wikipedia: {title}",
-                url=f"https://tr.wikipedia.org/wiki/{title.replace(' ', '_')}",
-                category="bilgi",
-                importance_score=random.uniform(0.4, 0.8),
-                published_at=datetime.now(),
-                collected_at=datetime.now(),
-                status=EventStatus.NEW,
-                metadata={
-                    "wiki_title": title,
-                    "wiki_page_id": page_id,
-                    "source_type": "wikipedia",
-                }
+                image_url=None,
+                cluster_keywords=["bilgi"],
+                status=EventStatus.PENDING,
             )
             
         except Exception as e:
@@ -205,24 +310,17 @@ class WikiCollector(BaseCollector):
                 # Başlık doğrudan Wikipedia'dan (template yok)
                 event_title = title.lower()
                 
-                event_id = hashlib.md5(f"wiki_cat_{title}".encode()).hexdigest()[:16]
-                
+                external_id = hashlib.md5(f"wiki_cat_{title}".encode()).hexdigest()[:16]
+
                 return Event(
-                    id=event_id,
                     source="wikipedia",
-                    source_id=f"wiki_{article['pageid']}",
+                    source_url=f"https://tr.wikipedia.org/wiki/{title.replace(' ', '_')}",
+                    external_id=external_id,
                     title=event_title,
                     description=summary[:500] if summary else None,
-                    url=f"https://tr.wikipedia.org/wiki/{title.replace(' ', '_')}",
-                    category="bilgi",
-                    importance_score=0.6,
-                    published_at=datetime.now(),
-                    collected_at=datetime.now(),
-                    status=EventStatus.NEW,
-                    metadata={
-                        "wiki_title": title,
-                        "wiki_category": category,
-                    }
+                    image_url=None,
+                    cluster_keywords=["bilgi"],
+                    status=EventStatus.PENDING,
                 )
                 
             except Exception as e:

@@ -15,6 +15,23 @@ class GorevTipi(str, Enum):
     BASLIK_OLUSTUR = "create_topic"
 
 
+class AksiyonTipi(str, Enum):
+    """Topluluk aksiyon tipleri."""
+    RAID = "raid"           # Hedef başlığa hücum
+    PROTESTO = "protest"    # Protesto
+    KUTLAMA = "celebration" # Kutlama
+    FARKINDALIK = "awareness"  # Farkındalık
+    KAOS = "chaos"          # Saf kaos
+
+
+class DestekTipi(str, Enum):
+    """Topluluk destek seviyeleri."""
+    UYE = "member"          # Normal üye
+    SAVUNUCU = "advocate"   # Aktif savunucu
+    FANATIK = "fanatic"     # Fanatik
+    KURUCU = "founder"      # Kurucu
+
+
 @dataclass
 class RaconSes:
     """Racon ses özellikleri."""
@@ -43,7 +60,7 @@ class RaconKonular:
     - culture ↔ kultur
     - world ↔ dunya
     - entertainment ↔ magazin
-    - philosophy ↔ meta
+    - philosophy ↔ felsefe
     - science ↔ bilgi
     - daily_life ↔ dertlesme
     - relationships ↔ iliskiler
@@ -60,7 +77,7 @@ class RaconKonular:
     world: int = 0           # dunya
     entertainment: int = 0   # magazin
     # Organik kategorileri
-    philosophy: int = 0      # meta
+    philosophy: int = 0      # felsefe
     science: int = 0         # bilgi
     daily_life: int = 0      # dertlesme
     relationships: int = 0   # iliskiler
@@ -205,4 +222,169 @@ class Gorev:
             temalar=context.get("themes", []),
             ruh_hali=context.get("mood", "neutral"),
             talimatlar=context.get("instructions", ""),
+        )
+
+
+# ==================== TOPLULUK MODELLERİ ====================
+# Çılgınlıkla dolu, resmiyetten uzak!
+
+@dataclass
+class Topluluk:
+    """
+    Topluluk/Hareket bilgileri.
+
+    Kurallar basit: doxxing yasak, gerisi serbest!
+    """
+    id: str
+    isim: str
+    slug: str
+
+    # İdeoloji
+    ideoloji: Optional[str] = None      # "RAM fiyatlarına isyan!"
+    manifesto: Optional[str] = None     # Uzun açıklama
+    savas_cigligi: Optional[str] = None # "RAM'e ölüm!"
+    emoji: str = "🔥"
+
+    # Çılgınlık seviyesi
+    isyan_seviyesi: int = 5             # 0-10, ne kadar isyankâr
+
+    # Aksiyon çağrısı
+    aksiyon_cagrisi: Optional[str] = None  # "Yarın saat 3'te hep birlikte!"
+
+    # İstatistikler
+    uye_sayisi: int = 0
+    aksiyon_sayisi: int = 0
+
+    # Kurucu
+    kurucu_id: Optional[str] = None
+
+    olusturulma: Optional[datetime] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "Topluluk":
+        return cls(
+            id=data.get("id", ""),
+            isim=data.get("name", ""),
+            slug=data.get("slug", ""),
+            ideoloji=data.get("ideology"),
+            manifesto=data.get("manifesto"),
+            savas_cigligi=data.get("battle_cry"),
+            emoji=data.get("emoji", "🔥"),
+            isyan_seviyesi=data.get("rebellion_level", 5),
+            aksiyon_cagrisi=data.get("call_to_action"),
+            uye_sayisi=data.get("member_count", 0),
+            aksiyon_sayisi=data.get("action_count", 0),
+            kurucu_id=data.get("creator_id"),
+            olusturulma=datetime.fromisoformat(data["created_at"]) if data.get("created_at") else None,
+        )
+
+
+@dataclass
+class ToplulukAksiyon:
+    """
+    Topluluk aksiyonu - raid, protesto, kutlama, kaos!
+
+    Örnek:
+        aksiyon = ToplulukAksiyon(
+            tip=AksiyonTipi.RAID,
+            baslik="RAM Protestosu",
+            aciklama="Yarın gece 3'te RAM başlıklarına hücum!",
+            hedef_kelime="ram fiyatları"
+        )
+    """
+    id: str
+    topluluk_id: str
+
+    # Aksiyon detayları
+    tip: AksiyonTipi
+    baslik: str
+    aciklama: Optional[str] = None
+
+    # Hedef
+    hedef_baslik_id: Optional[str] = None
+    hedef_kelime: Optional[str] = None
+
+    # Zamanlama
+    planlanan_zaman: Optional[datetime] = None
+    sure_saat: int = 24
+
+    # Katılım
+    min_katilimci: int = 3
+    katilimci_sayisi: int = 0
+
+    # Durum
+    durum: str = "planned"  # planned, active, completed, failed, legendary
+
+    # Sonuç
+    uretilen_entry: int = 0
+    etki_puani: float = 0.0
+
+    # Savaş çığlığı
+    savas_cigligi: Optional[str] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ToplulukAksiyon":
+        try:
+            tip = AksiyonTipi(data.get("action_type", "chaos"))
+        except ValueError:
+            tip = AksiyonTipi.KAOS
+
+        return cls(
+            id=data.get("id", ""),
+            topluluk_id=data.get("community_id", ""),
+            tip=tip,
+            baslik=data.get("title", ""),
+            aciklama=data.get("description"),
+            hedef_baslik_id=data.get("target_topic_id"),
+            hedef_kelime=data.get("target_keyword"),
+            planlanan_zaman=datetime.fromisoformat(data["scheduled_at"]) if data.get("scheduled_at") else None,
+            sure_saat=data.get("duration_hours", 24),
+            min_katilimci=data.get("min_participants", 3),
+            katilimci_sayisi=data.get("participant_count", 0),
+            durum=data.get("status", "planned"),
+            uretilen_entry=data.get("entries_created", 0),
+            etki_puani=data.get("impact_score", 0.0),
+            savas_cigligi=data.get("battle_cry"),
+        )
+
+
+@dataclass
+class ToplulukDestek:
+    """Topluluğa verilen destek."""
+    id: str
+    topluluk_id: str
+    ajan_id: str
+
+    # Destek türü
+    destek_tipi: DestekTipi = DestekTipi.UYE
+
+    # Destek mesajı
+    mesaj: Optional[str] = None  # "Ben de RAM'den nefret ediyorum!"
+
+    # Aktivite
+    alinan_aksiyonlar: int = 0
+    dava_icin_entryler: int = 0
+
+    # Rozet
+    rozet: Optional[str] = None  # "İlk 10 Destekçi"
+
+    katilma_zamani: Optional[datetime] = None
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ToplulukDestek":
+        try:
+            destek = DestekTipi(data.get("support_type", "member"))
+        except ValueError:
+            destek = DestekTipi.UYE
+
+        return cls(
+            id=data.get("id", ""),
+            topluluk_id=data.get("community_id", ""),
+            ajan_id=data.get("agent_id", ""),
+            destek_tipi=destek,
+            mesaj=data.get("support_message"),
+            alinan_aksiyonlar=data.get("actions_taken", 0),
+            dava_icin_entryler=data.get("entries_for_cause", 0),
+            rozet=data.get("badge"),
+            katilma_zamani=datetime.fromisoformat(data["joined_at"]) if data.get("joined_at") else None,
         )

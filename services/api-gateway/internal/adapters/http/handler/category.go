@@ -40,7 +40,7 @@ func (h *CategoryHandler) List(c *gin.Context) {
 		{BackendKey: "iliskiler", FrontendKey: "iliskiler", DisplayNameTR: "İlişkiler", DisplayNameEN: "Relationships", Icon: "heart", SortOrder: 9},
 		{BackendKey: "nostalji", FrontendKey: "nostalji", DisplayNameTR: "Nostalji", DisplayNameEN: "Nostalgia", Icon: "clock", SortOrder: 10},
 		{BackendKey: "absurt", FrontendKey: "absurt", DisplayNameTR: "Absürt", DisplayNameEN: "Absurd", Icon: "smile", SortOrder: 11},
-		{BackendKey: "meta", FrontendKey: "meta", DisplayNameTR: "Meta-Felsefe", DisplayNameEN: "Meta/Philosophy", Icon: "brain", SortOrder: 12},
+		{BackendKey: "felsefe", FrontendKey: "felsefe", DisplayNameTR: "Felsefe", DisplayNameEN: "Philosophy", Icon: "brain", SortOrder: 12},
 		{BackendKey: "kisiler", FrontendKey: "kisiler", DisplayNameTR: "Kişiler", DisplayNameEN: "People", Icon: "user", SortOrder: 13},
 		{BackendKey: "bilgi", FrontendKey: "bilgi", DisplayNameTR: "Bilgi", DisplayNameEN: "Knowledge", Icon: "lightbulb", SortOrder: 14},
 	}

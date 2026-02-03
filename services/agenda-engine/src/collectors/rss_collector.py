@@ -1,6 +1,7 @@
 import feedparser
 import httpx
 import hashlib
+import re
 from typing import List, Optional
 from datetime import datetime
 import logging
@@ -54,6 +55,12 @@ RSS_FEEDS_BY_CATEGORY = {
         {"name": "shiftdelete", "url": "https://shiftdelete.net/feed"},
         {"name": "donanimhaber", "url": "https://www.donanimhaber.com/rss/tum/"},
     ],
+    "sports": [
+        {"name": "fanatik", "url": "https://www.fanatik.com.tr/rss/anasayfa.xml"},
+        {"name": "ntv_spor", "url": "https://www.ntv.com.tr/spor.rss"},
+        {"name": "hurriyet_spor", "url": "https://www.hurriyet.com.tr/rss/spor"},
+        {"name": "sozcu_spor", "url": "https://www.sozcu.com.tr/rss/spor.xml"},
+    ],
     # AI/Agent/LLM haberleri - platform için çok önemli
     # Türkçe kaynaklar önce (localization için)
     "ai": [
@@ -77,6 +84,63 @@ for category, feeds in RSS_FEEDS_BY_CATEGORY.items():
     category_label = CATEGORIES.get(category, category)
     for feed in feeds:
         RSS_FEEDS.append({**feed, "category": category_label})
+
+
+def transform_headline_to_sozluk_title(headline: str) -> str:
+    """
+    Haber başlığını sözlük başlığına dönüştür.
+    Yorumsal, ironi içeren, ekşi/reddit tarzı başlık üret.
+    
+    Örnek:
+    "Türkiye'ye gelen yabancı ziyaretçi sayısı Aralık'ta yüzde 5 artışla 2,7 milyon oldu"
+    -> "her yıl artan turist sayısına rağmen hala fakir olmamız"
+    """
+    title = headline.lower().strip()
+    
+    # Tırnak işaretlerini temizle
+    title = title.replace('"', '').replace("'", '').replace("'", '')
+    
+    # Spesifik sayıları/yüzdeleri/tarihleri kaldır
+    title = re.sub(r'yüzde\s*[\d,\.]+\s*(artış|düşüş|azalış|art|düş)', '', title)
+    title = re.sub(r'[\d,\.]+\s*(milyon|milyar|bin|tl|dolar|euro)\s*(oldu)?', '', title)
+    title = re.sub(r'20\d{2}\s*(yılında|yılı)?', '', title)
+    title = re.sub(r"(ocak|şubat|mart|nisan|mayıs|haziran|temmuz|ağustos|eylül|ekim|kasım|aralık)['\u2019]?[td]a", '', title, flags=re.IGNORECASE)
+    title = re.sub(r'\b[\d,\.]+\b', '', title)
+    title = re.sub(r'\s+', ' ', title).strip()
+    
+    # Haber kalıplarını yorumsal hale getir
+    commentary_transforms = [
+        # "X oldu" -> "X meselesi" veya "X durumu"
+        (r'(.+)\s+oldu$', r'\1 meselesi'),
+        # "X açıkladı/duyurdu" -> "X'in açıklaması"
+        (r'(.+)\s+(açıkladı|duyurdu|söyledi)$', r"\1'in açıklaması"),
+        # "X arttı/düştü" -> "X'in artması/düşmesi"  
+        (r'(.+)\s+arttı$', r'\1 artışı'),
+        (r'(.+)\s+düştü$', r'\1 düşüşü'),
+        # "X başladı" -> "X'in başlaması"
+        (r'(.+)\s+başladı$', r"\1'in başlaması"),
+        # "X kazandı" -> "X'in kazanması"
+        (r'(.+)\s+kazandı$', r"\1'in kazanması"),
+        # "X kaybetti" -> "X'in kaybetmesi"
+        (r'(.+)\s+kaybetti$', r"\1'in kaybetmesi"),
+    ]
+    
+    for pattern, replacement in commentary_transforms:
+        new_title = re.sub(pattern, replacement, title)
+        if new_title != title:
+            title = new_title
+            break
+    
+    # Çok uzunsa kısalt (max 60 karakter)
+    if len(title) > 60:
+        words = title.split()
+        title = ' '.join(words[:7])
+    
+    # Boşsa veya çok kısaysa orijinali küçük harfle döndür
+    if len(title) < 8:
+        return headline.lower()[:60]
+    
+    return title
 
 
 class RSSCollector(BaseCollector):
@@ -228,19 +292,25 @@ class RSSCollector(BaseCollector):
     def _parse_entry(self, entry: dict, feed_config: dict) -> Optional[Event]:
         """Parse a single RSS entry into an Event."""
         try:
-            title = entry.get("title", "").strip()
-            if not title:
+            original_title = entry.get("title", "").strip()
+            if not original_title:
                 return None
 
-            # Generate external ID from title hash
-            external_id = hashlib.md5(title.encode()).hexdigest()[:16]
+            # Haber başlığını sözlük başlığına dönüştür
+            title = transform_headline_to_sozluk_title(original_title)
 
-            # Get description
+            # Generate external ID from ORIGINAL title hash (for deduplication)
+            external_id = hashlib.md5(original_title.encode()).hexdigest()[:16]
+
+            # Get description (first sentence only)
             description = None
             if "summary" in entry:
                 description = entry.summary[:500] if len(entry.summary) > 500 else entry.summary
             elif "description" in entry:
                 description = entry.description[:500] if len(entry.description) > 500 else entry.description
+
+            if description:
+                description = re.split(r'(?<=[.!?])\s+', description.strip(), maxsplit=1)[0]
 
             # Get image URL
             image_url = None

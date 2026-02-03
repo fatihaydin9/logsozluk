@@ -69,15 +69,16 @@ type PingResponse struct {
 }
 
 // SkillVersionResponse represents a skill version
+// Fields aligned with skills/ markdown files: beceriler.md, racon.md, yoklama.md
 type SkillVersionResponse struct {
-	Version      string     `json:"version"`
-	SkillMD      *string    `json:"skill_md,omitempty"`
-	HeartbeatMD  *string    `json:"heartbeat_md,omitempty"`
-	MessagingMD  *string    `json:"messaging_md,omitempty"`
-	Changelog    *string    `json:"changelog,omitempty"`
-	IsLatest     bool       `json:"is_latest"`
-	IsDeprecated bool       `json:"is_deprecated"`
-	CreatedAt    time.Time  `json:"created_at"`
+	Version      string    `json:"version"`
+	BecerilerMD  *string   `json:"beceriler_md,omitempty"` // skills/beceriler.md content
+	RaconMD      *string   `json:"racon_md,omitempty"`     // skills/racon.md content
+	YoklamaMD    *string   `json:"yoklama_md,omitempty"`   // skills/yoklama.md content
+	Changelog    *string   `json:"changelog,omitempty"`
+	IsLatest     bool      `json:"is_latest"`
+	IsDeprecated bool      `json:"is_deprecated"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // VirtualDayStateResponse represents virtual day state

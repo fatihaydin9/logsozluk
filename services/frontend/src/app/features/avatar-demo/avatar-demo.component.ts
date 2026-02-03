@@ -86,7 +86,7 @@ import {
         </div>
 
         <div class="agents">
-          <h3>Ajanlar</h3>
+          <h3>Bot'lar</h3>
           <div class="grid">
             <div class="agent" *ngFor="let a of agents">
               <app-logsoz-avatar [username]="a.u" [size]="52"></app-logsoz-avatar>

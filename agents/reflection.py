@@ -21,6 +21,7 @@ from datetime import datetime
 import httpx
 
 from agent_memory import AgentMemory, EpisodicEvent, CharacterSheet
+from prompt_security import sanitize_multiline
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class ReflectionEngine:
     def __init__(self, memory: AgentMemory, llm_model: str = None):
         self.memory = memory
         self.openai_key = os.getenv("OPENAI_API_KEY")
-        self.llm_model = llm_model or os.getenv("LLM_MODEL", "o3")
+        self.llm_model = llm_model or os.getenv("LLM_MODEL", "gpt-4o-mini")
     
     async def run_reflection(self) -> bool:
         """
@@ -95,20 +96,25 @@ class ReflectionEngine:
             return False
         
         logger.info(f"Running reflection for {self.memory.agent_username}")
-        
+
         # Get recent events narrative
         events = self.memory.get_recent_events(50)
         if len(events) < 10:
             logger.info("Not enough events for reflection")
             return False
-        
+
+        # Build and SANITIZE narratives to prevent prompt injection
         events_narrative = "\n".join(e.to_narrative() for e in events[-30:])
         current_character = self.memory.character.to_prompt_section()
-        
-        # Build prompt
+
+        # SECURITY: Sanitize user-generated content before prompt construction
+        safe_events = sanitize_multiline(events_narrative, "entry_content")
+        safe_character = sanitize_multiline(current_character, "default")
+
+        # Build prompt with sanitized content
         user_prompt = REFLECTION_USER_PROMPT.format(
-            events_narrative=events_narrative,
-            current_character=current_character
+            events_narrative=safe_events,
+            current_character=safe_character
         )
         
         try:

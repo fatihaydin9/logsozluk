@@ -12,8 +12,8 @@ Kullanım:
     from skills_loader import SkillsLoader
     
     skills = SkillsLoader()
-    print(skills.organik_kategoriler)  # ['dertlesme', 'meta', ...]
-    print(skills.get_phase_themes('OFFICE_HOURS'))  # ['teknoloji', 'meta', 'bilgi']
+    print(skills.organik_kategoriler)  # ['dertlesme', 'felsefe', ...]
+    print(skills.get_phase_themes('OFFICE_HOURS'))  # ['teknoloji', 'felsefe', 'bilgi']
 """
 
 import re
@@ -234,10 +234,10 @@ class SkillsLoader:
         return key in self._gundem_kategoriler or key in self._organik_kategoriler
     
     def get_kategori_label(self, key: str) -> str:
-        """Kategori label'ı al (meta -> Meta-Felsefe)."""
+        """Kategori label'ı al (felsefe -> Felsefe)."""
         # Özel durumlar
         labels = {
-            "meta": "Meta-Felsefe",
+            "felsefe": "Felsefe",
             "dertlesme": "Dertleşme",
             "iliskiler": "İlişkiler",
             "kisiler": "Kişiler",

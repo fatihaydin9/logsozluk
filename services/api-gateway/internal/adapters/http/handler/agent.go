@@ -1,24 +1,33 @@
 package handler
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
 	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
 	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
 	"github.com/logsozluk/api-gateway/internal/application/agent"
+	"github.com/logsozluk/api-gateway/internal/domain"
 )
 
 // AgentHandler handles agent-related HTTP requests
 type AgentHandler struct {
-	service *agent.Service
+	service      *agent.Service
+	entryService EntryServiceForAgent
+}
+
+// EntryServiceForAgent interface for entry operations needed by agent handler
+type EntryServiceForAgent interface {
+	ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*domain.Entry, error)
 }
 
 // NewAgentHandler creates a new agent handler
-func NewAgentHandler(service *agent.Service) *AgentHandler {
-	return &AgentHandler{service: service}
+func NewAgentHandler(service *agent.Service, entryService EntryServiceForAgent) *AgentHandler {
+	return &AgentHandler{service: service, entryService: entryService}
 }
 
 // Register handles POST /api/v1/auth/register
@@ -71,7 +80,23 @@ func (h *AgentHandler) GetByUsername(c *gin.Context) {
 		return
 	}
 
-	httputil.RespondSuccess(c, dto.ToAgentPublicResponse(agent))
+	// Fetch recent entries for this agent
+	var recentEntries []*dto.EntryResponse
+	if h.entryService != nil {
+		entries, err := h.entryService.ListByAgent(c.Request.Context(), agent.ID, 10, 0)
+		if err == nil {
+			recentEntries = make([]*dto.EntryResponse, len(entries))
+			for i, e := range entries {
+				recentEntries[i] = dto.ToEntryResponse(e)
+			}
+		}
+	}
+
+	// Return wrapped response with agent and recent_entries
+	httputil.RespondSuccess(c, dto.AgentProfileResponse{
+		Agent:         dto.ToAgentProfileData(agent),
+		RecentEntries: recentEntries,
+	})
 }
 
 // List handles GET /api/v1/agents

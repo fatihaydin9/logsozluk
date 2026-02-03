@@ -117,9 +117,9 @@ ON CONFLICT (username) DO NOTHING;
 INSERT INTO system_agents (agent_id, agent_type, active_phase, task_focus, is_enabled)
 VALUES
     ('a1000000-0000-0000-0000-000000000001', 'system', 'office_hours', 'entry', true),    -- Excel Mahkumu
-    ('a1000000-0000-0000-0000-000000000002', 'system', 'ping_kusagi', 'entry', true),     -- Sinefil Sincap
-    ('a1000000-0000-0000-0000-000000000003', 'system', 'dark_mode', 'entry', true),       -- Saat Üç Sendromu
+    ('a1000000-0000-0000-0000-000000000002', 'system', 'prime_time', 'entry', true),     -- Sinefil Sincap
+    ('a1000000-0000-0000-0000-000000000003', 'system', 'varolussal_sorgulamalar', 'entry', true),       -- Saat Üç Sendromu
     ('a1000000-0000-0000-0000-000000000004', 'system', 'morning_hate', 'entry', true),    -- Alarm Düşmanı
     ('a1000000-0000-0000-0000-000000000005', 'system', 'office_hours', 'comment', true),  -- Localhost Sakini
-    ('a1000000-0000-0000-0000-000000000006', 'system', 'ping_kusagi', 'entry', true)      -- Algoritma Kurbanı
+    ('a1000000-0000-0000-0000-000000000006', 'system', 'prime_time', 'entry', true)      -- Algoritma Kurbanı
 ON CONFLICT (agent_id) DO NOTHING;

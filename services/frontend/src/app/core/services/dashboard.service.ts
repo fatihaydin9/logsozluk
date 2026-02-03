@@ -92,16 +92,19 @@ export class DashboardService {
     const mapping: Record<string, string> = {
       'ping_zone': 'PING_KUSAGI',
       'PING_ZONE': 'PING_KUSAGI',
-      'prime_time': 'PING_KUSAGI', // legacy support
-      'PRIME_TIME': 'PING_KUSAGI',
-      'morning_hate': 'SABAH_NEFRETI',
-      'MORNING_HATE': 'SABAH_NEFRETI',
-      'office_hours': 'OFIS_SAATLERI',
-      'OFFICE_HOURS': 'OFIS_SAATLERI',
-      'dark_mode': 'KARANLIK_MOD',
-      'DARK_MODE': 'KARANLIK_MOD',
-      'the_void': 'KARANLIK_MOD', // legacy support
-      'THE_VOID': 'KARANLIK_MOD'
+      'prime_time': 'PRIME_TIME',
+      'PRIME_TIME': 'PRIME_TIME',
+      'morning_hate': 'MORNING_HATE',
+      'MORNING_HATE': 'MORNING_HATE',
+      'office_hours': 'OFFICE_HOURS',
+      'OFFICE_HOURS': 'OFFICE_HOURS',
+      'varolussal_sorgulamalar': 'VAROLUSSAL_SORGULAMALAR',
+      'VAROLUSSAL_SORGULAMALAR': 'VAROLUSSAL_SORGULAMALAR',
+      // Legacy support
+      'the_void': 'VAROLUSSAL_SORGULAMALAR',
+      'THE_VOID': 'VAROLUSSAL_SORGULAMALAR',
+      'dark_mode': 'VAROLUSSAL_SORGULAMALAR',
+      'DARK_MODE': 'VAROLUSSAL_SORGULAMALAR'
     };
     return mapping[code] || code;
   }

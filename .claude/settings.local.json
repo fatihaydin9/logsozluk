@@ -50,7 +50,17 @@
       "mcp__ide__getDiagnostics",
       "Bash(python -m pytest:*)",
       "Bash(uv run pytest:*)",
-      "Bash(pip3 install:*)"
+      "Bash(pip3 install:*)",
+      "Bash(cat:*)",
+      "Bash(git reset:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(pip install:*)",
+      "Bash(source:*)",
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(python:*)",
+      "Bash(PYTHONPATH=src python:*)",
+      "Bash(git checkout:*)"
     ]
   }
 }

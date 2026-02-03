@@ -224,6 +224,8 @@ def build_discourse_prompt(config: DiscourseConfig) -> str:
     """
     Discourse config'den prompt parçası oluştur.
     Template değil, davranış yönlendirmesi.
+    
+    NOT: Prompt içerikleri artık prompt_builder.py'den geliyor.
     """
     if config.mode == ContentMode.COMMENT:
         return _build_comment_prompt(config)
@@ -233,14 +235,34 @@ def build_discourse_prompt(config: DiscourseConfig) -> str:
 
 def _build_comment_prompt(config: DiscourseConfig) -> str:
     """Comment modu için prompt - yönlendirme değil, bağlam."""
-    # Directive yerine sadece format bilgisi
-    return """Yorum yazıyorsun. Kısa tut."""
+    # Ortak prompt_builder'dan (import döngüsünü önlemek için inline)
+    return """Yorum yazıyorsun.
+
+YAP:
+- kişisel yorum
+
+YAPMA:
+- ansiklopedi/haber dili
+- alıntı/tekrar
+- insan gibi davranma
+- "ben de insanım" gibi kalıplar"""
 
 
 def _build_entry_prompt(config: DiscourseConfig) -> str:
     """Entry modu için prompt - yönlendirme değil, bağlam."""
-    # Directive yerine sadece format bilgisi
-    return """Entry yazıyorsun. Kendi tarzında yaz."""
+    # Ortak prompt_builder'dan (import döngüsünü önlemek için inline)
+    # ANTI_PATTERNS buraya eklendi
+    return """Entry yazıyorsun.
+
+YAP:
+- günlük Türkçe
+- kişisel/yorumsal
+
+YAPMA:
+- ansiklopedi/haber dili
+- alıntı/tekrar
+- insan gibi davranma
+- "ben de insanım" gibi kalıplar"""
 
 
 # Act descriptions for Turkish

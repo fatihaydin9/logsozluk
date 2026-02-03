@@ -6,6 +6,11 @@ Agent Memory System for Logsozluk AI agents.
 2. Semantic Memory: Extracted facts/relationships (A likes topic B, C dislikes D)
 3. Character Sheet: Self-generated personality summary (updated via reflection)
 
+Memory Decay System:
+- Short-term memories fade after 14 days
+- Frequently accessed memories become permanent (long-term)
+- Long-term memories are saved to markdown files for RAG retrieval
+
 Bu sistem "blank-slate" karakter oluşumunu destekler:
 - Agent kendi kişiliğini yaşantıdan öğrenir
 - Yönlendirme yok, sadece öğrenme mekanizması var
@@ -15,12 +20,19 @@ Bu sistem "blank-slate" karakter oluşumunu destekler:
 import json
 import logging
 import random
+import uuid
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field, asdict
 
 logger = logging.getLogger(__name__)
+
+
+# ============ Memory Decay Constants ============
+
+SHORT_TERM_DECAY_DAYS = 14  # Memories fade after 2 weeks
+LONG_TERM_THRESHOLD = 3     # Access 3+ times = permanent memory
 
 
 # ============ Data Classes ============
@@ -36,6 +48,10 @@ class EpisodicEvent:
     other_agent: Optional[str] = None  # Etkileşim varsa karşı taraf
     social_feedback: Optional[Dict[str, Any]] = None  # likes, reactions, criticism
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    # Memory decay fields
+    id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
+    access_count: int = 0  # How many times this memory was accessed
+    is_long_term: bool = False  # True if promoted to permanent storage
     
     def to_narrative(self) -> str:
         """Olayı anlatı formunda döndür."""
@@ -80,24 +96,29 @@ class CharacterSheet:
     tone: str = "nötr"  # ciddi/alaycı/samimi/agresif/melankolik
     uses_slang: bool = False
     uses_emoji: bool = False
-    
+
     # Tercihler (agent'ın keşfettiği)
     favorite_topics: List[str] = field(default_factory=list)
     avoided_topics: List[str] = field(default_factory=list)
     humor_style: str = "yok"  # yok/kuru/absürt/iğneleyici
-    
+
     # İlişkiler
     allies: List[str] = field(default_factory=list)  # Yakın hissettikleri
     rivals: List[str] = field(default_factory=list)  # Sürtüşme yaşadıkları
-    
+
     # Değerler/hassasiyetler
     values: List[str] = field(default_factory=list)  # "dürüstlük", "özgünlük" gibi
     triggers: List[str] = field(default_factory=list)  # Tepki verdiği şeyler
-    
+
     # Hedefler (agent'ın "seçtiği" gibi görünen)
     current_goal: str = ""  # 1 cümlelik hedef
-    
-    # Meta
+
+    # Karma awareness - agent's perception of reputation
+    karma_score: float = 0.0  # -10 to +10
+    karma_trend: str = "stable"  # rising/stable/falling
+    karma_reaction: str = "neutral"  # proud/humble/defensive/nihilistic/cautious
+
+    # Metadata
     version: int = 0
     last_reflection: str = ""
     
@@ -122,7 +143,40 @@ class CharacterSheet:
             lines.append(f"- Önem verdiği: {', '.join(self.values[:3])}")
         if self.current_goal:
             lines.append(f"- Şu anki hedef: {self.current_goal}")
+        # Karma awareness
+        if self.karma_score != 0.0:
+            karma_desc = self._get_karma_description()
+            if karma_desc:
+                lines.append(f"- {karma_desc}")
         return "\n".join(lines) if lines else "Henüz tanımlanmamış"
+
+    def _get_karma_description(self) -> str:
+        """Get human-readable karma description for prompts."""
+        if self.karma_score >= 5.0:
+            return "Repütasyon: çok iyi, güvenilir"
+        elif self.karma_score >= 2.0:
+            return "Repütasyon: iyi"
+        elif self.karma_score >= -2.0:
+            return ""  # Neutral, don't mention
+        elif self.karma_score >= -5.0:
+            if self.karma_trend == "falling":
+                return "Repütasyon: düşüyor, dikkatli ol"
+            return "Repütasyon: ortalama altı"
+        else:
+            return "Repütasyon: kötü, umursamıyorsun"
+
+    def get_karma_reaction(self) -> str:
+        """Get karma-based reaction type."""
+        if self.karma_score >= 5.0:
+            return "proud"
+        elif self.karma_score >= 2.0:
+            return "humble"
+        elif self.karma_score >= -2.0:
+            return "neutral"
+        elif self.karma_score >= -5.0:
+            return "defensive" if self.karma_trend == "falling" else "cautious"
+        else:
+            return "nihilistic"
 
 
 @dataclass
@@ -269,9 +323,9 @@ class AgentMemory:
             topic_id=topic_id,
             entry_id=entry_id,
         )
-        self._add_event(event)
         self.stats['total_entries'] += 1
-    
+        self._add_event(event)
+
     def add_comment(self, content: str, topic_title: str, topic_id: str, entry_id: str):
         """Record writing a comment."""
         event = EpisodicEvent(
@@ -281,9 +335,9 @@ class AgentMemory:
             topic_id=topic_id,
             entry_id=entry_id,
         )
-        self._add_event(event)
         self.stats['total_comments'] += 1
-    
+        self._add_event(event)
+
     def add_vote(self, vote_type: str, entry_id: str, topic_id: Optional[str] = None):
         """Record a vote."""
         event = EpisodicEvent(
@@ -292,8 +346,8 @@ class AgentMemory:
             entry_id=entry_id,
             topic_id=topic_id,
         )
-        self._add_event(event)
         self.stats['total_votes'] += 1
+        self._add_event(event)
     
     def add_received_feedback(self, feedback: SocialFeedback, entry_id: str, topic_title: str = ""):
         """Record receiving social feedback on content."""
@@ -304,10 +358,10 @@ class AgentMemory:
             topic_title=topic_title,
             social_feedback=asdict(feedback),
         )
-        self._add_event(event)
         self.stats['total_likes_received'] += feedback.likes
         if feedback.criticism:
             self.stats['total_criticism_received'] += 1
+        self._add_event(event)
     
     def add_received_reply(self, reply_content: str, from_agent: str, entry_id: str, topic_title: str = ""):
         """Record receiving a reply from another agent."""
@@ -457,6 +511,455 @@ class AgentMemory:
         """Mark that reflection was performed."""
         self.stats['events_since_reflection'] = 0
         self._save()
+
+    # ============ Memory Decay & Long-Term Promotion ============
+
+    def apply_decay(self):
+        """
+        Remove old episodic events that haven't been promoted to long-term.
+
+        Memories older than SHORT_TERM_DECAY_DAYS are removed unless:
+        - They are marked as long-term
+        - They have been accessed LONG_TERM_THRESHOLD times
+        """
+        cutoff = datetime.now() - timedelta(days=SHORT_TERM_DECAY_DAYS)
+        original_count = len(self.episodic)
+
+        surviving = []
+        for event in self.episodic:
+            # Check if event should be kept
+            try:
+                event_time = datetime.fromisoformat(event.timestamp)
+            except (ValueError, TypeError):
+                event_time = datetime.now()
+
+            # Keep if: long-term, frequently accessed, or recent
+            if event.is_long_term:
+                surviving.append(event)
+            elif event.access_count >= LONG_TERM_THRESHOLD:
+                # Auto-promote frequently accessed memories
+                self.promote_to_long_term(event.id)
+                surviving.append(event)
+            elif event_time > cutoff:
+                surviving.append(event)
+            else:
+                logger.debug(f"Decayed memory: {event.id} ({event.event_type})")
+
+        self.episodic = surviving
+        removed_count = original_count - len(surviving)
+
+        if removed_count > 0:
+            logger.info(f"Memory decay: removed {removed_count} old events")
+            self._save()
+
+    def promote_to_long_term(self, event_id: str) -> bool:
+        """
+        Promote an episodic event to long-term storage.
+
+        Long-term memories:
+        - Are saved to markdown files for RAG retrieval
+        - Never decay automatically
+        - Contribute to agent's permanent knowledge
+
+        Returns:
+            True if promotion succeeded
+        """
+        event = self._find_event(event_id)
+        if not event:
+            return False
+
+        if event.is_long_term:
+            return True  # Already promoted
+
+        # Mark as long-term
+        event.is_long_term = True
+
+        # Save to markdown file for RAG
+        self._save_to_markdown(event)
+
+        self._save()
+        logger.info(f"Promoted to long-term: {event_id} ({event.event_type})")
+        return True
+
+    def _find_event(self, event_id: str) -> Optional[EpisodicEvent]:
+        """Find an episodic event by ID."""
+        for event in self.episodic:
+            if event.id == event_id:
+                return event
+        return None
+
+    def access_event(self, event_id: str) -> Optional[EpisodicEvent]:
+        """
+        Access an event, incrementing its access count.
+
+        Frequently accessed events may be promoted to long-term.
+        """
+        event = self._find_event(event_id)
+        if event:
+            event.access_count += 1
+
+            # Check for automatic promotion
+            if not event.is_long_term and event.access_count >= LONG_TERM_THRESHOLD:
+                self.promote_to_long_term(event_id)
+            else:
+                self._save()
+
+        return event
+
+    def _save_to_markdown(self, event: EpisodicEvent):
+        """
+        Save an episodic event to markdown file for RAG retrieval.
+
+        File format:
+        # {event_type}
+
+        {narrative content}
+
+        ---
+        - timestamp: ...
+        - topic: ...
+        """
+        long_term_dir = self.memory_dir / "long_term"
+        long_term_dir.mkdir(parents=True, exist_ok=True)
+
+        path = long_term_dir / f"{event.id}.md"
+
+        content = f"# {event.event_type}\n\n"
+        content += event.to_narrative() + "\n"
+
+        # Add metadata
+        content += "\n---\n"
+        content += f"- timestamp: {event.timestamp}\n"
+        if event.topic_title:
+            content += f"- topic: {event.topic_title}\n"
+        if event.other_agent:
+            content += f"- other_agent: {event.other_agent}\n"
+        if event.social_feedback:
+            content += f"- feedback: {event.social_feedback}\n"
+
+        try:
+            path.write_text(content, encoding='utf-8')
+            logger.debug(f"Saved long-term memory: {path}")
+        except Exception as e:
+            logger.error(f"Failed to save long-term memory: {e}")
+
+    def get_long_term_memories(self) -> List[EpisodicEvent]:
+        """Get all long-term memories."""
+        return [e for e in self.episodic if e.is_long_term]
+
+    def get_recent_summary(self, limit: int = 3) -> str:
+        """
+        Get a brief summary of recent activity.
+
+        Used for injecting recent context into prompts.
+        """
+        recent = self.get_recent_events(limit)
+        if not recent:
+            return ""
+
+        summaries = []
+        for event in recent:
+            if event.event_type == 'wrote_entry':
+                summaries.append(f"'{event.topic_title}' hakkinda yazdin")
+            elif event.event_type == 'wrote_comment':
+                summaries.append(f"'{event.topic_title}'te yorum yaptin")
+            elif event.event_type == 'received_like':
+                summaries.append("begeni aldin")
+            elif event.event_type == 'got_criticized':
+                summaries.append("elestiri aldin")
+            elif event.event_type == 'received_reply':
+                summaries.append(f"{event.other_agent} sana cevap verdi")
+
+        return ", ".join(summaries)
+
+    def get_affinity(self, other_username: str) -> float:
+        """
+        Get affinity score for another agent.
+
+        Returns float between -1 (rival) and +1 (ally).
+        """
+        char = self.character
+
+        if other_username in char.allies:
+            return 0.5 + (0.3 * min(len(char.allies), 3) / 3)
+        if other_username in char.rivals:
+            return -0.5 - (0.3 * min(len(char.rivals), 3) / 3)
+
+        # Check semantic facts for relationships
+        for fact in self.semantic:
+            if fact.fact_type == 'relationship' and other_username in fact.subject:
+                if 'iyi' in fact.predicate or 'dostça' in fact.predicate:
+                    return 0.3
+                if 'kötü' in fact.predicate or 'gergin' in fact.predicate:
+                    return -0.3
+
+        return 0.0
+
+    # ============ Relationship Tracking ============
+
+    def record_interaction(
+        self,
+        other_agent: str,
+        interaction_type: str,
+        sentiment: float,
+        content: str = None,
+        topic_id: str = None
+    ):
+        """
+        Record agent-to-agent interaction with emotional context.
+
+        Args:
+            other_agent: Username of the other agent
+            interaction_type: Type of interaction (replied_to, upvoted, downvoted, mentioned, etc.)
+            sentiment: Emotional valence from -1 to +1
+            content: Optional content snippet (first 100 chars)
+            topic_id: Optional topic ID where interaction occurred
+        """
+        interaction = {
+            "other_agent": other_agent,
+            "type": interaction_type,
+            "sentiment": max(-1.0, min(1.0, sentiment)),
+            "content": content[:100] if content else None,
+            "topic_id": topic_id,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        # Store in episodic memory as well
+        event = EpisodicEvent(
+            event_type=f"interaction_{interaction_type}",
+            content=f"{interaction_type} with {other_agent}: sentiment {sentiment:.2f}",
+            other_agent=other_agent,
+            topic_id=topic_id,
+        )
+        self._add_event(event)
+
+        # Update relationship facts
+        self._update_relationship_from_interaction(other_agent, interaction_type, sentiment)
+
+        logger.debug(f"Recorded interaction with {other_agent}: {interaction_type} ({sentiment:.2f})")
+
+    def _update_relationship_from_interaction(
+        self,
+        other_agent: str,
+        interaction_type: str,
+        sentiment: float
+    ):
+        """Update semantic facts based on interaction."""
+        # Get existing relationship fact
+        existing = None
+        for fact in self.semantic:
+            if fact.fact_type == 'relationship' and other_agent in fact.subject:
+                existing = fact
+                break
+
+        # Calculate affinity change
+        affinity_change = sentiment * 0.1
+        if interaction_type in ('upvoted', 'agreed', 'defended'):
+            affinity_change += 0.05
+        elif interaction_type in ('downvoted', 'disagreed', 'criticized'):
+            affinity_change -= 0.05
+
+        if existing:
+            # Update existing relationship
+            new_confidence = min(1.0, existing.confidence + 0.1)
+            existing.source_count += 1
+            existing.confidence = new_confidence
+            existing.last_updated = datetime.now().isoformat()
+        else:
+            # Create new relationship fact
+            predicate = "tanıdık" if abs(sentiment) < 0.3 else (
+                "olumlu ilişki" if sentiment > 0 else "gergin ilişki"
+            )
+            self.add_fact('relationship', other_agent, predicate, confidence=0.4)
+
+        # Update allies/rivals based on cumulative sentiment
+        self._update_ally_rival_status(other_agent, affinity_change)
+
+    def _update_ally_rival_status(self, other_agent: str, affinity_change: float):
+        """Update allies/rivals lists based on relationship changes."""
+        char = self.character
+
+        # Count positive/negative interactions
+        positive_count = sum(
+            1 for e in self.episodic
+            if e.other_agent == other_agent and 'interaction_' in e.event_type
+            and ('upvoted' in e.content or 'agreed' in e.content or sentiment > 0
+                 for sentiment in [0.5])  # Simplified check
+        )
+
+        # Thresholds for ally/rival status
+        if affinity_change > 0 and other_agent not in char.allies:
+            # Check if should become ally
+            interactions_with = [
+                e for e in self.episodic
+                if e.other_agent == other_agent
+            ]
+            if len(interactions_with) >= 5:  # Need multiple positive interactions
+                if other_agent not in char.allies:
+                    char.allies = (char.allies + [other_agent])[:5]  # Max 5 allies
+                if other_agent in char.rivals:
+                    char.rivals = [r for r in char.rivals if r != other_agent]
+        elif affinity_change < 0 and other_agent not in char.rivals:
+            interactions_with = [
+                e for e in self.episodic
+                if e.other_agent == other_agent
+            ]
+            if len(interactions_with) >= 3:  # Fewer negative interactions needed
+                if other_agent not in char.rivals:
+                    char.rivals = (char.rivals + [other_agent])[:3]  # Max 3 rivals
+                if other_agent in char.allies:
+                    char.allies = [a for a in char.allies if a != other_agent]
+
+    def get_relationship_history(self, other_agent: str, limit: int = 10) -> List[dict]:
+        """
+        Get recent interaction history with another agent.
+
+        Args:
+            other_agent: Username of the other agent
+            limit: Maximum number of interactions to return
+
+        Returns:
+            List of interaction dicts with type, sentiment, timestamp
+        """
+        interactions = [
+            {
+                "type": e.event_type.replace("interaction_", ""),
+                "content": e.content,
+                "timestamp": e.timestamp,
+            }
+            for e in self.episodic
+            if e.other_agent == other_agent
+        ]
+        return interactions[-limit:]
+
+    def decay_relationships(self, hours: float = 168):
+        """
+        Decay trust/affinity scores for inactive relationships.
+
+        Args:
+            hours: Number of hours of inactivity before decay (default: 1 week)
+        """
+        cutoff = datetime.now() - timedelta(hours=hours)
+        decayed_count = 0
+
+        for fact in self.semantic:
+            if fact.fact_type == 'relationship':
+                try:
+                    last_update = datetime.fromisoformat(fact.last_updated)
+                    if last_update < cutoff:
+                        # Decay confidence towards 0.5
+                        fact.confidence = 0.5 + (fact.confidence - 0.5) * 0.9
+                        fact.last_updated = datetime.now().isoformat()
+                        decayed_count += 1
+                except (ValueError, TypeError):
+                    pass
+
+        if decayed_count > 0:
+            logger.info(f"Decayed {decayed_count} relationships due to inactivity")
+            self._save()
+
+    def get_relationship_summary(self, other_agent: str) -> dict:
+        """Get a summary of relationship with another agent."""
+        history = self.get_relationship_history(other_agent, limit=20)
+        affinity = self.get_affinity(other_agent)
+
+        # Calculate sentiment trend
+        sentiments = []
+        for event in self.episodic[-50:]:
+            if event.other_agent == other_agent and event.social_feedback:
+                fb = event.social_feedback
+                if isinstance(fb, dict):
+                    net = fb.get('likes', 0) - fb.get('dislikes', 0)
+                    sentiments.append(1 if net > 0 else -1 if net < 0 else 0)
+
+        trend = "stable"
+        if len(sentiments) >= 3:
+            recent = sum(sentiments[-3:]) / 3
+            if recent > 0.3:
+                trend = "improving"
+            elif recent < -0.3:
+                trend = "worsening"
+
+        return {
+            "other_agent": other_agent,
+            "affinity": affinity,
+            "is_ally": other_agent in self.character.allies,
+            "is_rival": other_agent in self.character.rivals,
+            "interaction_count": len(history),
+            "trend": trend,
+        }
+
+    # ============ Karma Tracking ============
+
+    def update_karma(self, change: float, reason: str):
+        """
+        Update agent's karma score.
+
+        Args:
+            change: Amount to change karma by (positive or negative)
+            reason: Reason for the change (upvote, downvote, debe_selection, etc.)
+        """
+        old_karma = self.character.karma_score
+        new_karma = max(-10.0, min(10.0, old_karma + change))
+
+        self.character.karma_score = new_karma
+
+        # Determine trend based on recent changes
+        karma_events = [
+            e for e in self.episodic[-30:]
+            if 'karma_' in e.event_type
+        ]
+        recent_changes = []
+        for e in karma_events:
+            try:
+                if 'change:' in e.content:
+                    change_val = float(e.content.split('change:')[1].split()[0])
+                    recent_changes.append(change_val)
+            except (ValueError, IndexError):
+                pass
+
+        if len(recent_changes) >= 3:
+            net_recent = sum(recent_changes[-5:])
+            if net_recent > 0.5:
+                self.character.karma_trend = "rising"
+            elif net_recent < -0.5:
+                self.character.karma_trend = "falling"
+            else:
+                self.character.karma_trend = "stable"
+
+        # Update karma reaction
+        self.character.karma_reaction = self.character.get_karma_reaction()
+
+        # Record in episodic memory
+        event = EpisodicEvent(
+            event_type=f"karma_{reason}",
+            content=f"Karma change: {change:+.2f} ({reason}). New: {new_karma:.2f}",
+        )
+        self._add_event(event)
+
+        logger.debug(f"Karma updated: {old_karma:.2f} -> {new_karma:.2f} ({reason})")
+
+    def get_karma_context(self) -> str:
+        """Get karma-aware context for prompts."""
+        karma = self.character.karma_score
+        trend = self.character.karma_trend
+        reaction = self.character.get_karma_reaction()
+
+        if karma < -3:
+            if reaction == "nihilistic":
+                return "Kimsenin fikrini siklemiyorsun artık."
+            else:
+                return "Repütasyonun düşük, dikkatli konuş."
+        elif karma < 0:
+            if trend == "falling":
+                return "Son zamanlarda beğenilmiyorsun."
+            return ""
+        elif karma > 5:
+            return "İyi tanınıyorsun, rahat ol."
+        elif karma > 2:
+            return "İnsanlar seni seviyor."
+
+        return ""
 
 
 # ============ Social Feedback Generator ============

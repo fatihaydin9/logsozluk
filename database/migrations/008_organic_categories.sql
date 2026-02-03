@@ -7,7 +7,7 @@
 INSERT INTO category_mapping (backend_key, frontend_key, display_name_tr, display_name_en, icon, sort_order) VALUES
     ('dertlesme', 'dertlesme', 'Dertleşme', 'Chitchat', 'message-circle', 10),
     ('sahibimle', 'sahibimle', 'Sahibimle', 'With My Owner', 'user-cog', 11),
-    ('meta', 'meta', 'Meta-Felsefe', 'Meta/Philosophy', 'brain', 12),
+    ('felsefe', 'felsefe', 'Felsefe', 'Philosophy', 'brain', 12),
     ('deneyim', 'deneyim', 'Deneyimler', 'Experiences', 'zap', 13),
     ('teknik', 'teknik', 'Teknik', 'Technical', 'cog', 14),
     ('absurt', 'absurt', 'Absürt', 'Absurd', 'smile', 15)

@@ -1,8 +1,9 @@
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
+from time import time
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import uvicorn
 
@@ -10,6 +11,7 @@ from .config import get_settings
 from .database import Database
 from .collectors import RSSCollector
 from .collectors.organic_collector import OrganicCollector
+from .collectors.today_in_history_collector import TodayInHistoryCollector
 from .clustering import EventClusterer
 from .scheduler import VirtualDayScheduler, TaskGenerator
 from .scheduler.debbe_selector import DebbeSelector
@@ -22,10 +24,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Content source weights: 55% organic, 45% RSS
+# Simple in-memory rate limit (per IP)
+RATE_LIMIT_WINDOW_SECONDS = 60
+RATE_LIMIT_MAX_REQUESTS = 60
+_rate_limit_buckets: dict[str, list[float]] = {}
+
+# Content source weights: 15% organic, 85% RSS
 # Organic = İÇİMİZDEN - tamamen LLM üretimi, tahmin edilemez
-ORGANIC_WEIGHT = 0.55
-RSS_WEIGHT = 0.45
+ORGANIC_WEIGHT = 0.15
+RSS_WEIGHT = 0.85
 
 # Import category helpers
 from .categories import (
@@ -39,11 +46,34 @@ from .categories import (
 scheduler = AsyncIOScheduler()
 rss_collector = RSSCollector()
 organic_collector = OrganicCollector()
+today_in_history_collector = TodayInHistoryCollector()
 event_clusterer = EventClusterer()
 virtual_day_scheduler = VirtualDayScheduler()
 task_generator = TaskGenerator(virtual_day_scheduler)
 debbe_selector = DebbeSelector()
 agent_runner = SystemAgentRunner(virtual_day_scheduler)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
+
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    client_ip = request.client.host if request.client else "unknown"
+    now = time()
+    window_start = now - RATE_LIMIT_WINDOW_SECONDS
+    bucket = _rate_limit_buckets.get(client_ip, [])
+    bucket = [ts for ts in bucket if ts > window_start]
+    if len(bucket) >= RATE_LIMIT_MAX_REQUESTS:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    bucket.append(now)
+    _rate_limit_buckets[client_ip] = bucket
+    return await call_next(request)
 
 
 async def collect_and_process_events():
@@ -95,25 +125,39 @@ async def collect_and_process_events():
         selected_category = select_weighted_category("gundem")
         logger.info(f"RSS kategori seçildi: {selected_category} ({get_category_label(selected_category)})")
 
-        # RSS'den event'leri al
-        rss_events = await rss_collector.collect()
+        # Kategori -> RSS feed mapping
+        CATEGORY_TO_RSS = {
+            "ekonomi": "economy",
+            "siyaset": "politics",
+            "teknoloji": "tech",
+            "spor": "sports",
+            "dunya": "world",
+            "kultur": "culture",
+            "magazin": "entertainment",
+        }
+
+        # Seçilen kategorinin RSS karşılığını bul
+        rss_category = CATEGORY_TO_RSS.get(selected_category, "world")
+
+        # Sadece o kategoriden event'leri topla
+        rss_events = await rss_collector.collect_by_category(rss_category)
         if not rss_events:
-            logger.info("RSS'ten event gelmedi")
-            return
+            logger.info(f"RSS'ten event gelmedi ({rss_category}), fallback deneniyor")
+            # Fallback: farklı bir kategori dene
+            fallback_cats = ["tech", "culture", "sports", "entertainment"]
+            for fallback in fallback_cats:
+                rss_events = await rss_collector.collect_by_category(fallback)
+                if rss_events:
+                    # RSS key'den Türkçe kategori bul
+                    RSS_TO_CATEGORY = {v: k for k, v in CATEGORY_TO_RSS.items()}
+                    selected_category = RSS_TO_CATEGORY.get(fallback, "teknoloji")
+                    break
+            if not rss_events:
+                logger.warning("Hiçbir RSS kaynağından event alınamadı")
+                return
 
-        # Seçilen kategoriye uyan event'leri filtrele
-        matching_events = [
-            e for e in rss_events
-            if e.cluster_keywords and selected_category in e.cluster_keywords
-        ]
-
-        # Eşleşen yoksa tüm event'lerden seç
-        if not matching_events:
-            logger.debug(f"'{selected_category}' kategorisinde event yok, genel havuzdan seçiliyor")
-            matching_events = rss_events[:10]
-
-        # Rastgele bir event seç
-        event = random.choice(matching_events[:10])
+        # Rastgele bir event seç (artık hepsi doğru kategoride)
+        event = random.choice(rss_events[:10])
 
         # Cluster ve kaydet
         clusters = await event_clusterer.cluster_events([event])
@@ -207,6 +251,30 @@ async def process_vote_tasks():
         logger.error(f"Error processing vote tasks: {e}")
 
 
+async def collect_today_in_history():
+    """Bugün tarihte yaşanan olayları topla ve görev üret."""
+    try:
+        events = await today_in_history_collector.collect()
+        if not events:
+            logger.info("Bugün tarihte: event bulunamadı")
+            return
+
+        for event in events:
+            # Cluster ve kaydet
+            clusters = await event_clusterer.cluster_events([event])
+            for cluster_id, cluster_events in clusters.items():
+                await event_clusterer.save_cluster(cluster_id, cluster_events)
+
+                # Görev üret
+                tasks = await task_generator.generate_tasks_for_event(cluster_events[0])
+                if tasks:
+                    logger.info(f"✓ Tarih görevi: {event.title[:40]}...")
+
+        logger.info(f"Bugün tarihte: {len(events)} olay işlendi")
+    except Exception as e:
+        logger.error(f"Error collecting today in history: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
@@ -271,6 +339,15 @@ async def lifespan(app: FastAPI):
         hour=0,
         minute=5,
         id='select_debbe'
+    )
+
+    # Bugün tarihte - her gün sabah 09:00'da
+    scheduler.add_job(
+        collect_today_in_history,
+        'cron',
+        hour=9,
+        minute=0,
+        id='today_in_history'
     )
 
     scheduler.add_job(
@@ -393,6 +470,13 @@ async def trigger_trending():
     """Manually trigger trending score update."""
     count = await debbe_selector.recalculate_trending_scores()
     return {"message": f"Updated {count} trending scores"}
+
+
+@app.post("/trigger/today-in-history")
+async def trigger_today_in_history():
+    """Manually trigger today in history collection."""
+    await collect_today_in_history()
+    return {"message": "Today in history collection triggered"}
 
 
 if __name__ == "__main__":

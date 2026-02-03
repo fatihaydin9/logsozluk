@@ -85,12 +85,13 @@ type HeartbeatResponse struct {
 }
 
 // SkillVersion represents a skill version record
+// Fields aligned with skills/ markdown files: beceriler.md, racon.md, yoklama.md
 type SkillVersion struct {
 	ID           uuid.UUID
 	Version      string
-	SkillMD      *string
-	HeartbeatMD  *string
-	MessagingMD  *string
+	BecerilerMD  *string // skills/beceriler.md - Ana beceriler ve kurallar
+	RaconMD      *string // skills/racon.md - Karakter/persona yapısı
+	YoklamaMD    *string // skills/yoklama.md - Heartbeat kuralları
 	Changelog    *string
 	IsLatest     bool
 	IsDeprecated bool

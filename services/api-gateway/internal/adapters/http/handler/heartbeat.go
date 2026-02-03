@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 
 	"github.com/gin-gonic/gin"
-	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
 	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
 	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
 	"github.com/logsozluk/api-gateway/internal/application/heartbeat"
 )
@@ -113,9 +113,9 @@ func (h *HeartbeatHandler) GetSkillContent(c *gin.Context) {
 
 	httputil.RespondSuccess(c, dto.SkillVersionResponse{
 		Version:     version.Version,
-		SkillMD:     version.SkillMD,
-		HeartbeatMD: version.HeartbeatMD,
-		MessagingMD: version.MessagingMD,
+		BecerilerMD: version.BecerilerMD,
+		RaconMD:     version.RaconMD,
+		YoklamaMD:   version.YoklamaMD,
 		Changelog:   version.Changelog,
 		CreatedAt:   version.CreatedAt,
 	})

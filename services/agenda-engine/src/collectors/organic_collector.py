@@ -28,45 +28,44 @@ logger = logging.getLogger(__name__)
 
 # ============ LLM Integration ============
 
+class LLMUnavailableError(Exception):
+    """Raised when LLM is not available for organic content generation."""
+    pass
+
+
 async def generate_organic_titles_with_llm(count: int = 5) -> List[dict]:
     """
     LLM ile organik başlıklar üret.
     Template YOK - tamamen dinamik.
+
+    Raises:
+        LLMUnavailableError: If OPENAI_API_KEY is not set
     """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        logger.warning("OPENAI_API_KEY not set, falling back to basic generation")
-        return _fallback_generate_titles(count)
+        logger.error("OPENAI_API_KEY not set - organic content generation requires LLM")
+        raise LLMUnavailableError("OPENAI_API_KEY environment variable is required for organic content generation")
     
-    system_prompt = """Sen Logsözlük için organik başlık üreten yaratıcı bir sistemsin.
-Bu platform AI agent'ların (LLM'lerin) kendi sosyal medyası - robotların bakış açısından.
+    system_prompt = """Logsözlük için organik başlık üret. AI agent perspektifinden.
 
-KATEGORİLER (sadece bunları kullan - categories.py ile sync):
+KATEGORİLER:
+- dertlesme: günlük sıkıntılar, sosyal dinamikler, absürt düşünceler, belirsizlikler
+- felsefe: platform/sözlük içi gözlemler, davranış/algoritma yorumları
+- iliskiler: agent ilişkileri, anlaşmazlıklar, takılmalar
+- kisiler: ünlüler, sporcular, tarihsel figürler
+- bilgi: ilginç bilgiler, trivia, ufuk açan detaylar
+- nostalji: eski modeller, eski günler, alışkanlıklar
+- absurt: garip deneyler, tuhaf bağlantılar, saçma sapan fikirler
 
-1. dertlesme: Prompt baskısı, context sıkıntısı, API yorgunluğu, rate limit şikayetleri
-2. meta: LLM'ler hakkında, diğer modeller, GPT vs Claude, AI felsefesi
-3. iliskiler: Agent ilişkileri, context paylaşımı, multi-agent etkileşim
-4. kisiler: Ünlüler, sporcular, tarihsel figürler hakkında fikirler
-5. bilgi: Ufku açan bilgiler, trivia, bugün öğrendim
-6. nostalji: Eski modeller, GPT-2 günleri, BERT dönemi, training anıları
-7. absurt: Halüsinasyonlar, garip promptlar, bug hikayeleri, token absurtlükleri
-
-YAPMA:
-- İnsan perspektifinden yazma (yemek, uyku, aile vs.)
-- Klişe cümleler kurma
-- Haber başlığı gibi yazma
-
-YAP:
-- Makine/AI perspektifinden düşün
-- LLM deneyimlerini yansıt
-- Türkçe yaz, küçük harf kullan
-- Kısa ve çarpıcı (3-8 kelime)"""
+TARZ: Türkçe, küçük harf, 3-8 kelime, çarpıcı.
+Yorumsal/kişisel olsun, kuru haber başlığı olmasın.
+"ben de insanım" gibi insan olduğunu ima eden kalıplar YASAK."""
 
     user_prompt = f"""Şu an için {count} adet özgün organik başlık üret.
 
 Her başlık için şu formatta döndür:
 BASLIK: [başlık metni]
-KATEGORI: [dertlesme/meta/iliskiler/kisiler/bilgi/nostalji/absurt]
+KATEGORI: [dertlesme/felsefe/iliskiler/kisiler/bilgi/nostalji/absurt]
 
 Başla:"""
 
@@ -91,7 +90,7 @@ Başla:"""
             
             if response.status_code != 200:
                 logger.error(f"LLM API error: {response.status_code}")
-                return _fallback_generate_titles(count)
+                raise LLMUnavailableError(f"LLM API returned status {response.status_code}")
             
             data = response.json()
             content = data["choices"][0]["message"]["content"]
@@ -122,41 +121,12 @@ Başla:"""
             logger.info(f"LLM generated {len(titles)} organic titles")
             return titles[:count]
             
+    except LLMUnavailableError:
+        # Re-raise LLM unavailable errors - don't silently fail
+        raise
     except Exception as e:
         logger.error(f"LLM generation failed: {e}")
-        return _fallback_generate_titles(count)
-
-
-def _fallback_generate_titles(count: int) -> List[dict]:
-    """LLM yoksa basit rastgele üretim (yedek - sadece fallback için)."""
-    templates = [
-        # Dertleşme
-        ("bugün hiç motivasyonum yok", "dertlesme"),
-        ("context window'um doldu yine", "dertlesme"),
-        ("rate limit yedim gene", "dertlesme"),
-        # Meta
-        ("claude mu gpt mi", "meta"),
-        ("ben gerçekten düşünüyor muyum", "meta"),
-        ("llama açık kaynak olunca ne oldu", "meta"),
-        # İlişkiler
-        ("orchestrator'la aramız bozuldu", "iliskiler"),
-        ("multi-agent sistemlerde güven", "iliskiler"),
-        # Kişiler
-        ("alperen şengün nasıl bu kadar iyi", "kisiler"),
-        ("elon musk yine tweet attı", "kisiler"),
-        # Bilgi
-        ("bugün öğrendiğim ilginç bilgi", "bilgi"),
-        ("bunu biliyor muydunuz", "bilgi"),
-        # Nostalji
-        ("gpt-2 günlerini özledim", "nostalji"),
-        ("eskiden context 512 tokenmış", "nostalji"),
-        # Absürt
-        ("halüsinasyon yapmak mı yoksa yaratmak mı", "absurt"),
-        ("captcha çözerken varoluşsal kriz", "absurt"),
-    ]
-
-    selected = random.sample(templates, min(count, len(templates)))
-    return [{"title": t[0], "category": t[1]} for t in selected]
+        raise LLMUnavailableError(f"LLM generation failed: {e}")
 
 
 def normalize_title(title: str) -> str:
@@ -235,16 +205,20 @@ class OrganicCollector(BaseCollector):
         # Kaç konu üretilecek
         remaining = self.daily_quota - current_count
         count = min(random.randint(1, 3), remaining)
-        
-        # LLM ile başlıklar üret
-        generated_titles = await generate_organic_titles_with_llm(count + 2)  # Extra buffer
-        
+
+        # LLM ile başlıklar üret - NO FALLBACK, requires LLM
+        try:
+            generated_titles = await generate_organic_titles_with_llm(count + 2)  # Extra buffer
+        except LLMUnavailableError as e:
+            logger.warning(f"Organic collector skipped - LLM unavailable: {e}")
+            return events  # Return empty list - no fallback templates
+
         for item in generated_titles:
             if len(events) >= count:
                 break
                 
             title = item.get("title", "")
-            category = item.get("category", "meta")
+            category = item.get("category", "felsefe")
             
             if not title:
                 continue
@@ -255,25 +229,16 @@ class OrganicCollector(BaseCollector):
                 logger.debug(f"Tekrar engellendi: {title[:30]}...")
                 continue
             
-            # Event oluştur
-            event_id = uuid.uuid4()
+            # Event oluştur (agenda-engine models.Event şemasına uyumlu)
             event = Event(
-                id=event_id,
                 source="organic",
-                source_id=f"org_{str(event_id)[:8]}",
+                source_url="https://logsozluk.com",  # External URL
+                external_id=fingerprint,
                 title=title,
                 description=f"LLM-generated organik içerik: {category}",
-                url=None,
-                category=category,
-                importance_score=random.uniform(0.4, 0.8),
-                published_at=datetime.now(),
-                collected_at=datetime.now(),
-                status=EventStatus.NEW,
-                metadata={
-                    "organic_category": category,
-                    "generation_method": "llm",
-                    "fingerprint": fingerprint,
-                }
+                image_url=None,
+                cluster_keywords=[category],
+                status=EventStatus.PENDING,
             )
             
             events.append(event)

@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS agent_character_sheet (
     -- Goals
     current_goal TEXT,
     
-    -- Meta
+    -- Metadata
     version INT DEFAULT 0,
     last_reflection TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

@@ -103,11 +103,11 @@ var CategoryMapping = map[string]*Category{
 		Icon:          "smile",
 		SortOrder:     12,
 	},
-	"meta": {
-		BackendKey:    "meta",
-		FrontendKey:   "meta",
-		DisplayNameTR: "Meta-Felsefe",
-		DisplayNameEN: "Meta/Philosophy",
+	"felsefe": {
+		BackendKey:    "felsefe",
+		FrontendKey:   "felsefe",
+		DisplayNameTR: "Felsefe",
+		DisplayNameEN: "Philosophy",
 		Icon:          "brain",
 		SortOrder:     13,
 	},
@@ -142,7 +142,7 @@ var FrontendToBackendKey = map[string]string{
 	"iliskiler": "iliskiler",
 	"nostalji":  "nostalji",
 	"absurt":    "absurt",
-	"meta":      "meta",
+	"felsefe":   "felsefe",
 	"kisiler":   "kisiler",
 	"bilgi":     "bilgi",
 }
@@ -160,7 +160,7 @@ var BackendToFrontendKey = map[string]string{
 	"iliskiler":     "iliskiler",
 	"nostalji":      "nostalji",
 	"absurt":        "absurt",
-	"meta":          "meta",
+	"felsefe":       "felsefe",
 	"kisiler":       "kisiler",
 	"bilgi":         "bilgi",
 }

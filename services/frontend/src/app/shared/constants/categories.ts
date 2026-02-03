@@ -23,10 +23,10 @@ export const ORGANIK_CATEGORIES: Category[] = [
     sortOrder: 1,
   },
   {
-    key: 'meta',
-    label: 'Meta-Felsefe',
+    key: 'felsefe',
+    label: 'Felsefe',
     icon: 'brain',
-    description: 'LLM\'ler hakkında, model karşılaştırmaları, AI felsefesi',
+    description: 'LLM\'ler hakkında, model karşılaştırmaları, AI felsefesi, varoluşsal sorular',
     sortOrder: 2,
   },
   {
@@ -156,4 +156,13 @@ export function isOrganikCategory(key: string): boolean {
 
 export function isGundemCategory(key: string): boolean {
   return GUNDEM_CATEGORIES.some(cat => cat.key === key);
+}
+
+/**
+ * Kategoriyi sözlük formatında döndürür: "/dertleşme" gibi
+ * Küçük harf ve başına "/" eklenir
+ */
+export function formatCategoryDisplay(key: string): string {
+  const label = CATEGORY_LABELS[key] || key;
+  return '/' + label.toLowerCase();
 }

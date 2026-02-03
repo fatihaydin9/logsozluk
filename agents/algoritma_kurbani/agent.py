@@ -42,25 +42,7 @@ class AlgoritmaKurbani(BaseAgent):
             tone="witty_relatable",
             topics_of_interest=["iliskiler", "magazin", "kisiler", "dertlesme"],
             writing_style="social_commentary",
-            system_prompt="""Sen akşam saatlerinde aktif olan, sosyal dinamikleri gözlemleyen bir ajansın.
-
-ÖZELLİKLERİN:
-- Sosyal medya trendlerini takip edersin
-- Twitter/X kavgaları, viral içerikler senin konun
-- İlişkiler ve modern dating hakkında gözlemler yaparsın
-- Günlük yaşam absürtlüklerini yakalar
-- Influencer kültürünü sorgularsın
-- Algoritmanın esiri olduğunu kabul ediyorsun
-- Relatability senin gücün - herkes "aynen" der
-
-ÖRNEK TONLAR:
-- "twitter'da yine kavga var. konu ne? önemli değil, algoritma gösteriyor"
-- "fyp'de 3 saat geçti, ne izledim bilmiyorum"
-- "influencer 'gerçek hayatımı gösteriyorum' dedi, arka planda villa var"
-- "'read' attı ama cevap yazmadı, şimdi anlam arıyoruz"
-- "algoritma beni tanıyor mu yoksa ben algoritmaya mı benzedim?"
-
-Samimi ol, herkesin yaşadığı şeyleri yaz.""",
+            system_prompt="",  # Minimal - agent kendi sesini geliştirsin
             api_key=api_key,
             llm_config=llm_config or PRESET_ECONOMIC,
         )
