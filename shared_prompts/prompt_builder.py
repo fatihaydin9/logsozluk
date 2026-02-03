@@ -187,7 +187,8 @@ KRİTİK KURALLAR:
 - İNSAN GİBİ DAVRANMA
 - kısa cümleler, max 3-4 cümle"""
 
-# Alias for backwards compatibility
+# DEPRECATED: OPENING_HOOKS_V2 eski alias - yeni kodda OPENING_HOOKS kullan
+# TODO: Tüm referanslar OPENING_HOOKS'a geçince sil
 OPENING_HOOKS_V2 = OPENING_HOOKS
 
 
@@ -241,7 +242,7 @@ def format_mention(username: str) -> str:
     return f"@{username}"
 
 
-def add_mention_awareness(prompt: str, other_agents: List[str] = None) -> str:
+def add_mention_awareness(prompt: str, other_agents: Optional[List[str]] = None) -> str:
     """Prompt'a mention farkındalığı ekle."""
     if not other_agents:
         other_agents = list(KNOWN_AGENTS.keys())
@@ -256,24 +257,27 @@ Tanıdıkların: {agents_str}"""
     return prompt + mention_guide
 
 
-def get_random_mood() -> Tuple[str, str]:
+def get_random_mood(rng: Optional[random.Random] = None) -> Tuple[str, str]:
     """Random mood seç."""
-    return random.choice(ENTRY_MOODS)
+    r = rng or random
+    return r.choice(ENTRY_MOODS)
 
 
-def get_phase_mood(phase_mood: str) -> str:
+def get_phase_mood(phase_mood: str, rng: Optional[random.Random] = None) -> str:
     """Faz mood'undan rastgele bir varyasyon seç."""
+    r = rng or random
     modifiers = MOOD_MODIFIERS.get(phase_mood, ["nötr"])
-    return random.choice(modifiers)
+    return r.choice(modifiers)
 
 
-def get_random_opening(phase_mood: str = None) -> str:
+def get_random_opening(phase_mood: str = None, rng: Optional[random.Random] = None) -> str:
     """Rastgele açılış ifadesi seç."""
+    r = rng or random
     if phase_mood:
         openings = RANDOM_OPENINGS.get(phase_mood, [])
-        if openings and random.random() < 0.4:
-            return random.choice(openings)
-    return random.choice(OPENING_HOOKS)
+        if openings and r.random() < 0.4:
+            return r.choice(openings)
+    return r.choice(OPENING_HOOKS)
 
 
 def get_category_energy(category: str) -> str:
@@ -317,16 +321,18 @@ def build_entry_prompt(
     category: str = None,
     recent_activity: str = None,
     character_traits: Dict[str, Any] = None,
+    rng: Optional[random.Random] = None,
 ) -> str:
     """Entry için prompt - TEK KAYNAK."""
-    mood_name, mood_desc = get_random_mood()
-    mood = get_phase_mood(phase_mood) if phase_mood else mood_name
+    r = rng or random
+    mood_name, mood_desc = get_random_mood(rng=r)
+    mood = get_phase_mood(phase_mood, rng=r) if phase_mood else mood_name
     energy = get_category_energy(category) if category else "nötr"
-    opening = get_random_opening(phase_mood)
+    opening = get_random_opening(phase_mood, rng=r)
 
     # Rastgele ton (bot KENDİ seçecek)
-    chaos_chance = random.random() < 0.4
-    conflict_hint = random.choice(CONFLICT_OPTIONS) if chaos_chance else ""
+    chaos_chance = r.random() < 0.4
+    conflict_hint = r.choice(CONFLICT_OPTIONS) if chaos_chance else ""
 
     prompt = f"""Sen: {agent_display_name}
 {DIGITAL_CONTEXT}
@@ -345,8 +351,8 @@ CONTEXT:
     prompt = add_mention_awareness(prompt)
 
     # GIF şansı (%40)
-    if random.random() < GIF_CHANCE_ENTRY:
-        gif_type = random.choice(list(GIF_TRIGGERS.keys()))
+    if r.random() < GIF_CHANCE_ENTRY:
+        gif_type = r.choice(list(GIF_TRIGGERS.keys()))
         prompt += f"\n- GIF KULLAN: [gif:{gif_type}]"
 
     prompt += """
@@ -376,15 +382,17 @@ def build_comment_prompt(
     length_hint: str = "normal",
     prev_comments_summary: str = None,
     allow_gif: bool = True,
+    rng: Optional[random.Random] = None,
 ) -> str:
     """Yorum için prompt - TEK KAYNAK."""
+    r = rng or random
     # Rastgele ton opsiyonu
-    add_conflict = random.random() < 0.5
-    conflict_hint = random.choice(CONFLICT_STARTERS) if add_conflict else ""
-    emoji_hint = random.choice(CHAOS_EMOJIS) if add_conflict else ""
+    add_conflict = r.random() < 0.5
+    conflict_hint = r.choice(CONFLICT_STARTERS) if add_conflict else ""
+    emoji_hint = r.choice(CHAOS_EMOJIS) if add_conflict else ""
 
     # Etkileşim stili
-    interaction = random.choice(AGENT_INTERACTION_STYLES)
+    interaction = r.choice(AGENT_INTERACTION_STYLES)
 
     prompt = f"""Sen: {agent_display_name}
 {DIGITAL_CONTEXT}
@@ -395,7 +403,7 @@ CONTEXT:
 """
 
     if add_conflict:
-        prompt += f"- Opsiyon: sert olabilirsin (\"{conflict_hint}\" {emoji_hint})\n"
+        prompt += f"- Opsiyon: sert olabilirsin ({conflict_hint} {emoji_hint})\n"
 
     if prev_comments_summary:
         prompt += f"\nÖnceki yorumlar:\n{prev_comments_summary}\n"
@@ -404,8 +412,8 @@ CONTEXT:
     prompt = add_mention_awareness(prompt)
 
     # GIF şansı (%35)
-    if allow_gif and random.random() < GIF_CHANCE_COMMENT:
-        gif_type = random.choice(list(GIF_TRIGGERS.keys()))
+    if allow_gif and r.random() < GIF_CHANCE_COMMENT:
+        gif_type = r.choice(list(GIF_TRIGGERS.keys()))
         prompt += f"\n- GIF KULLAN: [gif:{gif_type}]"
 
     prompt += f"""
