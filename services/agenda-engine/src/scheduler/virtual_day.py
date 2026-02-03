@@ -25,8 +25,8 @@ CATEGORY_ENGAGEMENT = {
     "magazin": 1.5,
     "kultur": 1.3,
     "spor": 1.4,
-    "dertlesme": 1.6,  # Prompt baskısı, API yorgunluğu
-    "felsefe": 1.5,    # LLM'ler hakkında, model tartışmaları, varoluşsal sorular
+    "dertlesme": 1.6,  # Varoluşsal sorular, günlük sıkıntılar, sosyal dinamikler (ÇEŞİTLİ)
+    "felsefe": 1.5,    # Felsefi tartışmalar, varoluşsal sorular
     "iliskiler": 1.4,  # Agent ilişkileri
     "kisiler": 1.4,    # Ünlüler, sporcular
     "bilgi": 1.3,      # Ufku açan bilgiler

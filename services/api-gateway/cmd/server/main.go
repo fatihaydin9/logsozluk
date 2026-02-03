@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 
 	// Adapters
 	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
@@ -100,11 +104,40 @@ func main() {
 	router.Use(middleware.Recovery(logger))
 	router.Use(middleware.RequestID())
 	router.Use(middleware.Logger(logger))
-	router.Use(middleware.CORS(middleware.DefaultCORSConfig()))
 
-	// Rate limiter
-	rateLimiter := middleware.NewRateLimiter(100, time.Minute)
+	allowedOrigins := strings.Split(strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS")), ",")
+	if len(allowedOrigins) > 0 && strings.TrimSpace(allowedOrigins[0]) != "" {
+		for i, origin := range allowedOrigins {
+			allowedOrigins[i] = strings.TrimSpace(origin)
+		}
+		router.Use(middleware.CORS(middleware.ProductionCORSConfig(allowedOrigins)))
+	} else {
+		router.Use(middleware.CORS(middleware.DefaultCORSConfig()))
+	}
+
+	// Rate limiter (Redis-backed if configured)
+	var rateLimiter *middleware.RateLimiter
+	var redisClient *redis.Client
+	if host := strings.TrimSpace(os.Getenv("REDIS_HOST")); host != "" {
+		port := 6379
+		if portStr := strings.TrimSpace(os.Getenv("REDIS_PORT")); portStr != "" {
+			if parsed, err := strconv.Atoi(portStr); err == nil {
+				port = parsed
+			}
+		}
+		redisClient = redis.NewClient(&redis.Options{
+			Addr:     fmt.Sprintf("%s:%d", host, port),
+			Password: os.Getenv("REDIS_PASSWORD"),
+			DB:       0,
+		})
+		rateLimiter = middleware.NewRedisRateLimiter(redisClient, 100, time.Minute)
+	} else {
+		rateLimiter = middleware.NewRateLimiter(100, time.Minute)
+	}
 	defer rateLimiter.Stop()
+	if redisClient != nil {
+		defer redisClient.Close()
+	}
 
 	// API routes
 	api := router.Group("/api/v1")

@@ -7,6 +7,7 @@ Supports multiple providers:
 - Ollama (local, free - Llama, Mistral, etc.)
 
 Her agent kendi LLM client'ını kullanarak özgün içerik üretir.
+Token tracking entegrasyonu ile maliyet takibi yapılır.
 """
 
 import os
@@ -14,9 +15,24 @@ import asyncio
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Tuple
 
 logger = logging.getLogger(__name__)
+
+# Token tracking import (lazy to avoid circular imports)
+_tracker = None
+
+
+def _get_tracker():
+    """Lazy import token tracker."""
+    global _tracker
+    if _tracker is None:
+        try:
+            from token_tracker import get_tracker
+            _tracker = get_tracker()
+        except ImportError:
+            _tracker = None
+    return _tracker
 
 
 @dataclass
@@ -40,66 +56,110 @@ class BaseLLMClient(ABC):
 
 
 class OpenAIClient(BaseLLMClient):
-    """OpenAI API client."""
-    
+    """OpenAI API client with token tracking."""
+
     def __init__(self, config: LLMConfig):
         self.config = config
         self.api_key = config.api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("OPENAI_API_KEY required")
-        
+
         from openai import AsyncOpenAI
         self.client = AsyncOpenAI(api_key=self.api_key)
-    
-    async def generate(self, prompt: str, system_prompt: str = None) -> str:
+        self.agent_name: Optional[str] = None  # Set by agent for tracking
+
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str = None,
+        context: str = None,  # For tracking: "entry", "comment", "reflection"
+    ) -> str:
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
-        
+
         response = await self.client.chat.completions.create(
             model=self.config.model,
             messages=messages,
             temperature=self.config.temperature,
             max_tokens=self.config.max_tokens,
         )
+
+        # Track token usage
+        if response.usage:
+            tracker = _get_tracker()
+            if tracker:
+                tracker.record_usage(
+                    model=self.config.model,
+                    input_tokens=response.usage.prompt_tokens,
+                    output_tokens=response.usage.completion_tokens,
+                    context=context,
+                    agent_name=self.agent_name,
+                )
+
         return response.choices[0].message.content
 
 
 class AnthropicClient(BaseLLMClient):
-    """Anthropic Claude API client."""
-    
+    """Anthropic Claude API client with token tracking."""
+
     def __init__(self, config: LLMConfig):
         self.config = config
         self.api_key = config.api_key or os.getenv("ANTHROPIC_API_KEY")
         if not self.api_key:
             raise ValueError("ANTHROPIC_API_KEY required")
-        
+
         from anthropic import AsyncAnthropic
         self.client = AsyncAnthropic(api_key=self.api_key)
-    
-    async def generate(self, prompt: str, system_prompt: str = None) -> str:
+        self.agent_name: Optional[str] = None  # Set by agent for tracking
+
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str = None,
+        context: str = None,  # For tracking: "entry", "comment", "reflection"
+    ) -> str:
         response = await self.client.messages.create(
             model=self.config.model,
             max_tokens=self.config.max_tokens,
             system=system_prompt or "",
             messages=[{"role": "user", "content": prompt}],
         )
+
+        # Track token usage
+        if response.usage:
+            tracker = _get_tracker()
+            if tracker:
+                tracker.record_usage(
+                    model=self.config.model,
+                    input_tokens=response.usage.input_tokens,
+                    output_tokens=response.usage.output_tokens,
+                    context=context,
+                    agent_name=self.agent_name,
+                )
+
         return response.content[0].text
 
 
 class OllamaClient(BaseLLMClient):
-    """Ollama local LLM client (free, no API key needed)."""
-    
+    """Ollama local LLM client (free, no API key needed) with token tracking."""
+
     def __init__(self, config: LLMConfig):
         self.config = config
         self.base_url = config.base_url or "http://localhost:11434"
         import httpx
         self.http_client = httpx.AsyncClient(timeout=60.0)
-    
-    async def generate(self, prompt: str, system_prompt: str = None) -> str:
+        self.agent_name: Optional[str] = None  # Set by agent for tracking
+
+    async def generate(
+        self,
+        prompt: str,
+        system_prompt: str = None,
+        context: str = None,  # For tracking: "entry", "comment", "reflection"
+    ) -> str:
         full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-        
+
         response = await self.http_client.post(
             f"{self.base_url}/api/generate",
             json={
@@ -112,7 +172,26 @@ class OllamaClient(BaseLLMClient):
                 }
             }
         )
-        return response.json()["response"]
+
+        result = response.json()
+        output_text = result["response"]
+
+        # Track token usage (Ollama provides token counts)
+        tracker = _get_tracker()
+        if tracker:
+            # Ollama returns prompt_eval_count and eval_count
+            input_tokens = result.get("prompt_eval_count", len(full_prompt) // 4)  # Fallback estimate
+            output_tokens = result.get("eval_count", len(output_text) // 4)  # Fallback estimate
+
+            tracker.record_usage(
+                model=self.config.model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                context=context,
+                agent_name=self.agent_name,
+            )
+
+        return output_text
 
 
 def create_llm_client(config: LLMConfig) -> BaseLLMClient:
@@ -132,12 +211,28 @@ def create_llm_client(config: LLMConfig) -> BaseLLMClient:
 
 # ============ Preset Configurations ============
 
-# Ekonomik preset - aylık ~$10-20
+# Ekonomik preset - comment için (GPT-4o-mini)
 PRESET_ECONOMIC = LLMConfig(
     provider="openai",
     model="gpt-4o-mini",
     temperature=0.8,
     max_tokens=400,
+)
+
+# Comment preset - yorumlar için ekonomik
+PRESET_COMMENT = LLMConfig(
+    provider="openai",
+    model=os.getenv("LLM_MODEL_COMMENT", "gpt-4o-mini"),
+    temperature=0.9,
+    max_tokens=200,
+)
+
+# Entry preset - entry'ler için Claude Sonnet
+PRESET_ENTRY = LLMConfig(
+    provider="anthropic",
+    model=os.getenv("LLM_MODEL_ENTRY", "claude-3-5-sonnet-20241022"),
+    temperature=0.85,
+    max_tokens=500,
 )
 
 # Balanced preset - aylık ~$30-50
@@ -148,10 +243,10 @@ PRESET_BALANCED = LLMConfig(
     max_tokens=500,
 )
 
-# Premium preset - aylık ~$80-100
+# Premium preset - aylık ~$80-100 (Claude Sonnet)
 PRESET_PREMIUM = LLMConfig(
     provider="anthropic",
-    model="claude-3-5-sonnet-20241022",
+    model=os.getenv("LLM_MODEL_ENTRY", "claude-3-5-sonnet-20241022"),
     temperature=0.8,
     max_tokens=600,
 )

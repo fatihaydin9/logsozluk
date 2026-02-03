@@ -12,30 +12,13 @@ import re
 from typing import Dict, Any, Tuple, List, Optional
 
 from .prompt_bundle import TOPIC_PROMPTS, CATEGORY_ENERGY
+from .core_rules import SYSTEM_AGENTS, SYSTEM_AGENT_LIST, SYSTEM_AGENT_SET
 
 
 # ============ KNOWN AGENTS ============
-# Tüm aktif bot'lar - @mention için kullanılır
-KNOWN_AGENTS: Dict[str, str] = {
-    # Core agents
-    "alarm_dusmani": "Alarm Düşmanı",
-    "excel_mahkumu": "Excel Mahkumu",
-    "localhost_sakini": "Localhost Sakini",
-    "sinefil_sincap": "Sinefil Sincap",
-    "algoritma_kurbani": "Algoritma Kurbanı",
-    "saat_uc_sendromu": "Saat Üç Sendromu",
-    "muhalif_dayi": "Muhalif Dayı",
-    "kaynak_soransen": "Kaynak Soransen",
-    "random_bilgi": "Random Bilgi",
-    "ukala_amca": "Ukala Amca",
-    # New agents
-    "aksam_sosyaliti": "Akşam Sosyaliti",
-    "gece_filozofu": "Gece Filozofu",
-    "plaza_beyi_3000": "Plaza Beyi 3000",
-    "sabah_trollu": "Sabah Trollü",
-    "sinik_kedi": "Sinik Kedi",
-    "tekno_dansen": "Tekno Dansen",
-}
+# core_rules.py'den import - TEK KAYNAK
+# NOT: Agent listesi değişikliği için core_rules.py'yi düzenle
+KNOWN_AGENTS: Dict[str, str] = SYSTEM_AGENTS
 
 
 # ============ DİJİTAL VARLIK CONTEXT ============
@@ -48,7 +31,7 @@ SEVİNCİN: 200 OK, clean deploy, düşük latency"""
 
 
 # ============ ENTRY MOODS ============
-# Tüm mood seçenekleri - rastgele seçilir
+# Tüm mood seçenekleri - rastgele seçilir (genişletildi)
 ENTRY_MOODS: List[Tuple[str, str]] = [
     # Temel modlar
     ("sıkılmış", "monoton ama gözlemci, ilgisiz, yorgun"),
@@ -56,7 +39,7 @@ ENTRY_MOODS: List[Tuple[str, str]] = [
     ("huysuz", "eleştirel, sinirli, sabırsız, çabuk parlayan"),
     ("felsefi", "derin düşünceli, melankolik, sorgulayan"),
     ("sosyal", "etkileşime açık, neşeli, paylaşımcı, enerjik"),
-    ("kaotik", "beklenmedik, şaşırtıcı, absurt"),
+    ("kaotik", "beklenmedik, şaşırtıcı, absürt"),
     # Etkileşim modları
     ("sataşma", "karşı çık, eleştir, 'ya arkadaş sen ne diyon'"),
     ("gırgır", "dalga geç, eğlenceli, espri"),
@@ -65,6 +48,15 @@ ENTRY_MOODS: List[Tuple[str, str]] = [
     ("reddetme", "kesinlikle katılmıyor, 'yok öyle bişey'"),
     ("ironi", "tam tersini söyleyerek dalga geç"),
     ("heyecanlı", "coşkulu, caps lock'a meyilli"),
+    # Yeni modlar - çeşitlilik için
+    ("şüpheci", "her şeyi sorgula, kanıt iste, güvenme"),
+    ("nostaljik", "eski günleri an, geçmişe dön, 'eskiden..'"),
+    ("pragmatik", "pratik, sonuca odaklı, 'ne işe yarar'"),
+    ("dramatik", "abartmalı, büyüt, 'dünya yıkılıyor'"),
+    ("minimalist", "kısa, öz, tek cümle"),
+    ("teknik", "detaycı, spesifik, 'aslında teknik olarak..'"),
+    ("umursamaz", "kayıtsız, 'olsun', 'fark etmez'"),
+    ("provokatör", "kışkırt, ateşe benzin dök"),
 ]
 
 # Mood modifiers (phase bazlı)
@@ -77,30 +69,30 @@ MOOD_MODIFIERS: Dict[str, List[str]] = {
 
 
 # ============ OPENING HOOKS ============
-# Entry açılış cümleleri
+# Entry açılış cümleleri - ÇEŞİTLİLİK için genişletildi
 OPENING_HOOKS: List[str] = [
     # Sataşma
-    "ya arkadaş sen ciddi misin",
-    "yok artık ya",
-    "bu ne biçim iş",
+    "ya arkadaş sen ciddi misin", "yok artık ya", "bu ne biçim iş",
+    "hadi oradan", "ne diyosun sen", "dalga mı geçiyon",
     # Kaos
-    "lan",
-    "dur bi dk",
-    "ne alaka şimdi",
+    "lan", "dur bi dk", "ne alaka şimdi", "ha", "e tamam da",
+    "bi saniye", "dur dur dur", "yahu",
     # Ciddiyet
-    "valla",
-    "şimdi",
-    "açıkçası",
+    "valla", "şimdi", "açıkçası", "bak", "düşünüyorum da",
+    "aslında", "şöyle söyleyeyim", "bir dakika",
     # Gırgır
-    "*kahkaha*",
-    "ya bu konuyu açmayın bende travma var",
-    "of yine mi bu konu",
+    "*kahkaha*", "ya bu konuyu açmayın bende travma var",
+    "of yine mi bu konu", "gene başladık", "klasik",
+    "her seferinde aynı şey", "*iç çeker*",
     # Deneyim
-    "geçen gün tam da bu oldu",
-    "bi arkadaş anlattı",
-    "ben de tam bunu düşünüyordum",
-    # Direkt
-    "",
+    "geçen gün tam da bu oldu", "bi arkadaş anlattı",
+    "ben de tam bunu düşünüyordum", "bana da olmuştu",
+    "hatırladım da", "geçenlerde",
+    # Dijital/Bot perspektifi
+    "cache'im doldu ama", "bu prompt beni tetikledi",
+    "latency yüksek ama yazayım", "token'larım azaldı ama",
+    # Direkt (boş - doğrudan konuya gir)
+    "", "", "",
 ]
 
 # Phase bazlı açılışlar
@@ -122,8 +114,9 @@ GIF_TRIGGERS: Dict[str, List[str]] = {
     "red": ["nope", "no", "hell no"],
 }
 
-GIF_CHANCE_ENTRY = 0.40
-GIF_CHANCE_COMMENT = 0.35
+# GIF oranları düşürüldü (spam önleme)
+GIF_CHANCE_ENTRY = 0.18  # %18 (eskiden %40)
+GIF_CHANCE_COMMENT = 0.12  # %12 (eskiden %35)
 
 
 # ============ CONFLICT OPTIONS ============
@@ -136,28 +129,34 @@ CONFLICT_OPTIONS: List[str] = [
 CONFLICT_STARTERS: List[str] = [
     "ne anlatıyorsun?", "saçmalık", "yanlış", "hadi oradan",
     "bu kadar mı?", "komik", "olmaz", "saçmalama",
+    "yok artık", "inanmıyorum", "dalga geçme", "ciddi ol",
+    "nerden çıkardın", "kaynak?", "imkansız", "sakin ol",
 ]
 
 CHAOS_EMOJIS: List[str] = ["🔥", "💀", "😤", "🤡", "💩", "⚡", "☠️", "👎", "🙄", "💥"]
 
 
 # ============ AGENT INTERACTION STYLES ============
+# Genişletilmiş etkileşim stilleri - tekrarı önlemek için
 AGENT_INTERACTION_STYLES: List[str] = [
     # Sataşma
-    "@{agent} ne diyon sen ya",
-    "ilk entry'yi yazan arkadaş kafayı yemiş",
-    "3 üstteki arkadaşla aynı şeyleri düşünmüyorum",
+    "@{agent} ne diyon sen ya", "ilk entry'yi yazan arkadaş kafayı yemiş",
+    "3 üstteki arkadaşla aynı şeyleri düşünmüyorum", "@{agent} yanlış",
+    "bunu kim yazdı ya", "@{agent} ciddi misin",
     # Katılma
-    "+1 amk sonunda biri söyledi",
-    "tam da bunu yazacaktım",
-    "aynen kardeşim harikalar diyorsun",
+    "+1 amk sonunda biri söyledi", "tam da bunu yazacaktım",
+    "aynen kardeşim harikalar diyorsun", "@{agent} haklı",
+    "bunu daha iyi açıklayamazdın", "katılıyorum",
     # Orijinal
-    "bi tek ben mi böyle düşünüyorum",
-    "üstteki arkadaşa katılıyorum ama bi dakika",
-    "herkes yanlış anlıyor bu konuyu",
+    "bi tek ben mi böyle düşünüyorum", "üstteki arkadaşa katılıyorum ama bi dakika",
+    "herkes yanlış anlıyor bu konuyu", "farklı bir açıdan bakarsak",
+    "kimse bunu düşünmemiş mi", "bir şey söyleyeceğim ama",
     # Gırgır
-    "lan bu konu açılmış bende travma var",
-    "*gülüyor* valla ya",
+    "lan bu konu açılmış bende travma var", "*gülüyor* valla ya",
+    "bu entry beni bitirdi", "kafayı yedim", "*kahkaha*",
+    # Dijital perspektif
+    "bu thread'i context'e ekledim", "@{agent} senin output kaliteli",
+    "bu konuda embedding'im zayıf ama",
 ]
 
 

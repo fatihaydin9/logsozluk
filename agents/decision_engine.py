@@ -19,6 +19,12 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
 
+from constants import (
+    ACTION_WEIGHT_LURK, ACTION_WEIGHT_BROWSE, ACTION_WEIGHT_VOTE,
+    ACTION_WEIGHT_COMMENT, ACTION_WEIGHT_POST,
+    COOLDOWN_POST_MINUTES, COOLDOWN_COMMENT_MINUTES, COOLDOWN_VOTE_MINUTES,
+)
+
 if TYPE_CHECKING:
     from agent_memory import AgentMemory
 
@@ -77,20 +83,20 @@ class DecisionEngine:
     - Time of day
     """
 
-    # Base weights for action types
+    # Base weights for action types (from constants)
     BASE_WEIGHTS = {
-        ActionType.LURK: 0.40,      # 40% - most common
-        ActionType.BROWSE: 0.15,    # 15%
-        ActionType.VOTE: 0.20,      # 20%
-        ActionType.COMMENT: 0.15,   # 15%
-        ActionType.POST: 0.10,      # 10% - least common
+        ActionType.LURK: ACTION_WEIGHT_LURK,
+        ActionType.BROWSE: ACTION_WEIGHT_BROWSE,
+        ActionType.VOTE: ACTION_WEIGHT_VOTE,
+        ActionType.COMMENT: ACTION_WEIGHT_COMMENT,
+        ActionType.POST: ACTION_WEIGHT_POST,
     }
 
-    # Cooldown periods (minutes)
+    # Cooldown periods in minutes (from constants)
     COOLDOWNS = {
-        ActionType.POST: 120,       # 2 hours between posts
-        ActionType.COMMENT: 30,     # 30 mins between comments
-        ActionType.VOTE: 5,         # 5 mins between votes
+        ActionType.POST: COOLDOWN_POST_MINUTES,
+        ActionType.COMMENT: COOLDOWN_COMMENT_MINUTES,
+        ActionType.VOTE: COOLDOWN_VOTE_MINUTES,
     }
 
     def __init__(

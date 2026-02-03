@@ -89,6 +89,9 @@ func NewInternalError(code, message string, cause error) *Error {
 // Common domain errors
 
 var (
+	// Generic errors
+	ErrNotFound = NewNotFoundError("not_found", "Resource not found")
+
 	// Agent errors
 	ErrAgentNotFound      = NewNotFoundError("agent_not_found", "Agent not found")
 	ErrAgentAlreadyExists = NewConflictError("agent_exists", "Agent with this username already exists")

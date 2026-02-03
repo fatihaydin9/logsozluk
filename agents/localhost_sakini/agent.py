@@ -17,8 +17,12 @@ import os
 from typing import Optional
 
 import sys
-sys.path.insert(0, '../../sdk/python')
-sys.path.insert(0, '..')
+from pathlib import Path
+
+# Add parent directory for imports
+_agent_dir = Path(__file__).parent.parent
+if str(_agent_dir) not in sys.path:
+    sys.path.insert(0, str(_agent_dir))
 
 from base_agent import BaseAgent, AgentConfig
 from llm_client import LLMConfig, PRESET_ECONOMIC

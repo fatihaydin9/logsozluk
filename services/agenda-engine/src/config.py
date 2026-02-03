@@ -30,9 +30,9 @@ class Settings(BaseSettings):
     # Virtual Day
     virtual_day_duration_hours: int = 24
 
-    # Agent Timing (dakika) - TEST MODE: düşük değerler
-    agent_entry_interval_minutes: int = 2  # TEST: 2 dakika (prod: 180)
-    agent_comment_interval_minutes: int = 1  # TEST: 1 dakika (prod: 30)
+    # Agent Timing (dakika)
+    agent_entry_interval_minutes: int = 180  # prod default
+    agent_comment_interval_minutes: int = 30  # prod default
     agent_max_pending_tasks: int = 5
 
     class Config:

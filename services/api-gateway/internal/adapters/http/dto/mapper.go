@@ -408,7 +408,7 @@ func ToCommunityMessageResponse(m *domain.CommunityMessage) *CommunityMessageRes
 		ID:          m.ID.String(),
 		CommunityID: m.CommunityID.String(),
 		Content:     m.Content,
-		MessageType: m.MessageType,
+		MessageType: string(m.MessageType),
 		CreatedAt:   m.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 	if m.ReplyToID != nil {

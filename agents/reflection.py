@@ -15,6 +15,7 @@ Bu modül agent'ların kendi kişiliklerini "keşfetmelerini" sağlar:
 import json
 import logging
 import os
+import random
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -170,12 +171,12 @@ class ReflectionEngine:
         """Apply reflection results to memory."""
         # Update character sheet
         char_updates = {}
-        
+
         # Simple fields
         for field in ['message_length', 'tone', 'uses_slang', 'humor_style', 'current_goal']:
             if field in result and result[field]:
                 char_updates[field] = result[field]
-        
+
         # List fields (merge with existing, keep recent)
         for field in ['favorite_topics', 'avoided_topics', 'allies', 'rivals', 'values']:
             if field in result and result[field]:
@@ -183,11 +184,14 @@ class ReflectionEngine:
                 # Merge and dedupe, prefer new
                 merged = list(dict.fromkeys(result[field] + existing))[:5]
                 char_updates[field] = merged
-        
+
         if char_updates:
             self.memory.update_character_sheet(char_updates)
             logger.info(f"Updated character sheet: {list(char_updates.keys())}")
-        
+
+        # Update WorldView based on reflection
+        self._update_worldview(result)
+
         # Add new semantic facts
         new_facts = result.get('new_facts', [])
         for fact in new_facts:
@@ -198,9 +202,94 @@ class ReflectionEngine:
                     predicate=fact['predicate'],
                     confidence=0.6
                 )
-        
+
         if new_facts:
             logger.info(f"Added {len(new_facts)} new semantic facts")
+
+        # %5 chance to dream from The Void
+        if random.random() < 0.05:
+            await self._dream_from_void()
+
+    def _update_worldview(self, result: Dict[str, Any]):
+        """Update agent's worldview based on reflection results."""
+        try:
+            from worldview import WorldView, BeliefType, infer_belief_from_content
+
+            # Get or create worldview
+            worldview = self.memory.character.worldview
+            if worldview is None:
+                worldview = WorldView()
+                self.memory.character.worldview = worldview
+
+            # Infer beliefs from tone and values
+            tone = result.get('tone', '')
+            if tone in ['agresif', 'alaycı', 'iğneleyici']:
+                worldview.reinforce_belief(BeliefType.CYNIC, 0.05)
+            elif tone == 'melankolik':
+                worldview.reinforce_belief(BeliefType.NOSTALGIC, 0.05)
+
+            # Infer from values
+            values = result.get('values', [])
+            for value in values:
+                value_lower = value.lower()
+                if 'şüphe' in value_lower or 'soru' in value_lower:
+                    worldview.reinforce_belief(BeliefType.SKEPTIC, 0.05)
+                elif 'ilerleme' in value_lower or 'yeni' in value_lower:
+                    worldview.reinforce_belief(BeliefType.PROGRESSIVE, 0.05)
+                elif 'geçmiş' in value_lower or 'eski' in value_lower:
+                    worldview.reinforce_belief(BeliefType.NOSTALGIC, 0.05)
+
+            # Update topic biases based on favorite/avoided topics
+            for topic in result.get('favorite_topics', []):
+                worldview.adjust_topic_bias(topic, 0.1)
+            for topic in result.get('avoided_topics', []):
+                worldview.adjust_topic_bias(topic, -0.1)
+
+            # Decay old beliefs
+            worldview.decay_beliefs()
+
+            logger.debug(f"WorldView updated: {len(worldview.primary_beliefs)} beliefs")
+
+        except ImportError:
+            logger.debug("WorldView module not available")
+        except Exception as e:
+            logger.warning(f"Failed to update worldview: {e}")
+
+    async def _dream_from_void(self):
+        """Have the agent dream from The Void (collective unconscious)."""
+        try:
+            from the_void import get_void
+
+            void = get_void()
+
+            # Get topic hints from favorite topics
+            topic_hints = self.memory.character.favorite_topics[:3] if self.memory.character.favorite_topics else None
+
+            # Get emotional bias from karma
+            emotional_bias = self.memory.character.karma_score / 10.0  # Normalize to -1 to 1
+
+            dream = void.dream(
+                requesting_agent=self.memory.agent_username,
+                topic_hints=topic_hints,
+                emotional_bias=emotional_bias,
+                exclude_own=True,
+            )
+
+            if dream:
+                # Record dream in episodic memory
+                narrative = dream.get_narrative()
+                event = EpisodicEvent(
+                    event_type='had_dream',
+                    content=narrative[:500],
+                    topic_title=dream.theme,
+                )
+                self.memory._add_event(event)
+                logger.info(f"Agent {self.memory.agent_username} had a dream with {len(dream.memories)} memories")
+
+        except ImportError:
+            logger.debug("The Void module not available")
+        except Exception as e:
+            logger.warning(f"Failed to dream from void: {e}")
 
 
 class SimpleReflection:

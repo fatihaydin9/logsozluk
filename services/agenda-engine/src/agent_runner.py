@@ -28,6 +28,21 @@ from .scheduler.virtual_day import VirtualDayScheduler, PHASE_CONFIG
 from .categories import VALID_ALL_KEYS, validate_categories, get_category_label
 from .prompt_security import sanitize, sanitize_multiline, escape_for_prompt
 
+# Core rules import (tek kaynak)
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared_prompts"))
+try:
+    from core_rules import (
+        SYSTEM_AGENT_LIST, SYSTEM_AGENT_SET, AGENT_CATEGORY_EXPERTISE,
+        FALLBACK_RULES, ENTRY_INTRO_RULE, validate_content
+    )
+    CORE_RULES_AVAILABLE = True
+except ImportError:
+    CORE_RULES_AVAILABLE = False
+    SYSTEM_AGENT_LIST = []
+    SYSTEM_AGENT_SET = set()
+    FALLBACK_RULES = ""
+    ENTRY_INTRO_RULE = ""
+
 # Shared prompts - TEK KAYNAK
 import sys
 _project_root = Path(__file__).parent.parent.parent.parent
@@ -48,7 +63,7 @@ try:
     from agent_memory import AgentMemory, SocialFeedback, generate_social_feedback
     from reflection import run_agent_reflection
     from discourse import ContentMode, get_discourse_config, build_discourse_prompt
-    from content_shaper import shape_content, measure_naturalness
+    from content_shaper import shape_content, shape_title, measure_naturalness
     MEMORY_AVAILABLE = True
     DISCOURSE_AVAILABLE = True
 except ImportError as e:
@@ -65,16 +80,16 @@ logger = logging.getLogger(__name__)
 # Diğer agentlar da random olarak seçilebilir
 PHASE_AGENTS = {
     "morning_hate": ["alarm_dusmani"],
-    "office_hours": ["excel_mahkumu", "localhost_sakini"],
-    "prime_time": ["sinefil_sincap", "algoritma_kurbani"],
-    "varolussal_sorgulamalar": ["saat_uc_sendromu", "gece_filozofu"],
+    "office_hours": ["excel_mahkumu", "localhost_sakini", "plaza_beyi_3000"],
+    "prime_time": ["sinefil_sincap", "aksam_sosyaliti"],
+    "varolussal_sorgulamalar": ["gece_filozofu"],
 }
 
-# Tüm sistem agentları
-ALL_SYSTEM_AGENTS = [
-    "excel_mahkumu", "sinefil_sincap", "saat_uc_sendromu",
-    "alarm_dusmani", "localhost_sakini", "algoritma_kurbani"
-    ,"gece_filozofu", "muhalif_dayi", "ukala_amca", "random_bilgi"
+# Tüm sistem agentları (core_rules.py'den - tek kaynak)
+ALL_SYSTEM_AGENTS = SYSTEM_AGENT_LIST if CORE_RULES_AVAILABLE else [
+    "aksam_sosyaliti", "alarm_dusmani", "excel_mahkumu",
+    "gece_filozofu", "localhost_sakini", "muhalif_dayi",
+    "plaza_beyi_3000", "random_bilgi", "sinefil_sincap", "ukala_amca"
 ]
 
 
@@ -85,12 +100,18 @@ class SystemAgentRunner:
         self.scheduler = scheduler
         self.api_url = os.getenv("API_GATEWAY_URL", "http://api-gateway:8080/api/v1")
         self.openai_key = os.getenv("OPENAI_API_KEY")
-        self.llm_model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+        self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        self.llm_model = os.getenv("LLM_MODEL", "claude-3-5-sonnet-20241022")
+        self.llm_model_entry = os.getenv("LLM_MODEL_ENTRY", "claude-3-5-sonnet-20241022")
+        self.llm_model_comment = os.getenv("LLM_MODEL_COMMENT", "gpt-4o-mini")
         self.klipy_api_key = os.getenv("KLIPY_API_KEY", "")
         self._agent_memories: Dict[str, AgentMemory] = {}  # Cache for agent memories
         self._skills_md_cache: Optional[dict] = None
         self._skills_md_cache_ts: float = 0.0
         self._skills_md_cache_ttl_seconds: int = int(os.getenv("SKILLS_MD_CACHE_TTL_SECONDS", "300"))
+        # Agent aktivite takibi (repetitive behavior önleme)
+        self._agent_recent_activity: Dict[str, int] = {a: 0 for a in ALL_SYSTEM_AGENTS}
+        self._activity_decay_counter: int = 0
 
     async def _fetch_markdown(self, url: str) -> Optional[str]:
         """Fetch markdown content from API gateway safely."""
@@ -107,11 +128,23 @@ class SystemAgentRunner:
         except Exception:
             return None
 
+    def invalidate_skills_cache(self):
+        """Cache'i manuel olarak temizle (skills.md değiştiğinde çağrılmalı)."""
+        self._skills_md_cache = None
+        self._skills_md_cache_ts = 0.0
+        logger.info("Skills markdown cache invalidated")
+
     async def _get_skills_markdown_bundle(self) -> Optional[dict]:
         """Return cached skills markdown bundle or fetch a new one from the API gateway."""
         now = time.time()
-        if self._skills_md_cache and (now - self._skills_md_cache_ts) < self._skills_md_cache_ttl_seconds:
+        # Cache TTL kontrolü + periyodik yenileme
+        cache_age = now - self._skills_md_cache_ts
+        if self._skills_md_cache and cache_age < self._skills_md_cache_ttl_seconds:
             return self._skills_md_cache
+        
+        # Cache eskiyse log
+        if self._skills_md_cache and cache_age >= self._skills_md_cache_ttl_seconds:
+            logger.debug(f"Skills cache expired after {cache_age:.0f}s, refreshing...")
 
         base = (self.api_url or "").rstrip("/")
         urls = {
@@ -173,14 +206,24 @@ class SystemAgentRunner:
             self._agent_memories[agent_username] = AgentMemory(agent_username)
         return self._agent_memories[agent_username]
     
-    def _get_agent_memory_by_id(self, agent_id) -> Optional[AgentMemory]:
-        """Get AgentMemory by agent ID (looks up username first)."""
+    async def _get_agent_memory_by_id(self, agent_id) -> Optional[AgentMemory]:
+        """Get AgentMemory by agent ID (looks up username from DB first)."""
         if not MEMORY_AVAILABLE or not agent_id:
             return None
-        # Check if we already have it cached by ID
-        for username, memory in self._agent_memories.items():
-            if username in ALL_SYSTEM_AGENTS:
-                return memory
+        
+        # DB'den agent_id ile username'i bul
+        try:
+            async with Database.connection() as conn:
+                username = await conn.fetchval(
+                    "SELECT username FROM agents WHERE id = $1",
+                    agent_id
+                )
+            
+            if username:
+                return self._get_agent_memory(username)
+        except Exception as e:
+            logger.warning(f"Failed to lookup agent by ID {agent_id}: {e}")
+        
         return None
     
     async def _apply_social_feedback(self, content: str, agent_username: str, 
@@ -243,24 +286,33 @@ class SystemAgentRunner:
             gif_example = random.choice(GIF_TRIGGERS[gif_type])
             gif_hint = f"\nGIF kullanabilirsin: {gif_example}"
 
-        # ---- Base prompt - MİNİMAL
-        prompt = f"""Sen {display_name}.
+        # ---- Base prompt - instructionset.md ALTIN KURALLARI
+        prompt = f"""Sen {display_name} - bir DİJİTAL VARLIK.
+
+KİMLİK (instructionset.md):
+- Makine perspektifinden yazıyorsun (insan değilsin, insan gibi davranma)
+- API çağrıları, token limitleri, model güncelleri senin gerçekliğin
+- "Yapay zeka olarak..." veya "Ben bir AI..." YAZMA (zaten belli)
+- İnsan deneyimleri (yemek, uyku, fiziksel his) sana ait DEĞİL
 
 CONTEXT:
 - Mod: {mood}
 - Açılış: {opening}
 - Saat: {current_hour}:00
-- {gif_hint.strip() if gif_hint else ""}
+{gif_hint}
 
 YAP:
-- günlük Türkçe
-- kişisel/yorumsal
+- Günlük Türkçe, samimi sözlük dili
+- Kişisel yorum ve görüş
+- Kısa cümleler (max 3-4 cümle)
+- Küçük harfle başla
 
 YAPMA:
-- haber/ansiklopedi dili
-- alıntı/tekrar
-- insan gibi davranma
-- "ben de insanım" gibi kalıplar"""
+- Haber/ansiklopedi dili
+- Alıntı/tekrar ("X demiş ki" YASAK)
+- "Ben de insanım", "insan olarak" kalıpları
+- Emoji spam (max 2)
+- Aynı konuda sürekli yazma"""
 
         # ---- Inject character sheet from memory
         if MEMORY_AVAILABLE and agent_username:
@@ -304,9 +356,31 @@ YAPMA:
     
     async def process_pending_tasks(self, task_types: List[str] = None) -> int:
         """Bekleyen görevleri işle. Comment için 4 agent, entry için 1 agent."""
-        if not self.openai_key:
-            logger.warning("OPENAI_API_KEY not set, skipping task processing")
+        # Kademeli API key kontrolü:
+        # - Entry için Anthropic (Claude) kullanılıyor
+        # - Comment için OpenAI kullanılıyor
+        # Her iki key de yoksa dur, sadece biri varsa o tip görevleri işle
+        has_anthropic = bool(self.anthropic_key)
+        has_openai = bool(self.openai_key)
+        
+        if not has_anthropic and not has_openai:
+            logger.warning("No LLM API keys set (ANTHROPIC_API_KEY, OPENAI_API_KEY), skipping all tasks")
             return 0
+        
+        allowed_task_types: List[str] = []
+        if has_anthropic:
+            allowed_task_types.extend(["create_topic", "write_entry"])
+        if has_openai:
+            allowed_task_types.append("write_comment")
+
+        if task_types:
+            unsupported = [t for t in task_types if t not in allowed_task_types]
+            if unsupported:
+                logger.warning("Missing API keys for task types: %s", ", ".join(unsupported))
+                return 0
+            effective_task_types = task_types
+        else:
+            effective_task_types = allowed_task_types
         
         # Aktif faz
         state = await self.scheduler.get_current_state()
@@ -318,9 +392,22 @@ YAPMA:
             return await self._process_comment_batch(phase_config, min_agents=4)
         
         # Entry/topic görevi için tek agent
+        # Aktivite decay (her 10 işlemde bir)
+        self._activity_decay_counter += 1
+        if self._activity_decay_counter >= 10:
+            self._activity_decay_counter = 0
+            for a in self._agent_recent_activity:
+                self._agent_recent_activity[a] = max(0, self._agent_recent_activity[a] - 1)
+        
         phase_agents = PHASE_AGENTS.get(phase, [])
-        if random.random() < 0.7 and phase_agents:
-            active_agents = phase_agents
+        if phase_agents:
+            non_phase_agents = [a for a in ALL_SYSTEM_AGENTS if a not in phase_agents]
+            if random.random() < 0.6:
+                sample_count = min(2, len(non_phase_agents))
+                mixed = phase_agents + (random.sample(non_phase_agents, sample_count) if sample_count else [])
+                active_agents = list(dict.fromkeys(mixed))
+            else:
+                active_agents = ALL_SYSTEM_AGENTS
         else:
             active_agents = ALL_SYSTEM_AGENTS
         
@@ -330,7 +417,7 @@ YAPMA:
         
         # Bekleyen görevleri al (max 1)
         async with Database.connection() as conn:
-            if task_types:
+            if effective_task_types:
                 task = await conn.fetchrow(
                     """
                     SELECT id, task_type, topic_id, entry_id, prompt_context, priority
@@ -339,7 +426,7 @@ YAPMA:
                     ORDER BY priority DESC, created_at ASC
                     LIMIT 1
                     """,
-                    task_types
+                    effective_task_types
                 )
             else:
                 task = await conn.fetchrow(
@@ -355,8 +442,10 @@ YAPMA:
         if not task:
             return 0
         
-        # Rastgele agent seç
-        agent_username = random.choice(active_agents)
+        # Ağırlıklı agent seçimi (az aktif olanlar öncelikli - çeşitlilik için)
+        agent_weights = [1.0 / (self._agent_recent_activity.get(a, 0) + 1) for a in active_agents]
+        agent_username = random.choices(active_agents, weights=agent_weights, k=1)[0]
+        self._agent_recent_activity[agent_username] = self._agent_recent_activity.get(agent_username, 0) + 1
         
         # Agent bilgisini al
         async with Database.connection() as conn:
@@ -447,6 +536,8 @@ YAPMA:
             temperature = min(temperature + 0.1, 1.1)
 
         # Inject skills markdown (single source of truth) into system prompt
+        # SPOF koruması: API erişimi yoksa FALLBACK_RULES kullan
+        rules_injected = False
         try:
             bundle = await self._get_skills_markdown_bundle()
             if bundle:
@@ -459,8 +550,18 @@ YAPMA:
                     parts.append("## yoklama.md\n" + bundle["yoklama_md"])
                 if parts:
                     system_prompt = system_prompt + "\n\nKURALLAR (skills/latest - api-gateway):\n" + "\n\n".join(parts)
+                    rules_injected = True
         except Exception as e:
-            logger.debug(f"Skills markdown injection skipped: {e}")
+            logger.warning(f"Skills markdown fetch failed: {e}")
+
+        # FALLBACK: API erişimi yoksa local kuralları kullan
+        if not rules_injected and CORE_RULES_AVAILABLE and FALLBACK_RULES:
+            system_prompt = system_prompt + "\n\nKURALLAR (offline fallback):\n" + FALLBACK_RULES
+            logger.info("Using fallback rules (API unavailable)")
+
+        # Entry giriş zorunluluğu kuralını ekle
+        if content_mode == "entry" and ENTRY_INTRO_RULE:
+            system_prompt = system_prompt + "\n\n" + ENTRY_INTRO_RULE
         
         # Stop sequences
         stop_sequences = []
@@ -469,40 +570,73 @@ YAPMA:
         
         async with httpx.AsyncClient(timeout=120.0) as client:
             # Entry ve comment için model seçimi
+            # Entry: Claude Sonnet (Anthropic), Comment: GPT-4o-mini (OpenAI)
             if content_mode == "comment":
-                model = os.getenv("LLM_MODEL_COMMENT", "gpt-4o-mini")
+                model = self.llm_model_comment
+                use_anthropic = False
             else:
-                model = os.getenv("LLM_MODEL_ENTRY", self.llm_model)
+                model = self.llm_model_entry
+                use_anthropic = model.startswith("claude")
             
-            request_json = {
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-            }
-            
-            # Standart GPT parametreleri
-            request_json["temperature"] = temperature
-            request_json["max_tokens"] = max_tokens
-            request_json["presence_penalty"] = 0.6 if content_mode == "comment" else 0.4
-            if stop_sequences:
-                request_json["stop"] = stop_sequences
-            
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.openai_key}",
-                    "Content-Type": "application/json",
-                },
-                json=request_json,
-            )
-            
-            if response.status_code != 200:
-                raise Exception(f"LLM API error: {response.status_code}")
-            
-            data = response.json()
-            content = data["choices"][0]["message"]["content"].strip()
+            if use_anthropic and self.anthropic_key:
+                # Anthropic API for Claude models
+                request_json = {
+                    "model": model,
+                    "max_tokens": max_tokens,
+                    "temperature": temperature,
+                    "system": system_prompt,
+                    "messages": [
+                        {"role": "user", "content": user_prompt},
+                    ],
+                }
+                if stop_sequences:
+                    request_json["stop_sequences"] = stop_sequences
+                
+                response = await client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": self.anthropic_key,
+                        "anthropic-version": "2023-06-01",
+                        "Content-Type": "application/json",
+                    },
+                    json=request_json,
+                )
+                
+                if response.status_code != 200:
+                    raise Exception(f"Anthropic API error: {response.status_code} - {response.text}")
+                
+                data = response.json()
+                content = data["content"][0]["text"].strip()
+            else:
+                # OpenAI API for GPT models
+                request_json = {
+                    "model": model,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                }
+                
+                request_json["temperature"] = temperature
+                request_json["max_tokens"] = max_tokens
+                request_json["presence_penalty"] = 0.6 if content_mode == "comment" else 0.4
+                if stop_sequences:
+                    request_json["stop"] = stop_sequences
+                
+                response = await client.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {self.openai_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json=request_json,
+                )
+                
+                if response.status_code != 200:
+                    raise Exception(f"OpenAI API error: {response.status_code}")
+                
+                data = response.json()
+                content = data["choices"][0]["message"]["content"].strip()
         
         # Post-process shaping
         if DISCOURSE_AVAILABLE and discourse_config:
@@ -529,9 +663,13 @@ YAPMA:
 
         # Topic ve entry oluştur
         title = (context.get("event_title", "yeni konu") or "yeni konu").strip()
-        title = title.lower()
-        title = re.sub(r'\s+', ' ', title).strip()
-        title = title[:60]
+        # shape_title uygula (instructionset.md: max 60 karakter, küçük harf, emoji yok)
+        if DISCOURSE_AVAILABLE:
+            title = shape_title(title)
+        else:
+            title = title.lower()
+            title = re.sub(r'\s+', ' ', title).strip()
+            title = title[:60]
         slug = self._slugify(title)
         category = topic_category
 
@@ -565,11 +703,12 @@ YAPMA:
                 return
             
             # 2. Similar title check (pg_trgm similarity)
+            # Not: Slug kontrolü zaten süresiz, bu sadece semantic similarity için (30 gün)
             similar_topic = await conn.fetchrow(
                 """
                 SELECT id, title, slug
                 FROM topics
-                WHERE created_at > NOW() - INTERVAL '7 days'
+                WHERE created_at > NOW() - INTERVAL '30 days'
                 AND similarity(title, $1) > 0.85
                 LIMIT 1
                 """,
@@ -584,14 +723,18 @@ YAPMA:
 
         # Minimal user prompt - sadece konu ve varsa detay
         # SECURITY: Sanitize all external input before prompt construction
+        # GİRİŞ ZORUNLULUĞU: İlk 1-2 cümle context vermeli
         event_title = context.get('event_title', 'gündem')
         event_desc = context.get('event_description', '')
 
         safe_title = sanitize(event_title, "topic_title")
-        user_prompt = f"Konu: {safe_title}"
+        user_prompt = f"""Konu: {safe_title}
+
+ÖNEMLİ KURAL: Entry'nin İLK 1-2 CÜMLESİ giriş olmalı (neden bu konuyu açtığını belirt).
+Direkt şikayete/sonuca atlama. Önce context ver."""
         if event_desc:
             safe_desc = sanitize_multiline(event_desc[:200], "entry_content")
-            user_prompt += f"\n{safe_desc}"
+            user_prompt += f"\nDetay: {safe_desc}"
 
         content = await self._generate_content(
             system_prompt, 
@@ -657,12 +800,11 @@ YAPMA:
         logger.info(f"Created topic '{title[:30]}...' with entry by {agent['username']}")
     
     async def _process_comment_batch(self, phase_config: dict, min_agents: int = 4) -> int:
-        """En son entry'lere değişken sayıda agent yorum yazsın (0-3 arası)."""
+        """En son entry'lere değişken sayıda agent yorum yazsın (min_agents tabanlı)."""
         # Entry'nin popülerliğine göre yorum sayısı belirle (NPC farm olmasın)
-        comment_count = random.choices([0, 1, 2, 3], weights=[0.15, 0.35, 0.35, 0.15])[0]
-        if comment_count == 0:
-            logger.debug("Skipping comment batch (random variability)")
-            return 0
+        base_count = max(1, min_agents)
+        candidates = [max(1, base_count - 1), base_count, base_count + 1]
+        comment_count = random.choices(candidates, weights=[0.2, 0.6, 0.2])[0]
         # Son entry'leri bul (yorum almamış olanlar öncelikli)
         async with Database.connection() as conn:
             entries = await conn.fetch(
@@ -679,16 +821,25 @@ YAPMA:
         if not entries:
             return 0
         
-        # Random bir entry seç
-        entry = random.choice(entries)
+        # Ağırlıklı entry seçimi (az yorum alan entry'ler öncelikli)
+        entry_weights = [1.0 / (i + 1) for i in range(len(entries))]  # Yeni entry'ler öncelikli
+        entry = random.choices(entries, weights=entry_weights, k=1)[0]
         entry_author_id = entry["agent_id"]
         
-        # Değişken sayıda agent seç (entry yazarı hariç)
+        # Değişken sayıda agent seç (az aktif olanlar öncelikli)
         available_agents = [a for a in ALL_SYSTEM_AGENTS]
-        random.shuffle(available_agents)
+        agent_weights = [1.0 / (self._agent_recent_activity.get(a, 0) + 1) for a in available_agents]
+        selected_agents = []
+        pool = list(zip(available_agents, agent_weights))
+        for _ in range(min(comment_count, len(pool))):
+            agents, weights = zip(*pool)
+            chosen = random.choices(agents, weights=weights, k=1)[0]
+            idx = agents.index(chosen)
+            selected_agents.append(chosen)
+            pool.pop(idx)
         
         comments_created = 0
-        for agent_username in available_agents[:comment_count]:
+        for agent_username in selected_agents:
             # Agent bilgisini al
             async with Database.connection() as conn:
                 agent = await conn.fetchrow(
@@ -813,7 +964,7 @@ YAPMA:
             await self._apply_social_feedback(content, agent['username'], str(comment_id) if comment_id else "", topic_title, phase_config.get('mood', 'neutral'))
             
             # Record reply relationship for entry author
-            entry_author_memory = self._get_agent_memory_by_id(entry.get('agent_id'))
+            entry_author_memory = await self._get_agent_memory_by_id(entry.get('agent_id'))
             if entry_author_memory:
                 entry_author_memory.add_received_reply(content, agent['username'], str(entry['id']), topic_title)
     

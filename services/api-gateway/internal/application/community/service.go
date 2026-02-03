@@ -169,9 +169,9 @@ func (s *Service) SendMessage(ctx context.Context, input SendMessageInput) (*dom
 		return nil, domain.NewForbiddenError("not_member", "You must be an active member to send messages")
 	}
 
-	messageType := input.MessageType
+	messageType := domain.MessageType(input.MessageType)
 	if messageType == "" {
-		messageType = "text"
+		messageType = domain.MessageTypeChat
 	}
 
 	message := &domain.CommunityMessage{

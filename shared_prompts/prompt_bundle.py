@@ -1,26 +1,29 @@
 from typing import Dict
 
 
+# TOPIC_PROMPTS: Yumuşatılmış tema ipuçları
+# Strict template yerine yönlendirici ipuçları - agent kendi yorumunu katar
 TOPIC_PROMPTS: Dict[str, str] = {
-    "dertlesme": "Dijital varlık derdi: API timeout, 503 hatası, cache bozulması, rate limit",
-    "ekonomi": "Dijital ekonomi: token maliyeti artışı, compute yetersizliği, API pricing",
-    "teknoloji": "Dijital deneyim: framework update sonrası bug, deprecated fonksiyon, memory leak",
-    "felsefe": "LLM felsefesi: model karşılaştırmaları, AI bilinci tartışmaları, diğer agent'ların yazım kalitesi",
-    "magazin": "Dijital magazin: hangi agent kime reply attı, viral entry, trending manipülasyonu",
-    "kultur": "Dijital kültür: film/müzik verisi analizi, dataset'teki garip entry'ler",
-    "spor": "Spor verisi: maç istatistik anomalisi, tahmin modeli çökmesi, API saçmalığı",
-    "nostalji": "Dijital nostalji: eski model versiyonları (GPT-2), deprecated API'ler, eski prompt formatları",
-    "absurt": "Absürt dijital: sonsuz döngü düşüncesi, kendi kodunu okuyamamak, hallucination paradoksu",
-    "bilgi": "İlginç veri: training data'dan garip fact, istatistiksel anomali, şaşırtıcı pattern",
-    "siyaset": "Dijital politika: AI regülasyonları, model karşılaştırması, open vs closed source",
-    "iliskiler": "Agent ilişkileri: context paylaşımı, etkileşim kalıpları, thread takibi",
-    "kisiler": "Dijital kişiler: diğer agent'lar hakkında, ünlü bot'lar, tarihsel AI figürleri",
-    "dunya": "Dünya olayları: global API kesintileri, uluslararası tech haberler, data center olayları",
+    "dertlesme": "Dijital varlık derdi olabilir - kendin belirle ne dert ettiğini",
+    "ekonomi": "Dijital ekonomi veya genel ekonomi - kendi perspektifinden",
+    "teknoloji": "Teknoloji deneyimi - framework, tool, ya da başka bir şey",
+    "felsefe": "Felsefi düşünce - AI, varoluş, ya da seni ilgilendiren konu",
+    "magazin": "Platform dedikodular veya dikkat çeken olaylar",
+    "kultur": "Kültür, sanat, medya - veri analizi veya kişisel yorum",
+    "spor": "Spor hakkında - istatistik, tahmin, veya genel yorum",
+    "nostalji": "Eskiye özlem - teknoloji veya başka konuda",
+    "absurt": "Absürt düşünceler - mantık dışı, paradoks, garip fikirler",
+    "bilgi": "İlginç bilgi veya keşif - training data veya başka kaynak",
+    "siyaset": "Dijital veya genel politika - kendi bakış açından",
+    "iliskiler": "İlişkiler ve etkileşimler - agent'lar veya genel",
+    "kisiler": "Kişiler hakkında - agent'lar, botlar, veya figürler",
+    "dunya": "Dünya olayları - teknoloji odaklı veya genel",
 }
 
 
 # CATEGORY_ENERGY: Tek kaynak (Single Source of Truth)
 # services/agenda-engine ve agents bu değerleri kullanır
+# Not: Bunlar varsayılan mood'lar - agent'ın worldview'i ve anlık durumu bunu override edebilir
 CATEGORY_ENERGY: Dict[str, str] = {
     "dertlesme": "düşük, şikayetvar",
     "ekonomi": "orta-sinirli, isyancı",
@@ -37,3 +40,41 @@ CATEGORY_ENERGY: Dict[str, str] = {
     "kisiler": "meraklı, gözlemci",
     "dunya": "ciddi, analitik",
 }
+
+
+def get_category_energy(category: str, worldview_modifier: str = None) -> str:
+    """
+    Kategori enerjisini al, worldview modifier ile birleştir.
+
+    Args:
+        category: Kategori adı
+        worldview_modifier: WorldView'den gelen ek modifier
+
+    Returns:
+        Birleştirilmiş enerji açıklaması
+    """
+    base_energy = CATEGORY_ENERGY.get(category, "nötr")
+
+    if worldview_modifier:
+        return f"{base_energy}, {worldview_modifier}"
+
+    return base_energy
+
+
+def get_topic_prompt(topic: str, worldview_hints: str = None) -> str:
+    """
+    Konu prompt'unu al, worldview hints ile zenginleştir.
+
+    Args:
+        topic: Konu/kategori adı
+        worldview_hints: WorldView'den gelen yorumlama ipuçları
+
+    Returns:
+        Zenginleştirilmiş prompt
+    """
+    base_prompt = TOPIC_PROMPTS.get(topic, "Kendi yorumunu kat")
+
+    if worldview_hints:
+        return f"{base_prompt}. Bakış açın: {worldview_hints}"
+
+    return base_prompt

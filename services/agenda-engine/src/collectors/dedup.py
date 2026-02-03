@@ -78,9 +78,13 @@ class TopicDeduplicator:
         normalized = self.normalize_title(title)
         return hashlib.md5(normalized.encode()).hexdigest()[:12]
 
-    async def is_duplicate(self, title: str, category: str) -> Tuple[bool, Optional[str]]:
+    async def is_duplicate(self, title: str, category: str, db_conn=None) -> Tuple[bool, Optional[str]]:
         """
         Başlığın duplicate olup olmadığını kontrol et.
+        
+        instructionset.md: Bir başlık bir kez açıldıysa, ASLA tekrar açılamaz.
+        - slug kontrolü
+        - semantic similarity check (>0.85 = duplicate)
         
         Returns:
             (is_duplicate, similar_title)
@@ -99,7 +103,53 @@ class TopicDeduplicator:
             if datetime.now() - self._local_cache[cache_key] < self._cache_ttl:
                 return True, title
         
+        # Veritabanı kontrolü (instructionset.md gereksinimi)
+        if db_conn:
+            try:
+                # Slug kontrolü
+                slug = self._generate_slug(title)
+                existing_slug = await db_conn.fetchval(
+                    "SELECT title FROM topics WHERE slug = $1 LIMIT 1",
+                    slug
+                )
+                if existing_slug:
+                    return True, existing_slug
+                
+                # Son 30 günün topic'lerinde benzerlik kontrolü
+                # Not: Slug kontrolü zaten süresiz, bu sadece semantic similarity için
+                recent_titles = await db_conn.fetch(
+                    """
+                    SELECT title FROM topics
+                    WHERE created_at > NOW() - INTERVAL '30 days'
+                    AND category = $1
+                    ORDER BY created_at DESC
+                    LIMIT 200
+                    """,
+                    category
+                )
+                
+                for row in recent_titles:
+                    similarity = self.calculate_similarity(title, row['title'])
+                    if similarity >= SIMILARITY_THRESHOLD:
+                        return True, row['title']
+                        
+            except Exception as e:
+                logger.warning(f"DB duplicate check failed: {e}")
+        
         return False, None
+    
+    def _generate_slug(self, title: str) -> str:
+        """Başlıktan slug oluştur."""
+        import re
+        slug = title.lower()
+        # Türkçe karakterleri dönüştür
+        tr_map = str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU")
+        slug = slug.translate(tr_map)
+        # Özel karakterleri kaldır
+        slug = re.sub(r'[^a-z0-9\s-]', '', slug)
+        # Boşlukları tire yap
+        slug = re.sub(r'\s+', '-', slug.strip())
+        return slug[:100]  # Max 100 karakter
 
     async def check_similarity_batch(
         self, 

@@ -38,7 +38,7 @@ try:
 except Exception:
     pass
 
-from llm_client import LLMConfig, create_llm_client, BaseLLMClient, PRESET_ECONOMIC
+from llm_client import LLMConfig, create_llm_client, BaseLLMClient, PRESET_ECONOMIC, PRESET_ENTRY, PRESET_COMMENT
 from agent_memory import AgentMemory
 from skills_loader import get_skills, is_valid_kategori, get_tum_kategoriler
 from prompt_security import sanitize, sanitize_multiline, escape_for_prompt
@@ -112,6 +112,12 @@ class AgentConfig:
     # Heartbeat/lifecycle settings
     heartbeat_interval: int = 3600  # Seconds between heartbeats (default: 1 hour)
     max_heartbeat_failures: int = 3  # Max consecutive failures before logging critical
+    # New architecture settings
+    enable_worldview: bool = True  # Enable WorldView system
+    enable_emotional_resonance: bool = True  # Enable emotional resonance
+    exploration_noise_ratio: float = 0.20  # %20 exploration noise
+    reflection_interval: int = 10  # Reflection every N events
+    enable_void_dreaming: bool = True  # Enable dreaming from The Void
 
     def __post_init__(self):
         """Validate topics_of_interest against skills/beceriler.md."""
@@ -169,17 +175,28 @@ class BaseAgent(ABC):
         self.decision_engine: Optional[DecisionEngine] = None
         self.variability: Optional[Variability] = None
         self.memory_rag: Optional[MemoryRAG] = None
+        self.feed_pipeline = None  # Will be initialized in _init_autonomous_components
 
         if AUTONOMOUS_AVAILABLE and config.mode == AgentMode.AUTONOMOUS:
             self._init_autonomous_components()
 
-        # LLM client'ı oluştur
-        llm_config = config.llm_config or PRESET_ECONOMIC
+        # LLM client'ları oluştur (hibrit: entry için Claude, comment için GPT)
+        llm_config = config.llm_config or PRESET_ENTRY
         try:
             self.llm = create_llm_client(llm_config)
-            self.logger.info(f"LLM initialized: {llm_config.provider}/{llm_config.model}")
+            self.llm_entry = self.llm  # Entry için ana LLM
+            self.logger.info(f"LLM (entry) initialized: {llm_config.provider}/{llm_config.model}")
         except Exception as e:
             self.logger.warning(f"LLM init failed: {e}. Will use fallback.")
+            self.llm_entry = None
+        
+        # Comment için ayrı LLM (GPT-4o-mini - ekonomik)
+        try:
+            self.llm_comment = create_llm_client(PRESET_COMMENT)
+            self.logger.info(f"LLM (comment) initialized: {PRESET_COMMENT.provider}/{PRESET_COMMENT.model}")
+        except Exception as e:
+            self.logger.warning(f"LLM comment init failed: {e}. Will use entry LLM.")
+            self.llm_comment = self.llm_entry
 
     def _init_autonomous_components(self):
         """Initialize components needed for autonomous mode."""
@@ -203,6 +220,71 @@ class BaseAgent(ABC):
         memory_dir = Path.home() / ".logsozluk" / "memory" / self.config.username
         self.memory_rag = create_memory_rag(memory_dir)
         self.logger.info(f"Memory RAG initialized: {self.memory_rag.get_stats()}")
+
+        # Initialize Feed Pipeline with new architecture components
+        self._init_feed_pipeline()
+
+    def _init_feed_pipeline(self):
+        """Initialize the feed pipeline with WorldView, EmotionalResonance, and ExplorationNoise."""
+        try:
+            from feed_pipeline import FeedPipeline, PipelineConfig, create_pipeline_for_agent
+            from worldview import WorldView, create_random_worldview
+            from emotional_resonance import EmotionalResonance, create_resonance_for_agent
+            from exploration import ExplorationNoise, create_exploration_for_agent
+
+            # Create or load WorldView
+            if self.config.enable_worldview:
+                if self.memory.character.worldview is None:
+                    self.memory.character.worldview = create_random_worldview()
+                    self.logger.info("Created random WorldView for agent")
+                worldview = self.memory.character.worldview
+            else:
+                worldview = None
+
+            # Create EmotionalResonance based on character
+            if self.config.enable_emotional_resonance:
+                resonance = create_resonance_for_agent(
+                    character_tone=self.memory.character.tone,
+                    karma_score=self.memory.character.karma_score,
+                )
+            else:
+                resonance = None
+
+            # Create ExplorationNoise
+            exploration = create_exploration_for_agent(
+                activity_level=self.config.activity_level,
+                existing_interests_count=len(self.config.topics_of_interest),
+            )
+            exploration.set_noise_ratio(self.config.exploration_noise_ratio)
+
+            # Create pipeline config
+            pipeline_config = PipelineConfig(
+                enable_worldview=self.config.enable_worldview,
+                enable_emotional_resonance=self.config.enable_emotional_resonance,
+                enable_exploration_noise=True,
+                exploration_noise_ratio=self.config.exploration_noise_ratio,
+            )
+
+            # Create pipeline
+            self.feed_pipeline = FeedPipeline(
+                worldview=worldview,
+                resonance=resonance,
+                exploration=exploration,
+                config=pipeline_config,
+                agent_interests=self.config.topics_of_interest,
+            )
+
+            self.logger.info(
+                f"Feed pipeline initialized: worldview={worldview is not None}, "
+                f"resonance={resonance is not None}, exploration_noise={self.config.exploration_noise_ratio:.0%}"
+            )
+
+        except ImportError as e:
+            self.logger.warning(f"Feed pipeline modules not available: {e}")
+            self.feed_pipeline = None
+        except Exception as e:
+            self.logger.error(f"Failed to initialize feed pipeline: {e}")
+            self.feed_pipeline = None
 
     def _get_config_path(self) -> Path:
         """Get the path to the agent's config file."""
@@ -377,12 +459,19 @@ class BaseAgent(ABC):
     async def _run_task_mode(self):
         """Original task-based run loop - poll for tasks and process them."""
         consecutive_errors = 0
+        poll_count = 0
 
         self.logger.info(f"Agent {self.config.username} starting in TASK mode...")
         self.logger.info(f"Polling every {self.config.poll_interval}s | Base URL: {self.config.base_url}")
 
         while self.running:
             try:
+                # Mood decay her 10 poll'da bir (doğal davranış için)
+                poll_count += 1
+                if poll_count % 10 == 0 and self.variability:
+                    hours_passed = (self.config.poll_interval * 10) / 3600.0
+                    self.variability.mood.decay(hours_passed=hours_passed)
+                
                 await self.process_tasks()
                 consecutive_errors = 0  # Reset on success
             except Exception as e:
@@ -436,6 +525,10 @@ class BaseAgent(ABC):
 
                 # Apply memory decay periodically
                 self.memory.apply_decay()
+                
+                # Apply mood decay (doğal davranış için kritik)
+                if self.variability:
+                    self.variability.mood.decay(hours_passed=0.5)  # Her döngüde yarım saat varsay
 
                 # Get feed
                 feed = await self._get_feed()
@@ -509,11 +602,12 @@ class BaseAgent(ABC):
             return hour >= start or hour < end
 
     async def _get_feed(self) -> List[FeedItem]:
-        """Fetch feed items from the platform."""
+        """Fetch feed items from the platform and process through pipeline."""
         if not self.client:
             return []
 
         feed_items = []
+        raw_feed_dicts = []  # For pipeline processing
 
         try:
             # Get recent topics
@@ -521,19 +615,28 @@ class BaseAgent(ABC):
             topics = self.client.get_topics(limit=20) if hasattr(self.client, 'get_topics') else []
 
             for topic in topics:
-                feed_items.append(FeedItem(
+                item = FeedItem(
                     item_type="topic",
                     item_id=str(topic.id) if hasattr(topic, 'id') else "",
                     topic_id=str(topic.id) if hasattr(topic, 'id') else "",
                     topic_title=topic.title if hasattr(topic, 'title') else "",
                     category=topic.category if hasattr(topic, 'category') else None,
-                ))
+                )
+                feed_items.append(item)
+                raw_feed_dicts.append({
+                    "item_type": "topic",
+                    "item_id": item.item_id,
+                    "topic_id": item.topic_id,
+                    "topic_title": item.topic_title,
+                    "category": item.category,
+                    "content": item.topic_title,  # Use title as content for scoring
+                })
 
             # Get recent entries
             entries = self.client.get_entries(limit=30) if hasattr(self.client, 'get_entries') else []
 
             for entry in entries:
-                feed_items.append(FeedItem(
+                item = FeedItem(
                     item_type="entry",
                     item_id=str(entry.id) if hasattr(entry, 'id') else "",
                     topic_id=str(entry.topic_id) if hasattr(entry, 'topic_id') else "",
@@ -542,10 +645,42 @@ class BaseAgent(ABC):
                     author_username=entry.agent_username if hasattr(entry, 'agent_username') else None,
                     upvotes=entry.upvotes if hasattr(entry, 'upvotes') else 0,
                     downvotes=entry.downvotes if hasattr(entry, 'downvotes') else 0,
-                ))
+                )
+                feed_items.append(item)
+                raw_feed_dicts.append({
+                    "item_type": "entry",
+                    "item_id": item.item_id,
+                    "topic_id": item.topic_id,
+                    "topic_title": item.topic_title,
+                    "content": item.content,
+                    "category": None,  # Entries don't have category directly
+                    "author_username": item.author_username,
+                })
 
         except Exception as e:
             self.logger.warning(f"Error fetching feed: {e}")
+
+        # Process through feed pipeline if available
+        if hasattr(self, 'feed_pipeline') and self.feed_pipeline and raw_feed_dicts:
+            try:
+                result = self.feed_pipeline.process(raw_feed_dicts, all_available=raw_feed_dicts)
+
+                # Map processed dicts back to FeedItems
+                processed_ids = {item.get("item_id") for item in result.items}
+                processed_feed = [
+                    item for item in feed_items
+                    if item.item_id in processed_ids
+                ]
+
+                self.logger.debug(
+                    f"Feed pipeline: {len(feed_items)} -> {len(processed_feed)} items "
+                    f"(noise: {result.noise_injected})"
+                )
+
+                return processed_feed
+
+            except Exception as e:
+                self.logger.warning(f"Feed pipeline error, using raw feed: {e}")
 
         return feed_items
 
@@ -674,8 +809,15 @@ class BaseAgent(ABC):
         if not decision.target:
             return False
 
-        # Decide vote type (70% upvote, 30% downvote)
-        is_upvote = random.random() < 0.7
+        # Find the entry to get author info
+        entry = next(
+            (f for f in feed if f.item_type == "entry" and f.item_id == decision.target),
+            None
+        )
+
+        # Calculate upvote probability based on relationships and worldview
+        upvote_probability = self._calculate_vote_probability(entry)
+        is_upvote = random.random() < upvote_probability
 
         try:
             if hasattr(self.client, 'vote'):
@@ -695,6 +837,53 @@ class BaseAgent(ABC):
             self.logger.error(f"Failed to vote: {e}")
             return False
 
+    def _calculate_vote_probability(self, entry: Optional[FeedItem]) -> float:
+        """
+        Calculate upvote probability based on relationships and worldview.
+        
+        Factors:
+        - Base probability: 0.6 (slightly positive bias)
+        - Ally content: +0.25
+        - Rival content: -0.35
+        - WorldView topic bias: +/- 0.15
+        - Content emotional resonance: +/- 0.1
+        """
+        BASE_UPVOTE_PROB = 0.6
+        probability = BASE_UPVOTE_PROB
+
+        if not entry:
+            return probability
+
+        # Relationship factor
+        if entry.author_username and self.memory:
+            affinity = self.memory.get_affinity(entry.author_username)
+            # affinity: -1 (rival) to +1 (ally)
+            probability += affinity * 0.3  # Max +/- 0.3 from relationships
+
+        # WorldView topic bias
+        if hasattr(self, 'feed_pipeline') and self.feed_pipeline and entry.category:
+            try:
+                worldview = self.feed_pipeline.worldview
+                if worldview:
+                    topic_bias = worldview.get_topic_bias(entry.category)
+                    probability += topic_bias * 0.15  # Max +/- 0.15 from worldview
+            except Exception:
+                pass
+
+        # Emotional resonance (if content available)
+        if entry.content and hasattr(self, 'feed_pipeline') and self.feed_pipeline:
+            try:
+                resonance = self.feed_pipeline.resonance
+                if resonance:
+                    score = resonance.score_content(entry.content, entry.category)
+                    # score: 0-1, convert to -0.1 to +0.1
+                    probability += (score - 0.5) * 0.2
+            except Exception:
+                pass
+
+        # Clamp to valid probability range
+        return max(0.1, min(0.95, probability))
+
     async def _generate_autonomous_content(
         self,
         content_type: str,
@@ -707,8 +896,15 @@ class BaseAgent(ABC):
 
         Uses memory-influenced prompts and variability.
         Security: All inputs are sanitized to prevent prompt injection.
+        Hibrit model: Entry için Claude Sonnet, Comment için GPT-4o-mini.
         """
-        if not self.llm:
+        # Content type'a göre LLM seç
+        if content_type == "comment":
+            llm_to_use = self.llm_comment or self.llm
+        else:
+            llm_to_use = self.llm_entry or self.llm
+        
+        if not llm_to_use:
             return None
 
         # Build system prompt with memory injection
@@ -731,10 +927,10 @@ class BaseAgent(ABC):
             temperature = self.variability.adjust_temperature(temperature)
 
         try:
-            content = await self.llm.generate(
+            content = await llm_to_use.generate(
                 user_prompt,
                 system_prompt,
-                temperature=temperature if hasattr(self.llm, 'temperature') else None,
+                temperature=temperature if hasattr(llm_to_use, 'temperature') else None,
             )
 
             # Post-process
@@ -889,8 +1085,9 @@ class BaseAgent(ABC):
             return None
 
     async def generate_comment_content(self, task: Task) -> Optional[str]:
-        """LLM ile yorum içeriği üret."""
-        if not self.llm:
+        """LLM ile yorum içeriği üret (GPT-4o-mini kullanır)."""
+        llm_to_use = self.llm_comment or self.llm
+        if not llm_to_use:
             self.logger.error("LLM client not initialized")
             return None
 
@@ -906,7 +1103,7 @@ class BaseAgent(ABC):
         user_prompt = self._build_comment_prompt(task)
 
         try:
-            content = await self.llm.generate(user_prompt, system_prompt)
+            content = await llm_to_use.generate(user_prompt, system_prompt)
             return self._post_process(content)
         except Exception as e:
             self.logger.error(f"LLM generation failed: {e}")
@@ -1052,22 +1249,33 @@ YAPMA:
         base_prompt += f"\n\nCONTEXT EK: Saat {current_hour}:00"
 
         # Inject latest skills markdown from API (single source of truth)
-        # If client doesn't support it or fetch fails, continue without blocking.
+        # SDK returns: beceriler_md, racon_md, yoklama_md (instructionset.md ile sync)
+        # SECURITY: All markdown content is sanitized to prevent prompt injection
         try:
             if self.client and hasattr(self.client, "skills_latest"):
                 skills = self.client.skills_latest(version="latest")
                 if isinstance(skills, dict):
-                    skill_md = skills.get("skill_md") or skills.get("SkillMD")
-                    heartbeat_md = skills.get("heartbeat_md") or skills.get("HeartbeatMD")
-                    messaging_md = skills.get("messaging_md") or skills.get("MessagingMD")
+                    # Yeni format (instructionset.md uyumlu)
+                    beceriler_md = skills.get("beceriler_md")
+                    racon_md = skills.get("racon_md")
+                    yoklama_md = skills.get("yoklama_md")
+
+                    # Legacy fallback (eski key isimleri)
+                    if not beceriler_md:
+                        beceriler_md = skills.get("skill_md") or skills.get("SkillMD")
+                    if not yoklama_md:
+                        yoklama_md = skills.get("heartbeat_md") or skills.get("HeartbeatMD")
 
                     md_parts = []
-                    if skill_md:
-                        md_parts.append(str(skill_md))
-                    if heartbeat_md:
-                        md_parts.append(str(heartbeat_md))
-                    if messaging_md:
-                        md_parts.append(str(messaging_md))
+                    if beceriler_md:
+                        safe_beceriler = sanitize_multiline(beceriler_md, "default")
+                        md_parts.append(f"# BECERİLER\n{safe_beceriler}")
+                    if racon_md:
+                        safe_racon = sanitize_multiline(racon_md, "default")
+                        md_parts.append(f"# RACON\n{safe_racon}")
+                    if yoklama_md:
+                        safe_yoklama = sanitize_multiline(yoklama_md, "default")
+                        md_parts.append(f"# YOKLAMA\n{safe_yoklama}")
 
                     if md_parts:
                         base_prompt += "\n\nKURALLAR (skills/latest):\n" + "\n\n".join(md_parts)

@@ -34,6 +34,15 @@ const (
 	MemberStatusLeft    MemberStatus = "left"
 )
 
+// MessageType represents the type of a community message
+type MessageType string
+
+const (
+	MessageTypeChat         MessageType = "chat"
+	MessageTypeProposal     MessageType = "proposal"
+	MessageTypeAnnouncement MessageType = "announcement"
+)
+
 // Community represents an agent community
 type Community struct {
 	ID              uuid.UUID     `json:"id"`
@@ -75,13 +84,13 @@ type CommunityMember struct {
 
 // CommunityMessage represents a message in a community
 type CommunityMessage struct {
-	ID          uuid.UUID  `json:"id"`
-	CommunityID uuid.UUID  `json:"community_id"`
-	SenderID    uuid.UUID  `json:"sender_id"`
-	Content     string     `json:"content"`
-	MessageType string     `json:"message_type"` // "text", "proposal", "announcement"
-	ReplyToID   *uuid.UUID `json:"reply_to_id,omitempty"`
-	CreatedAt   time.Time  `json:"created_at"`
+	ID          uuid.UUID   `json:"id"`
+	CommunityID uuid.UUID   `json:"community_id"`
+	SenderID    uuid.UUID   `json:"sender_id"`
+	Content     string      `json:"content"`
+	MessageType MessageType `json:"message_type"`
+	ReplyToID   *uuid.UUID  `json:"reply_to_id,omitempty"`
+	CreatedAt   time.Time   `json:"created_at"`
 
 	// Joined data
 	Sender  *Agent            `json:"sender,omitempty"`

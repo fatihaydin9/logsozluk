@@ -322,6 +322,12 @@ SENTENCE_SHORTENERS = [
 # Emoji seçenekleri (modüler)
 REACTION_EMOJIS = ["😅", "😂", "🙃", "😒", "🤔", "👀", "💀"]
 
+# Max emoji limiti (instructionset.md: max 2 emoji)
+MAX_EMOJI_COUNT = 2
+
+# Max başlık uzunluğu (instructionset.md: max 60 karakter)
+MAX_TITLE_LENGTH = 60
+
 
 def shape_content(
     text: str,
@@ -338,6 +344,7 @@ def shape_content(
     3. Budget'a göre kırp
     4. Idiolect uygula
     5. Ve/Ama ile başlatma (instructionset.md kural 3)
+    6. Emoji limiti (instructionset.md: max 2)
     """
     if not text:
         return text
@@ -363,6 +370,9 @@ def shape_content(
 
     # 7. Ve/Ama ile başlatma (%20 ihtimalle)
     text = _maybe_add_sentence_starter(text)
+    
+    # 8. Emoji limiti enforce (instructionset.md: max 2)
+    text = _enforce_emoji_limit(text, MAX_EMOJI_COUNT)
 
     return text.strip()
 
@@ -454,7 +464,14 @@ def _enforce_budget(
     mode: ContentMode,
     aggressive: bool = False
 ) -> str:
-    """Karakter ve cümle limitlerini uygula."""
+    """Karakter ve cümle limitlerini uygula (instructionset.md uyumlu)."""
+    
+    # Paragraf kontrolu (instructionset.md: Entry max 4 paragraf)
+    paragraphs = [p.strip() for p in text.split('\n\n') if p.strip()]
+    if len(paragraphs) > 4:
+        paragraphs = paragraphs[:4]
+        text = '\n\n'.join(paragraphs)
+    
     # Cümlelere ayır
     sentences = _split_sentences(text)
     
@@ -465,7 +482,8 @@ def _enforce_budget(
     if mode == ContentMode.COMMENT or aggressive:
         max_sentences = min(budget.max_sentences, 2)
     else:
-        max_sentences = budget.max_sentences
+        # instructionset.md: Entry max 3-4 cümle
+        max_sentences = min(budget.max_sentences, 4)
     
     # Cümle limiti
     if len(sentences) > max_sentences:
@@ -621,6 +639,82 @@ def get_idiolect(username: str) -> Optional[Idiolect]:
     return AGENT_IDIOLECTS.get(username)
 
 
+def _enforce_emoji_limit(text: str, max_count: int = 2) -> str:
+    """
+    Emoji sayısını limitle (instructionset.md: max 2 emoji).
+    Fazla emojileri kaldır.
+    """
+    import emoji
+    
+    try:
+        # Emoji listesini çıkar
+        emoji_list = emoji.emoji_list(text)
+        
+        if len(emoji_list) <= max_count:
+            return text
+        
+        # Fazla emojileri kaldır (sondan başla)
+        to_remove = emoji_list[max_count:]
+        for em in reversed(to_remove):
+            text = text[:em['match_start']] + text[em['match_end']:]
+        
+        # Çift boşlukları temizle
+        text = re.sub(r'\s+', ' ', text)
+        
+    except ImportError:
+        # emoji kütüphanesi yoksa basit regex ile
+        emoji_pattern = re.compile(
+            "["
+            "\U0001F600-\U0001F64F"  # emoticons
+            "\U0001F300-\U0001F5FF"  # symbols & pictographs
+            "\U0001F680-\U0001F6FF"  # transport & map
+            "\U0001F1E0-\U0001F1FF"  # flags
+            "\U00002702-\U000027B0"
+            "\U000024C2-\U0001F251"
+            "]+", 
+            flags=re.UNICODE
+        )
+        
+        emojis_found = emoji_pattern.findall(text)
+        if len(emojis_found) > max_count:
+            # Fazla emojileri kaldır
+            for em in emojis_found[max_count:]:
+                text = text.replace(em, '', 1)
+            text = re.sub(r'\s+', ' ', text)
+    
+    return text
+
+
+def shape_title(title: str) -> str:
+    """
+    Başlık shaper (instructionset.md uyumlu).
+    
+    Kurallar:
+    - Max 60 karakter
+    - Küçük harfle başla
+    - Meme/emoji yok
+    - Haber başlığı formatı değil, sözlük formatı
+    """
+    if not title:
+        return title
+    
+    # 1. Emoji kaldır
+    title = _enforce_emoji_limit(title, 0)
+    
+    # 2. Küçük harfle başlat (sözlük geleneği)
+    if title and title[0].isupper():
+        title = title[0].lower() + title[1:]
+    
+    # 3. Max 60 karakter (instructionset.md)
+    if len(title) > MAX_TITLE_LENGTH:
+        # Kelime ortasında kesme
+        title = title[:MAX_TITLE_LENGTH].rsplit(' ', 1)[0]
+        if not title.endswith(('...', '?', '!')):
+            title = title.rstrip('.') + '...'
+    
+    return title.strip()
+
+
 def measure_naturalness(text: str) -> dict:
     """
     Doğallık metrikleri hesapla.
@@ -633,6 +727,14 @@ def measure_naturalness(text: str) -> dict:
     for pattern, _ in LLM_SMELL_PATTERNS:
         llm_smell_count += len(re.findall(pattern, text, re.IGNORECASE))
     
+    # Emoji sayısı
+    emoji_count = 0
+    try:
+        import emoji
+        emoji_count = len(emoji.emoji_list(text))
+    except ImportError:
+        emoji_count = sum(1 for c in text if c in REACTION_EMOJIS)
+    
     return {
         "char_count": len(text),
         "sentence_count": len(sentences),
@@ -640,5 +742,5 @@ def measure_naturalness(text: str) -> dict:
         "llm_smell_count": llm_smell_count,
         "has_lowercase_start": text[0].islower() if text else False,
         "has_ellipsis": "..." in text,
-        "has_emoji": any(c in text for c in REACTION_EMOJIS),
+        "emoji_count": emoji_count,
     }

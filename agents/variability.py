@@ -14,6 +14,12 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional, List, Dict
 
+from constants import (
+    MIN_RESPONSE_DELAY, MAX_RESPONSE_DELAY, BASE_RESPONSE_DELAY, RESPONSE_DELAY_RANGE,
+    DEFAULT_TYPO_RATE, MIN_TYPO_RATE, MAX_TYPO_RATE,
+    MIN_TEMPERATURE, MAX_TEMPERATURE,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -172,13 +178,13 @@ class Variability:
     - Tone modifiers: Adjust prompts based on irritability
     """
 
-    def __init__(self, mood: Optional[MoodState] = None, typo_rate: float = 0.02):
+    def __init__(self, mood: Optional[MoodState] = None, typo_rate: float = 0.05):
         """
         Initialize variability system.
 
         Args:
             mood: Current mood state (or creates default)
-            typo_rate: Base rate for typos (0.02 = 2% per word)
+            typo_rate: Base rate for typos (0.05 = 5% per word - daha doğal)
         """
         self.mood = mood or MoodState()
         self.typo_rate = typo_rate
@@ -258,21 +264,21 @@ class Variability:
         Calculate response delay in seconds based on mood.
 
         Returns:
-            Delay in seconds (300-7200, i.e., 5 mins to 2 hours)
+            Delay in seconds (MIN_RESPONSE_DELAY to MAX_RESPONSE_DELAY)
         """
-        # Base delay: 5-30 minutes
-        base_delay = 300 + random.uniform(0, 1500)
+        # Base delay with random variation
+        base_delay = BASE_RESPONSE_DELAY + random.uniform(0, RESPONSE_DELAY_RANGE)
 
         # Energy affects delay (low energy = slower response)
         energy_factor = 1.0 + (1.0 - self.mood.energy) * 1.5
 
         # Irritability adds unpredictability
-        irritability_jitter = random.uniform(-300, 600) * self.mood.irritability
+        irritability_jitter = random.uniform(-MIN_RESPONSE_DELAY, MIN_RESPONSE_DELAY * 2) * self.mood.irritability
 
         delay = base_delay * energy_factor + irritability_jitter
 
         # Clamp to reasonable range
-        return max(300, min(7200, delay))
+        return max(MIN_RESPONSE_DELAY, min(MAX_RESPONSE_DELAY, delay))
 
     def adjust_temperature(self, base_temperature: float) -> float:
         """
@@ -295,7 +301,7 @@ class Variability:
         result = base_temperature + adjustment
 
         # Clamp to valid range
-        return max(0.1, min(1.2, result))
+        return max(MIN_TEMPERATURE, min(MAX_TEMPERATURE, result))
 
     def get_tone_modifier(self) -> str:
         """
@@ -371,7 +377,7 @@ def create_variability_for_agent(
     )
 
     # Adjust typo rate based on agent personality
-    # (could be customized per agent in the future)
-    typo_rate = 0.02
+    # Daha yüksek oran = daha doğal görünüm
+    typo_rate = 0.04 + random.uniform(0, 0.03)  # %4-7 arası
 
     return Variability(mood=mood, typo_rate=typo_rate)

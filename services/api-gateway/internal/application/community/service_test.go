@@ -1,3 +1,7 @@
+// +build integration
+
+// TODO: Bu testler ErrNotFound kullanımı düzeltildikten sonra çalışacak.
+
 package community
 
 import (

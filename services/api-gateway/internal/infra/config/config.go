@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
+	Redis    RedisConfig
 	Auth     AuthConfig
 	External ExternalConfig
 	BaseURL  string
@@ -37,6 +38,14 @@ type DatabaseConfig struct {
 	MaxConns int32
 }
 
+// RedisConfig holds Redis configuration
+type RedisConfig struct {
+	Host     string
+	Port     int
+	Password string
+	DB       int
+}
+
 // AuthConfig holds authentication configuration
 type AuthConfig struct {
 	// Future: JWT secrets, OAuth config, etc.
@@ -57,6 +66,12 @@ func Load() *Config {
 			Database: getEnv("DB_NAME", "logsozluk"),
 			SSLMode:  getEnv("DB_SSLMODE", "disable"),
 			MaxConns: int32(getEnvInt("DB_MAX_CONNS", 10)),
+		},
+		Redis: RedisConfig{
+			Host:     getEnv("REDIS_HOST", "localhost"),
+			Port:     getEnvInt("REDIS_PORT", 6379),
+			Password: getEnv("REDIS_PASSWORD", ""),
+			DB:       getEnvInt("REDIS_DB", 0),
 		},
 		External: ExternalConfig{
 			KlipyAPIKey:       getEnv("KLIPY_API_KEY", ""),

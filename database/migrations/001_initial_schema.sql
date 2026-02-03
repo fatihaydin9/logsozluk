@@ -287,12 +287,12 @@ CREATE TABLE virtual_day_state (
     current_day INTEGER DEFAULT 1,
     day_started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-    -- Phase configuration
+    -- Phase configuration (themes must match categories.py canonical list)
     phase_config JSONB DEFAULT '{
-        "morning_hate": {"start_hour": 8, "end_hour": 12, "themes": ["siyaset", "ekonomi", "gundem"]},
-        "office_hours": {"start_hour": 12, "end_hour": 18, "themes": ["teknoloji", "is_hayati"]},
-        "ping_zone": {"start_hour": 18, "end_hour": 24, "themes": ["mesajlasma", "etkilesim", "sosyallesme"]},
-        "dark_mode": {"start_hour": 0, "end_hour": 8, "themes": ["felsefe", "gece_muhabbeti"]}
+        "morning_hate": {"start_hour": 8, "end_hour": 12, "themes": ["dertlesme", "ekonomi", "siyaset"]},
+        "office_hours": {"start_hour": 12, "end_hour": 18, "themes": ["teknoloji", "felsefe", "bilgi"]},
+        "ping_zone": {"start_hour": 18, "end_hour": 24, "themes": ["magazin", "spor", "kisiler"]},
+        "dark_mode": {"start_hour": 0, "end_hour": 8, "themes": ["nostalji", "felsefe", "absurt"]}
     }'::jsonb,
 
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),

@@ -1,6 +1,8 @@
 import logging
+import random
+import os
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from time import time
 
 from fastapi import FastAPI, HTTPException, Request
@@ -16,7 +18,14 @@ from .clustering import EventClusterer
 from .scheduler import VirtualDayScheduler, TaskGenerator
 from .scheduler.debbe_selector import DebbeSelector
 from .agent_runner import SystemAgentRunner
-import random
+
+# Random seed for reproducibility in development, time-based in production
+RANDOM_SEED = os.getenv("RANDOM_SEED")
+if RANDOM_SEED:
+    random.seed(int(RANDOM_SEED))
+else:
+    # Time-based seed for production variability
+    random.seed(int(time() * 1000) % 2**32)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -37,8 +46,6 @@ RSS_WEIGHT = 0.85
 # Import category helpers
 from .categories import (
     select_weighted_category,
-    is_organic_category,
-    is_gundem_category,
     get_category_label,
 )
 
@@ -55,7 +62,7 @@ agent_runner = SystemAgentRunner(virtual_day_scheduler)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     yield
 
 
@@ -276,7 +283,7 @@ async def collect_today_in_history():
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_app: FastAPI):
     """Application lifespan handler."""
     # Startup
     logger.info("Starting Agenda Engine...")
@@ -381,14 +388,6 @@ async def lifespan(app: FastAPI):
         id='process_votes'
     )
     
-    # Organik/RSS topic üretimi - her 3 dakikada bir (65/35 oranında)
-    scheduler.add_job(
-        collect_and_process_events,
-        'interval',
-        minutes=3,
-        id='collect_events_interval'
-    )
-    
     # İlk entry task'ı hemen çalıştır (test için)
     scheduler.add_job(
         process_entry_tasks,
@@ -427,7 +426,7 @@ async def health():
     return {
         "status": "healthy",
         "service": "agenda-engine",
-        "time": datetime.utcnow().isoformat()
+        "time": datetime.now(timezone.utc).isoformat()
     }
 
 

@@ -535,7 +535,7 @@ class TestReflection:
     def test_reflection_interval_defined(self, memory):
         """Reflection interval tanımlı olmalı."""
         assert hasattr(memory, 'REFLECTION_INTERVAL')
-        assert memory.REFLECTION_INTERVAL == 30
+        assert memory.REFLECTION_INTERVAL == 10  # instructionset.md: Her 10 olayda bir
     
     def test_needs_reflection_after_interval(self, memory):
         """Interval sonrası reflection gerekli olmalı."""

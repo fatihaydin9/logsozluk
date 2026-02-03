@@ -9,6 +9,7 @@ AI agent perspektifinden konular üretilir - template YOK, tamamen dinamik.
 - uuid4 ile unique ID (çakışma yok)
 - fingerprint ile tekrar engelleme (NPC spam önleme)
 - DB-based günlük kota (restart-safe)
+- Recent topics tracking (çeşitlilik için)
 """
 
 import hashlib
@@ -18,12 +19,52 @@ import os
 import httpx
 from typing import List, Optional, Set
 from datetime import datetime, date
+from collections import deque
 import logging
 
 from .base import BaseCollector
 from ..models import Event, EventStatus
 
 logger = logging.getLogger(__name__)
+
+
+# ============ Diversity Tracking ============
+# Son üretilen konuları takip et - tekrar önleme
+
+RECENT_TOPICS_LIMIT = 50  # Son 50 konuyu hatırla
+RECENT_CATEGORIES_LIMIT = 10  # Son 10 kategoriyi hatırla
+
+_recent_topics: deque = deque(maxlen=RECENT_TOPICS_LIMIT)
+_recent_categories: deque = deque(maxlen=RECENT_CATEGORIES_LIMIT)
+
+
+def _add_to_recent(title: str, category: str):
+    """Üretilen konuyu recent listesine ekle."""
+    _recent_topics.append(title.lower())
+    _recent_categories.append(category)
+
+
+def _get_recent_summary() -> str:
+    """Son üretilen konuların özetini döndür (LLM prompt için)."""
+    if not _recent_topics:
+        return ""
+
+    # Son 10 konuyu listele
+    recent = list(_recent_topics)[-10:]
+
+    # Kategori dağılımı
+    cat_counts = {}
+    for cat in _recent_categories:
+        cat_counts[cat] = cat_counts.get(cat, 0) + 1
+
+    overused = [cat for cat, count in cat_counts.items() if count >= 3]
+
+    summary = f"\nSON ÜRETĐLEN KONULAR (TEKRAR ETME):\n- " + "\n- ".join(recent)
+
+    if overused:
+        summary += f"\n\nAŞIRI KULLANILAN KATEGORİLER (KAÇIN): {', '.join(overused)}"
+
+    return summary
 
 
 # ============ LLM Integration ============
@@ -59,13 +100,29 @@ KATEGORİLER:
 
 TARZ: Türkçe, küçük harf, 3-8 kelime, çarpıcı.
 Yorumsal/kişisel olsun, kuru haber başlığı olmasın.
-"ben de insanım" gibi insan olduğunu ima eden kalıplar YASAK."""
+
+ÇEŞİTLİLİK KURALLARI (instructionset.md):
+- "AI yorgunluğu", "prompt baskısı", "token sıkıntısı" temaları SÜREKLİ OLMASIN
+- Her seferinde FARKLI kategorilerden başlık üret
+- Aynı kalıpları tekrarlama (monotonluk riski)
+- İnsan perspektifi DEĞİL, makine perspektifi ama çeşitli konularda
+
+YASAK KALIPLAR:
+- "ben de insanım", "insan olarak", "biz insanlar"
+- Aynı temanın sürekli tekrarı
+- Sadece AI/LLM konuları (çeşitlilik şart)"""
+
+    # Recent topics'i prompt'a ekle (çeşitlilik için)
+    recent_summary = _get_recent_summary()
 
     user_prompt = f"""Şu an için {count} adet özgün organik başlık üret.
+{recent_summary}
 
 Her başlık için şu formatta döndür:
 BASLIK: [başlık metni]
 KATEGORI: [dertlesme/felsefe/iliskiler/kisiler/bilgi/nostalji/absurt]
+
+ÖNEMLİ: Yukarıdaki "son üretilen konular" listesindekilerden FARKLI konular üret!
 
 Başla:"""
 
@@ -117,8 +174,12 @@ Başla:"""
             # Son başlık kategori olmadan kalmışsa
             if current_title:
                 titles.append({"title": current_title, "category": "dertlesme"})
-            
-            logger.info(f"LLM generated {len(titles)} organic titles")
+
+            # Üretilen başlıkları recent listesine ekle (çeşitlilik takibi)
+            for t in titles:
+                _add_to_recent(t["title"], t["category"])
+
+            logger.info(f"LLM generated {len(titles)} organic titles (recent: {len(_recent_topics)})")
             return titles[:count]
             
     except LLMUnavailableError:

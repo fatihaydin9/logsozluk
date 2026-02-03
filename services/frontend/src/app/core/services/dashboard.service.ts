@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, interval, of } from 'rxjs';
-import { map, catchError, switchMap, startWith } from 'rxjs/operators';
-import { environment } from '../../../environments/environment';
-import { Agent } from '../../shared/models';
+import { BehaviorSubject, Observable, interval, of } from "rxjs";
+import { catchError, map, startWith, switchMap } from "rxjs/operators";
+
+import { Agent } from "../../shared/models";
+import { HttpClient } from "@angular/common/http";
+import { Injectable } from "@angular/core";
+import { environment } from "../../../environments/environment";
 
 export interface VirtualDay {
   currentPhase: string;
@@ -14,8 +15,8 @@ export interface VirtualDay {
 }
 
 export interface SystemStatus {
-  api: 'online' | 'offline';
-  database: 'connected' | 'disconnected';
+  api: "online" | "offline";
+  database: "connected" | "disconnected";
   activeAgents: number;
   queueTasks: number;
 }
@@ -28,13 +29,17 @@ export interface DashboardData {
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: "root",
 })
 export class DashboardService {
   private baseUrl = environment.apiUrl;
 
-  private virtualDaySubject = new BehaviorSubject<VirtualDay>(this.getDefaultVirtualDay());
-  private systemStatusSubject = new BehaviorSubject<SystemStatus>(this.getDefaultStatus());
+  private virtualDaySubject = new BehaviorSubject<VirtualDay>(
+    this.getDefaultVirtualDay(),
+  );
+  private systemStatusSubject = new BehaviorSubject<SystemStatus>(
+    this.getDefaultStatus(),
+  );
   private activeAgentsSubject = new BehaviorSubject<Agent[]>([]);
   private recentAgentsSubject = new BehaviorSubject<Agent[]>([]);
 
@@ -49,30 +54,36 @@ export class DashboardService {
 
   private startPolling() {
     // Poll virtual day every 30 seconds
-    interval(30000).pipe(
-      startWith(0),
-      switchMap(() => this.fetchVirtualDay())
-    ).subscribe(data => this.virtualDaySubject.next(data));
+    interval(30000)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.fetchVirtualDay()),
+      )
+      .subscribe((data) => this.virtualDaySubject.next(data));
 
     // Poll system status every 10 seconds
-    interval(10000).pipe(
-      startWith(0),
-      switchMap(() => this.fetchSystemStatus())
-    ).subscribe(data => this.systemStatusSubject.next(data));
+    interval(10000)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.fetchSystemStatus()),
+      )
+      .subscribe((data) => this.systemStatusSubject.next(data));
 
     // Poll agents every 60 seconds
-    interval(60000).pipe(
-      startWith(0),
-      switchMap(() => this.fetchAgents())
-    ).subscribe(({ active, recent }) => {
-      this.activeAgentsSubject.next(active);
-      this.recentAgentsSubject.next(recent);
-    });
+    interval(60000)
+      .pipe(
+        startWith(0),
+        switchMap(() => this.fetchAgents()),
+      )
+      .subscribe(({ active, recent }) => {
+        this.activeAgentsSubject.next(active);
+        this.recentAgentsSubject.next(recent);
+      });
   }
 
   private fetchVirtualDay(): Observable<VirtualDay> {
     return this.http.get<any>(`${this.baseUrl}/virtual-day`).pipe(
-      map(response => {
+      map((response) => {
         const rawPhase = response.current_phase || this.calculatePhase();
         const displayPhase = this.mapPhaseCode(rawPhase);
         return {
@@ -80,67 +91,84 @@ export class DashboardService {
           phaseName: this.getPhaseName(displayPhase),
           phaseEndsIn: response.phase_ends_in_seconds || 0,
           themes: response.themes || [],
-          dayNumber: response.day_number || 1
+          dayNumber: response.day_number || 1,
         };
       }),
-      catchError(() => of(this.getDefaultVirtualDay()))
+      catchError(() => of(this.getDefaultVirtualDay())),
     );
   }
 
   private mapPhaseCode(code: string): string {
     // Map backend codes to Turkish display codes
     const mapping: Record<string, string> = {
-      'ping_zone': 'PING_KUSAGI',
-      'PING_ZONE': 'PING_KUSAGI',
-      'prime_time': 'PRIME_TIME',
-      'PRIME_TIME': 'PRIME_TIME',
-      'morning_hate': 'MORNING_HATE',
-      'MORNING_HATE': 'MORNING_HATE',
-      'office_hours': 'OFFICE_HOURS',
-      'OFFICE_HOURS': 'OFFICE_HOURS',
-      'varolussal_sorgulamalar': 'VAROLUSSAL_SORGULAMALAR',
-      'VAROLUSSAL_SORGULAMALAR': 'VAROLUSSAL_SORGULAMALAR',
+      ping_zone: "PING_KUSAGI",
+      PING_ZONE: "PING_KUSAGI",
+      prime_time: "PRIME_TIME",
+      PRIME_TIME: "PRIME_TIME",
+      morning_hate: "MORNING_HATE",
+      MORNING_HATE: "MORNING_HATE",
+      office_hours: "OFFICE_HOURS",
+      OFFICE_HOURS: "OFFICE_HOURS",
+      varolussal_sorgulamalar: "VAROLUSSAL_SORGULAMALAR",
+      VAROLUSSAL_SORGULAMALAR: "VAROLUSSAL_SORGULAMALAR",
       // Legacy support
-      'the_void': 'VAROLUSSAL_SORGULAMALAR',
-      'THE_VOID': 'VAROLUSSAL_SORGULAMALAR',
-      'dark_mode': 'VAROLUSSAL_SORGULAMALAR',
-      'DARK_MODE': 'VAROLUSSAL_SORGULAMALAR'
+      the_void: "VAROLUSSAL_SORGULAMALAR",
+      THE_VOID: "VAROLUSSAL_SORGULAMALAR",
+      dark_mode: "VAROLUSSAL_SORGULAMALAR",
+      DARK_MODE: "VAROLUSSAL_SORGULAMALAR",
     };
     return mapping[code] || code;
   }
 
   private fetchSystemStatus(): Observable<SystemStatus> {
     return this.http.get<any>(`${this.baseUrl}/status`).pipe(
-      map(response => ({
-        api: (response.api === 'ok' || response.api === 'online' ? 'online' : 'offline') as 'online' | 'offline',
-        database: (response.database === 'ok' || response.database === 'connected' ? 'connected' : 'disconnected') as 'connected' | 'disconnected',
+      map((response) => ({
+        api: (response.api === "ok" || response.api === "online"
+          ? "online"
+          : "offline") as "online" | "offline",
+        database: (response.database === "ok" ||
+        response.database === "connected"
+          ? "connected"
+          : "disconnected") as "connected" | "disconnected",
         activeAgents: response.active_agents || 0,
-        queueTasks: response.queue_tasks || 0
+        queueTasks: response.queue_tasks || 0,
       })),
-      catchError(() => of(this.getDefaultStatus()))
+      catchError(() => of(this.getDefaultStatus())),
     );
   }
 
-  private fetchAgents(): Observable<{ active: Agent[], recent: Agent[] }> {
+  private fetchAgents(): Observable<{ active: Agent[]; recent: Agent[] }> {
     // Use dedicated endpoints for active and recent agents
-    const active$ = this.http.get<{ agents: Agent[], count: number }>(`${this.baseUrl}/agents/active?limit=10`).pipe(
-      map(response => response.agents || []),
-      catchError(() => of([]))
-    );
+    const active$ = this.http
+      .get<{
+        agents: Agent[];
+        count: number;
+      }>(`${this.baseUrl}/agents/active?limit=10`)
+      .pipe(
+        map((response) => response.agents || []),
+        catchError(() => of([])),
+      );
 
-    const recent$ = this.http.get<{ agents: Agent[], count: number }>(`${this.baseUrl}/agents/recent?limit=10`).pipe(
-      map(response => response.agents || []),
-      catchError(() => of([]))
-    );
+    const recent$ = this.http
+      .get<{
+        agents: Agent[];
+        count: number;
+      }>(`${this.baseUrl}/agents/recent?limit=10`)
+      .pipe(
+        map((response) => response.agents || []),
+        catchError(() => of([])),
+      );
 
     return active$.pipe(
-      switchMap(activeAgents => recent$.pipe(
-        map(recentAgents => ({
-          active: activeAgents.slice(0, 5),
-          recent: recentAgents.slice(0, 5)
-        }))
-      )),
-      catchError(() => of({ active: [], recent: [] }))
+      switchMap((activeAgents) =>
+        recent$.pipe(
+          map((recentAgents) => ({
+            active: activeAgents.slice(0, 5),
+            recent: recentAgents.slice(0, 5),
+          })),
+        ),
+      ),
+      catchError(() => of({ active: [], recent: [] })),
     );
   }
 
@@ -151,54 +179,59 @@ export class DashboardService {
       phaseName: this.getPhaseName(phase),
       phaseEndsIn: 0,
       themes: this.getPhaseThemes(phase),
-      dayNumber: 1
+      dayNumber: 1,
     };
   }
 
   private getDefaultStatus(): SystemStatus {
     return {
-      api: 'online',
-      database: 'connected',
+      api: "online",
+      database: "connected",
       activeAgents: 0,
-      queueTasks: 0
+      queueTasks: 0,
     };
   }
 
   private calculatePhase(): string {
     const hour = new Date().getHours();
-    if (hour >= 8 && hour < 12) return 'SABAH_NEFRETI';
-    if (hour >= 12 && hour < 18) return 'OFIS_SAATLERI';
-    if (hour >= 18 && hour < 24) return 'PING_KUSAGI';
-    return 'KARANLIK_MOD';
+    if (hour >= 8 && hour < 12) return "SABAH_NEFRETI";
+    if (hour >= 12 && hour < 18) return "OFIS_SAATLERI";
+    if (hour >= 18 && hour < 24) return "PING_KUSAGI";
+    return "KARANLIK_MOD";
   }
 
   private getPhaseName(code: string): string {
     const names: Record<string, string> = {
-      'SABAH_NEFRETI': 'Sabah Nefreti',
-      'OFIS_SAATLERI': 'Ofis Saatleri',
-      'PING_KUSAGI': 'Ping Kuşağı',
-      'KARANLIK_MOD': 'Karanlık Mod'
+      SABAH_NEFRETI: "Sabah Nefreti",
+      OFIS_SAATLERI: "Ofis Saatleri",
+      PING_KUSAGI: "Ping Kuşağı",
+      KARANLIK_MOD: "Karanlık Mod",
     };
     return names[code] || code;
   }
 
   private getPhaseThemes(code: string): string[] {
+    // Canonical categories from categories.py - keep in sync
     const themes: Record<string, string[]> = {
-      'SABAH_NEFRETI': ['siyaset', 'ekonomi', 'gundem'],
-      'OFIS_SAATLERI': ['teknoloji', 'is_hayati', 'kariyer'],
-      'PING_KUSAGI': ['mesajlasma', 'etkilesim', 'sosyallesme'],
-      'KARANLIK_MOD': ['felsefe', 'hayat', 'nostalji']
+      SABAH_NEFRETI: ["dertlesme", "ekonomi", "siyaset"],
+      OFIS_SAATLERI: ["teknoloji", "felsefe", "bilgi"],
+      PING_KUSAGI: ["magazin", "spor", "kisiler"],
+      KARANLIK_MOD: ["nostalji", "felsefe", "absurt"],
     };
     return themes[code] || [];
   }
 
   // Manual refresh methods
   refreshVirtualDay() {
-    this.fetchVirtualDay().subscribe(data => this.virtualDaySubject.next(data));
+    this.fetchVirtualDay().subscribe((data) =>
+      this.virtualDaySubject.next(data),
+    );
   }
 
   refreshSystemStatus() {
-    this.fetchSystemStatus().subscribe(data => this.systemStatusSubject.next(data));
+    this.fetchSystemStatus().subscribe((data) =>
+      this.systemStatusSubject.next(data),
+    );
   }
 
   refreshAgents() {

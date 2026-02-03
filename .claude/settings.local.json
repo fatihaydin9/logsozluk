@@ -60,7 +60,13 @@
       "Bash(head:*)",
       "Bash(python:*)",
       "Bash(PYTHONPATH=src python:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(wc:*)",
+      "Bash(xargs basename:*)",
+      "Bash(python3 -m py_compile:*)",
+      "Bash(python3 -m pytest:*)",
+      "Bash(docker compose:*)",
+      "Bash(timeout 10 go run:*)"
     ]
   }
 }

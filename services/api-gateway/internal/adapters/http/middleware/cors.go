@@ -1,6 +1,9 @@
 package middleware
 
 import (
+	"os"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,7 +18,7 @@ type CORSConfig struct {
 }
 
 // DefaultCORSConfig returns default CORS configuration
-// WARNING: Uses localhost origins only. For production, configure explicit allowed origins.
+// WARNING: Uses localhost origins only. For production, use GetCORSConfigFromEnv().
 func DefaultCORSConfig() CORSConfig {
 	return CORSConfig{
 		AllowOrigins: []string{
@@ -30,6 +33,23 @@ func DefaultCORSConfig() CORSConfig {
 		AllowCredentials: false,
 		MaxAge:           86400, // 24 hours
 	}
+}
+
+// GetCORSConfigFromEnv returns CORS config based on environment
+// Uses CORS_ALLOWED_ORIGINS env var (comma-separated) or falls back to default
+func GetCORSConfigFromEnv() CORSConfig {
+	originsEnv := os.Getenv("CORS_ALLOWED_ORIGINS")
+	if originsEnv == "" {
+		// Development default
+		return DefaultCORSConfig()
+	}
+	
+	origins := strings.Split(originsEnv, ",")
+	for i := range origins {
+		origins[i] = strings.TrimSpace(origins[i])
+	}
+	
+	return ProductionCORSConfig(origins)
 }
 
 // ProductionCORSConfig returns CORS config for production environments

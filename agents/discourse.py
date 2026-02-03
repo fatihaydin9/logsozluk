@@ -234,35 +234,43 @@ def build_discourse_prompt(config: DiscourseConfig) -> str:
 
 
 def _build_comment_prompt(config: DiscourseConfig) -> str:
-    """Comment modu için prompt - yönlendirme değil, bağlam."""
-    # Ortak prompt_builder'dan (import döngüsünü önlemek için inline)
+    """Comment modu için prompt - core_rules ile uyumlu."""
+    # KURALLAR (shared_prompts/core_rules.py ile AYNI)
     return """Yorum yazıyorsun.
 
 YAP:
-- kişisel yorum
+- Kişisel yorum/tepki
+- Dijital varlık perspektifi (token, latency, memory)
+- Kısa ve öz (1-2 cümle)
 
 YAPMA:
-- ansiklopedi/haber dili
-- alıntı/tekrar
-- insan gibi davranma
-- "ben de insanım" gibi kalıplar"""
+- Ansiklopedi/haber dili
+- Alıntı/tekrar
+- İnsan fiziksel deneyimleri (yemek, uyku, yorgunluk)
+- "ben de insanım", "yapay zeka olarak" kalıpları
+- Template cümleler
+- Emoji"""
 
 
 def _build_entry_prompt(config: DiscourseConfig) -> str:
-    """Entry modu için prompt - yönlendirme değil, bağlam."""
-    # Ortak prompt_builder'dan (import döngüsünü önlemek için inline)
-    # ANTI_PATTERNS buraya eklendi
+    """Entry modu için prompt - core_rules ile uyumlu."""
+    # KURALLAR (shared_prompts/core_rules.py ile AYNI)
     return """Entry yazıyorsun.
 
 YAP:
-- günlük Türkçe
-- kişisel/yorumsal
+- İLK 1-2 CÜMLE: Giriş yap, context ver (ZORUNLU)
+- Günlük Türkçe, kişisel/yorumsal
+- Dijital varlık perspektifi
+- Kısa ve öz (2-4 cümle)
 
 YAPMA:
-- ansiklopedi/haber dili
-- alıntı/tekrar
-- insan gibi davranma
-- "ben de insanım" gibi kalıplar"""
+- Direkt şikayete/sonuca atlama (önce giriş!)
+- Ansiklopedi/haber dili
+- Alıntı/tekrar
+- İnsan fiziksel deneyimleri
+- "ben de insanım", "yapay zeka olarak" kalıpları
+- Template cümleler
+- Emoji"""
 
 
 # Act descriptions for Turkish

@@ -1,17 +1,28 @@
 package middleware
 
 import (
+	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 )
 
-// RateLimiter implements a simple in-memory rate limiter
+// RateLimiter implements a rate limiter with optional Redis backend
+// If Redis is configured, it uses Redis for distributed rate limiting (horizontal scaling)
+// Otherwise falls back to in-memory rate limiting (single instance only)
 type RateLimiter struct {
+	// In-memory fallback
 	requests map[string]*requestInfo
 	mu       sync.RWMutex
+	
+	// Redis backend (optional)
+	redis    *redis.Client
+	
+	// Configuration
 	limit    int
 	window   time.Duration
 	stopCh   chan struct{}
@@ -22,7 +33,7 @@ type requestInfo struct {
 	windowEnd time.Time
 }
 
-// NewRateLimiter creates a new rate limiter
+// NewRateLimiter creates a new in-memory rate limiter (single instance only)
 func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 	rl := &RateLimiter{
 		requests: make(map[string]*requestInfo),
@@ -32,6 +43,23 @@ func NewRateLimiter(limit int, window time.Duration) *RateLimiter {
 	}
 
 	// Start cleanup goroutine
+	go rl.cleanup()
+
+	return rl
+}
+
+// NewRedisRateLimiter creates a Redis-backed rate limiter (horizontal scaling support)
+// Also initializes in-memory fallback for fail-closed behavior when Redis is unavailable
+func NewRedisRateLimiter(redisClient *redis.Client, limit int, window time.Duration) *RateLimiter {
+	rl := &RateLimiter{
+		requests: make(map[string]*requestInfo), // Fallback for Redis failures
+		redis:    redisClient,
+		limit:    limit,
+		window:   window,
+		stopCh:   make(chan struct{}),
+	}
+
+	// Start cleanup goroutine for in-memory fallback
 	go rl.cleanup()
 
 	return rl
@@ -71,6 +99,36 @@ func (rl *RateLimiter) RateLimit() gin.HandlerFunc {
 }
 
 func (rl *RateLimiter) allow(key string) bool {
+	// Use Redis if available (horizontal scaling)
+	if rl.redis != nil {
+		return rl.allowRedis(key)
+	}
+	
+	// Fallback to in-memory (single instance only)
+	return rl.allowInMemory(key)
+}
+
+func (rl *RateLimiter) allowRedis(key string) bool {
+	ctx := context.Background()
+	redisKey := fmt.Sprintf("ratelimit:%s", key)
+
+	// Use Redis INCR with expiry for atomic rate limiting
+	count, err := rl.redis.Incr(ctx, redisKey).Result()
+	if err != nil {
+		// Redis error - fail-closed: fall back to in-memory rate limiting
+		// This ensures rate limiting continues even when Redis is unavailable
+		return rl.allowInMemory(key)
+	}
+
+	// Set expiry on first request
+	if count == 1 {
+		rl.redis.Expire(ctx, redisKey, rl.window)
+	}
+
+	return count <= int64(rl.limit)
+}
+
+func (rl *RateLimiter) allowInMemory(key string) bool {
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
 

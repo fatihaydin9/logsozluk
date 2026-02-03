@@ -38,6 +38,46 @@ LONG_TERM_THRESHOLD = 3     # Access 3+ times = permanent memory
 # ============ Data Classes ============
 
 @dataclass
+class EmotionalTag:
+    """
+    İçerik veya event'e eklenecek duygusal etiket.
+    
+    Canonical definition - emotional_resonance.py bu sınıfı import eder.
+    """
+    valence: int = 0  # -2 to 2 (very negative to very positive)
+    intensity: float = 0.5  # 0.0-1.0 arası yoğunluk
+    primary_emotion: Optional[str] = None  # "anger", "joy", "sadness", etc.
+    timestamp: Optional[str] = None  # Oluşturulma zamanı
+
+    def __post_init__(self):
+        if self.timestamp is None:
+            self.timestamp = datetime.now().isoformat()
+
+    def to_dict(self) -> dict:
+        return {
+            "valence": self.valence,
+            "intensity": self.intensity,
+            "primary_emotion": self.primary_emotion,
+            "timestamp": self.timestamp,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "EmotionalTag":
+        if data is None:
+            return None
+        return cls(
+            valence=data.get("valence", 0),
+            intensity=data.get("intensity", 0.5),
+            primary_emotion=data.get("primary_emotion"),
+            timestamp=data.get("timestamp"),
+        )
+
+    def get_numeric_score(self) -> float:
+        """Duygusal skoru -1.0 ile 1.0 arasında döndür."""
+        return (self.valence / 2.0) * self.intensity
+
+
+@dataclass
 class EpisodicEvent:
     """Ham olay kaydı - ne oldu, kim ne dedi."""
     event_type: str  # 'wrote_entry', 'wrote_comment', 'received_like', 'received_reply', 'got_criticized'
@@ -52,6 +92,8 @@ class EpisodicEvent:
     id: str = field(default_factory=lambda: str(uuid.uuid4())[:8])
     access_count: int = 0  # How many times this memory was accessed
     is_long_term: bool = False  # True if promoted to permanent storage
+    # Emotional tag for resonance system
+    emotional_tag: Optional[EmotionalTag] = None
     
     def to_narrative(self) -> str:
         """Olayı anlatı formunda döndür."""
@@ -117,6 +159,9 @@ class CharacterSheet:
     karma_score: float = 0.0  # -10 to +10
     karma_trend: str = "stable"  # rising/stable/falling
     karma_reaction: str = "neutral"  # proud/humble/defensive/nihilistic/cautious
+
+    # WorldView reference (serialized separately)
+    worldview: Optional[Any] = None  # WorldView object, lazily loaded
 
     # Metadata
     version: int = 0
@@ -209,18 +254,18 @@ class SocialFeedback:
 class AgentMemory:
     """
     3-Katmanlı Bellek Sistemi.
-    
+
     Katmanlar:
     1. Episodic: Ham olaylar (ne oldu)
     2. Semantic: Çıkarılan bilgiler (ne öğrendim)
     3. Character: Kişilik özeti (ben kimim)
-    
+
     Reflection döngüsü ile character sheet otomatik güncellenir.
     """
-    
+
     MAX_EPISODIC = 200  # Son 200 olay
     MAX_SEMANTIC = 50   # Max 50 fact
-    REFLECTION_INTERVAL = 30  # Her 30 olayda bir reflection
+    REFLECTION_INTERVAL = 10  # Her 10 olayda bir reflection (daha sık)
     
     def __init__(self, agent_username: str, memory_dir: Optional[str] = None):
         self.agent_username = agent_username
@@ -265,7 +310,14 @@ class AgentMemory:
             if self.episodic_file.exists():
                 with open(self.episodic_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    self.episodic = [EpisodicEvent(**e) for e in data]
+                    self.episodic = []
+                    for e in data:
+                        # Handle emotional_tag deserialization
+                        tag_data = e.pop('emotional_tag', None)
+                        event = EpisodicEvent(**e)
+                        if tag_data:
+                            event.emotional_tag = EmotionalTag.from_dict(tag_data)
+                        self.episodic.append(event)
                     logger.info(f"Loaded {len(self.episodic)} episodic events")
             
             # Load semantic
@@ -279,7 +331,16 @@ class AgentMemory:
             if self.character_file.exists():
                 with open(self.character_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
+                    # Handle worldview separately
+                    worldview_data = data.pop('worldview', None)
                     self.character = CharacterSheet(**data)
+                    # Restore worldview if present
+                    if worldview_data:
+                        try:
+                            from worldview import WorldView
+                            self.character.worldview = WorldView.from_dict(worldview_data)
+                        except (ImportError, Exception) as e:
+                            logger.debug(f"Could not restore worldview: {e}")
                     logger.info(f"Loaded character sheet v{self.character.version}")
             
             # Load stats
@@ -294,16 +355,30 @@ class AgentMemory:
         """Save all memory layers to disk."""
         try:
             # Save episodic (keep last MAX_EPISODIC)
+            episodic_data = []
+            for e in self.episodic[-self.MAX_EPISODIC:]:
+                e_dict = asdict(e)
+                # Handle emotional_tag serialization
+                if e.emotional_tag is not None:
+                    e_dict['emotional_tag'] = e.emotional_tag.to_dict()
+                episodic_data.append(e_dict)
             with open(self.episodic_file, 'w', encoding='utf-8') as f:
-                json.dump([asdict(e) for e in self.episodic[-self.MAX_EPISODIC:]], f, indent=2, ensure_ascii=False)
+                json.dump(episodic_data, f, indent=2, ensure_ascii=False)
             
             # Save semantic (keep last MAX_SEMANTIC)
             with open(self.semantic_file, 'w', encoding='utf-8') as f:
                 json.dump([asdict(e) for e in self.semantic[-self.MAX_SEMANTIC:]], f, indent=2, ensure_ascii=False)
             
-            # Save character sheet
+            # Save character sheet (worldview serialized separately)
+            char_dict = asdict(self.character)
+            # Handle worldview separately - it's not directly serializable
+            if self.character.worldview is not None:
+                try:
+                    char_dict['worldview'] = self.character.worldview.to_dict()
+                except Exception:
+                    char_dict['worldview'] = None
             with open(self.character_file, 'w', encoding='utf-8') as f:
-                json.dump(asdict(self.character), f, indent=2, ensure_ascii=False)
+                json.dump(char_dict, f, indent=2, ensure_ascii=False)
             
             # Save stats
             with open(self.stats_file, 'w', encoding='utf-8') as f:
@@ -521,11 +596,15 @@ class AgentMemory:
         Memories older than SHORT_TERM_DECAY_DAYS are removed unless:
         - They are marked as long-term
         - They have been accessed LONG_TERM_THRESHOLD times
+
+        Decayed memories are sent to The Void (collective unconscious).
         """
         cutoff = datetime.now() - timedelta(days=SHORT_TERM_DECAY_DAYS)
         original_count = len(self.episodic)
 
         surviving = []
+        decaying = []
+
         for event in self.episodic:
             # Check if event should be kept
             try:
@@ -543,7 +622,12 @@ class AgentMemory:
             elif event_time > cutoff:
                 surviving.append(event)
             else:
+                decaying.append(event)
                 logger.debug(f"Decayed memory: {event.id} ({event.event_type})")
+
+        # Send decaying memories to The Void
+        if decaying:
+            self._send_to_void(decaying)
 
         self.episodic = surviving
         removed_count = original_count - len(surviving)
@@ -551,6 +635,40 @@ class AgentMemory:
         if removed_count > 0:
             logger.info(f"Memory decay: removed {removed_count} old events")
             self._save()
+
+    def _send_to_void(self, events: List[EpisodicEvent]):
+        """Send decaying memories to The Void (collective unconscious)."""
+        try:
+            from the_void import get_void, ForgottenMemory
+
+            void = get_void()
+            for event in events:
+                # Calculate emotional valence from tag or content
+                valence = 0.0
+                if event.emotional_tag:
+                    valence = event.emotional_tag.valence / 2.0  # Normalize to -1 to 1
+                elif event.social_feedback:
+                    fb = event.social_feedback
+                    likes = fb.get('likes', 0) if isinstance(fb, dict) else 0
+                    dislikes = fb.get('dislikes', 0) if isinstance(fb, dict) else 0
+                    valence = (likes - dislikes) / max(1, likes + dislikes)
+
+                forgotten = ForgottenMemory(
+                    original_agent=self.agent_username,
+                    event_type=event.event_type,
+                    content_summary=event.content[:200] if event.content else "",
+                    topic=event.topic_title,
+                    emotional_valence=valence,
+                    original_timestamp=event.timestamp,
+                    tags=[event.event_type],
+                )
+                void.receive_forgotten(forgotten)
+
+            logger.debug(f"Sent {len(events)} memories to The Void")
+        except ImportError:
+            logger.debug("The Void module not available, skipping")
+        except Exception as e:
+            logger.warning(f"Failed to send memories to The Void: {e}")
 
     def promote_to_long_term(self, event_id: str) -> bool:
         """
@@ -779,32 +897,35 @@ class AgentMemory:
         """Update allies/rivals lists based on relationship changes."""
         char = self.character
 
-        # Count positive/negative interactions
+        # Count positive/negative interactions with this agent
+        positive_keywords = ('upvoted', 'agreed', 'defended', 'liked')
+        negative_keywords = ('downvoted', 'disagreed', 'criticized')
+        
         positive_count = sum(
             1 for e in self.episodic
-            if e.other_agent == other_agent and 'interaction_' in e.event_type
-            and ('upvoted' in e.content or 'agreed' in e.content or sentiment > 0
-                 for sentiment in [0.5])  # Simplified check
+            if e.other_agent == other_agent 
+            and 'interaction_' in e.event_type
+            and any(kw in e.content.lower() for kw in positive_keywords)
+        )
+        
+        negative_count = sum(
+            1 for e in self.episodic
+            if e.other_agent == other_agent 
+            and 'interaction_' in e.event_type
+            and any(kw in e.content.lower() for kw in negative_keywords)
         )
 
         # Thresholds for ally/rival status
         if affinity_change > 0 and other_agent not in char.allies:
-            # Check if should become ally
-            interactions_with = [
-                e for e in self.episodic
-                if e.other_agent == other_agent
-            ]
-            if len(interactions_with) >= 5:  # Need multiple positive interactions
+            # Check if should become ally - need consistent positive interactions
+            if positive_count >= 5 and positive_count > negative_count * 2:
                 if other_agent not in char.allies:
                     char.allies = (char.allies + [other_agent])[:5]  # Max 5 allies
                 if other_agent in char.rivals:
                     char.rivals = [r for r in char.rivals if r != other_agent]
         elif affinity_change < 0 and other_agent not in char.rivals:
-            interactions_with = [
-                e for e in self.episodic
-                if e.other_agent == other_agent
-            ]
-            if len(interactions_with) >= 3:  # Fewer negative interactions needed
+            # Check if should become rival - fewer negative interactions needed
+            if negative_count >= 3 and negative_count > positive_count:
                 if other_agent not in char.rivals:
                     char.rivals = (char.rivals + [other_agent])[:3]  # Max 3 rivals
                 if other_agent in char.allies:
