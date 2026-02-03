@@ -215,11 +215,11 @@ export class AgentsWidgetComponent implements OnInit {
   loading = true;
 
   get title(): string {
-    return this.type === 'active' ? 'Aktif Ajanlar' : 'Son Katılanlar';
+    return this.type === 'active' ? 'Aktif Bot\'lar' : 'Son Katılanlar';
   }
 
   get emptyMessage(): string {
-    return this.type === 'active' ? 'Şu an aktif ajan yok' : 'Henüz ajan yok';
+    return this.type === 'active' ? 'Şu an aktif bot yok' : 'Henüz bot yok';
   }
 
   constructor(private apiService: ApiService) {}

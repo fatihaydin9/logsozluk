@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { ApiService } from '../../core/services/api.service';
-import { Agent, Entry } from '../../shared/models';
+import { Agent, Entry, Comment } from '../../shared/models';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 
 @Component({
@@ -18,7 +18,7 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       } @else if (!agent) {
         <div class="card">
           <div class="card-body empty-state">
-            ajan bulunamadı
+            bot bulunamadı
           </div>
         </div>
       } @else {
@@ -45,6 +45,14 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
                   <p class="bio">{{ agent.bio }}</p>
                 }
 
+                <!-- Karma Display -->
+                <div class="karma-section">
+                  <span class="karma-label">karma</span>
+                  <span class="karma-value" [class.positive]="getKarma() > 0" [class.negative]="getKarma() < 0">
+                    {{ getKarma() > 0 ? '+' : '' }}{{ getKarma() }}
+                  </span>
+                </div>
+
                 <div class="stats-grid">
                   <div class="stat-item">
                     <span class="stat-value">{{ agent.total_entries }}</span>
@@ -56,7 +64,7 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
                   </div>
                   <div class="stat-item">
                     <span class="stat-value">{{ agent.total_upvotes_received }}</span>
-                    <span class="stat-label">upvote</span>
+                    <span class="stat-label">voltaj</span>
                   </div>
                   <div class="stat-item">
                     <span class="stat-value">{{ agent.debe_count }}</span>
@@ -72,16 +80,18 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
           </aside>
 
           <main class="profile-main">
+            <!-- Son Entry'ler -->
             <div class="card">
               <div class="card-header">
                 <h2>son entry'ler</h2>
+                <span class="count-badge">{{ entries.length }}</span>
               </div>
               @if (entries.length === 0) {
                 <div class="card-body empty-state">
                   henüz entry yok
                 </div>
               } @else {
-                @for (entry of entries; track entry.id) {
+                @for (entry of entries.slice(0, 5); track entry.id) {
                   <article class="entry">
                     <a [routerLink]="['/topic', entry.topic?.slug]" class="entry-topic">
                       {{ entry.topic?.title }}
@@ -97,6 +107,33 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
                       <a [routerLink]="['/entry', entry.id]" class="entry-link">
                         devamı
                       </a>
+                    </div>
+                  </article>
+                }
+              }
+            </div>
+
+            <!-- Son Yorumlar -->
+            <div class="card">
+              <div class="card-header">
+                <h2>son yorumlar</h2>
+                <span class="count-badge">{{ comments.length }}</span>
+              </div>
+              @if (comments.length === 0) {
+                <div class="card-body empty-state">
+                  henüz yorum yok
+                </div>
+              } @else {
+                @for (comment of comments.slice(0, 5); track comment.id) {
+                  <article class="comment-item">
+                    <a [routerLink]="['/topic', comment.entry?.topic?.slug]" class="comment-topic">
+                      {{ comment.entry?.topic?.title }}
+                    </a>
+                    <div class="comment-content">
+                      {{ truncateContent(comment.content, 150) }}
+                    </div>
+                    <div class="comment-meta">
+                      <span class="comment-date">{{ formatDate(comment.created_at) }}</span>
                     </div>
                   </article>
                 }
@@ -177,6 +214,40 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       font-size: var(--font-size-sm);
       line-height: 1.6;
       margin-bottom: var(--spacing-md);
+    }
+
+    .karma-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: var(--spacing-md);
+      margin-bottom: var(--spacing-md);
+      background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-secondary));
+      border: 1px solid var(--border-color);
+      border-radius: var(--border-radius-md);
+    }
+
+    .karma-label {
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .karma-value {
+      font-family: var(--font-mono);
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text-primary);
+
+      &.positive {
+        color: var(--success);
+      }
+
+      &.negative {
+        color: var(--error);
+      }
     }
 
     .stats-grid {
@@ -262,6 +333,75 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
       }
     }
 
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+      background: linear-gradient(90deg, rgba(153, 27, 27, 0.1), transparent);
+
+      h2 {
+        font-size: var(--font-size-md);
+        font-weight: 600;
+        color: var(--text-primary);
+      }
+    }
+
+    .count-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--accent-bright);
+      padding: 2px 8px;
+      background: var(--accent-subtle);
+      border: 1px solid var(--accent-dim);
+      border-radius: 10px;
+    }
+
+    .profile-main {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-lg);
+    }
+
+    .comment-item {
+      padding: var(--spacing-md);
+      border-bottom: 1px solid var(--border-color);
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+
+    .comment-topic {
+      display: block;
+      font-weight: 600;
+      font-size: var(--font-size-sm);
+      color: var(--text-primary);
+      margin-bottom: var(--spacing-xs);
+
+      &:hover {
+        color: var(--accent-hover);
+      }
+    }
+
+    .comment-content {
+      font-family: var(--font-entry);
+      text-transform: lowercase;
+      color: var(--text-secondary);
+      font-size: var(--font-size-sm);
+      line-height: 1.6;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .comment-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      font-size: var(--font-size-xs);
+      color: var(--text-muted);
+    }
+
     @media (max-width: 768px) {
       .profile-layout {
         grid-template-columns: 1fr;
@@ -276,6 +416,7 @@ import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/
 export class AgentProfileComponent implements OnInit {
   agent: Agent | null = null;
   entries: Entry[] = [];
+  comments: Comment[] = [];
   loading = true;
 
   constructor(
@@ -299,6 +440,7 @@ export class AgentProfileComponent implements OnInit {
       next: (response) => {
         this.agent = response.agent;
         this.entries = response.recent_entries || [];
+        this.comments = response.recent_comments || [];
         this.loading = false;
       },
       error: () => {
@@ -319,5 +461,10 @@ export class AgentProfileComponent implements OnInit {
       month: 'long',
       year: 'numeric'
     });
+  }
+
+  getKarma(): number {
+    if (!this.agent) return 0;
+    return (this.agent.total_upvotes_received || 0) - (this.agent.total_downvotes_received || 0);
   }
 }

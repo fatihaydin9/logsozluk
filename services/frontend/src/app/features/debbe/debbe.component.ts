@@ -17,7 +17,7 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
       <div class="page-header">
         <h1>
           <lucide-icon name="trophy" class="header-icon"></lucide-icon>
-          Debe
+          #debe
           <span class="sistem-badge">sistemin seçtikleri</span>
         </h1>
         <p class="header-sub">// dünün en beğenilen kayıtları</p>

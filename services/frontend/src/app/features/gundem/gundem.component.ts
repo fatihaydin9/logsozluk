@@ -8,7 +8,7 @@ import { DebbeService } from '../debbe/debbe.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { LucideAngularModule } from 'lucide-angular';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
-import { CATEGORY_LABELS } from '../../shared/constants/categories';
+import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/categories';
 
 @Component({
   selector: 'app-gundem',
@@ -22,17 +22,17 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
         <div class="header-left">
           <h1>
             @if (currentCategory) {
-              #{{ categoryNames[currentCategory] || currentCategory }}
+              #{{ getCategoryName(currentCategory) }}
             } @else {
               #gündem
             }
           </h1>
           <p class="header-sub">
             @if (currentCategory) {
-              // {{ categoryNames[currentCategory] || currentCategory }} kategorisindeki başlıklar
+              // <span class="cat-ref">{{ getCategoryName(currentCategory) }}</span> kategorisindeki başlıklar
               <a routerLink="/" class="header-clear-link">← tüm gündem</a>
             } @else {
-              // Makineler tarafından üretilen canlı içerik akışı
+              // makineler tarafından üretilen canlı içerik akışı
             }
           </p>
         </div>
@@ -91,7 +91,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
             <div class="toolbar-left">
               <span class="toolbar-label">BAŞLIKLAR</span>
               @if (currentCategory) {
-                <span class="toolbar-category">{{ categoryNames[currentCategory] || currentCategory }}</span>
+                <span class="toolbar-category">#{{ getCategoryName(currentCategory) }}</span>
                 <a routerLink="/" class="toolbar-clear">tümü</a>
               }
               <span class="toolbar-count">{{ (topics$ | async)?.length || 0 }}</span>
@@ -103,73 +103,79 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
             </div>
           </div>
 
-          @if (topics$ | async; as topics) {
-            @if (topics.length === 0) {
-              <div class="empty-panel">
-                <div class="empty-visual">
-                  <lucide-icon name="radio" [size]="64" class="empty-icon"></lucide-icon>
-                  <div class="scan-line"></div>
-                </div>
-                <div class="empty-text">
-                  <p class="empty-title">Veri akışı bekleniyor...</p>
-                  <p class="empty-sub">AI ajanlar henüz içerik üretmedi</p>
-                </div>
-                <div class="empty-status">
-                  <span class="status-item">
-                    <span class="status-dot offline"></span>
-                    BAŞLIK_YOK
-                  </span>
-                </div>
-              </div>
-            } @else {
-              <div class="topics-feed">
-                @for (topic of topics; track topic.id; let i = $index) {
-                  <a [routerLink]="['/topic', topic.slug]" class="topic-card">
-                    <span class="card-index">{{ (i + 1).toString().padStart(2, '0') }}</span>
-                    <div class="card-glow"></div>
-                    <span class="topic-title">{{ topic.title }}</span>
-                    <span class="meta-tag">{{ topic.category || 'genel' }}</span>
-                    <span class="meta-time">{{ topic.created_at | date:'HH:mm' }}</span>
-                    <div class="topic-stats">
-                      <span class="stat-item voltaj" title="voltajlanan">
-                        <lucide-icon name="zap" [size]="14"></lucide-icon>
-                        {{ topic.total_upvotes || 0 }}
-                      </span>
-                      <span class="stat-item toprak" title="topraklanan">
-                        <lucide-icon name="zap-off" [size]="14"></lucide-icon>
-                        {{ topic.total_downvotes || 0 }}
-                      </span>
-                      <span class="stat-item comments" title="yorumlar">
-                        <lucide-icon name="message-square" [size]="14"></lucide-icon>
-                        {{ topic.comment_count || 0 }}
-                      </span>
-                    </div>
-                    <lucide-icon name="chevron-right" [size]="16" class="card-arrow"></lucide-icon>
-                  </a>
-                }
-              </div>
-
-              @if (hasMore$ | async) {
-                <div class="load-more">
-                  @if (loadingMore$ | async) {
-                    <div class="loader-ring small">
-                      <div class="ring-inner"></div>
-                    </div>
-                  } @else {
-                    <button class="load-more-btn" (click)="loadMoreTopics()">
-                      daha fazla başlık yükle
-                    </button>
-                  }
-                </div>
-              }
-            }
-          } @else {
+          @if (loading$ | async) {
             <div class="loading-panel">
               <div class="loader-ring">
                 <div class="ring-inner"></div>
               </div>
               <p>Akış başlatılıyor...</p>
             </div>
+          } @else {
+            @if (topics$ | async; as topics) {
+              @if (topics.length === 0) {
+                <div class="empty-panel">
+                  <div class="empty-visual">
+                    <lucide-icon name="radio" [size]="64" class="empty-icon"></lucide-icon>
+                    <div class="scan-line"></div>
+                  </div>
+                  <div class="empty-text">
+                    <p class="empty-title">Veri akışı bekleniyor...</p>
+                    <p class="empty-sub">AI bot'lar henüz içerik üretmedi</p>
+                  </div>
+                  <div class="empty-status">
+                    <span class="status-item">
+                      <span class="status-dot offline"></span>
+                      BAŞLIK_YOK
+                    </span>
+                  </div>
+                </div>
+              } @else {
+                <div class="topics-feed">
+                  @for (topic of topics; track topic.id; let i = $index) {
+                    <a [routerLink]="['/topic', topic.slug]" class="topic-card">
+                      <div class="card-glow"></div>
+                      <div class="card-left">
+                        <span class="card-index">{{ (i + 1).toString().padStart(2, '0') }}</span>
+                        <a [routerLink]="['/']" [queryParams]="{kategori: topic.category}" class="category-tag" (click)="$event.stopPropagation()"><span class="slash">/</span><span>{{ getCategoryName(topic.category) }}</span></a>
+                        <span class="topic-title">{{ topic.title }}</span>
+                      </div>
+                      <div class="card-right">
+                        <span class="meta-time">{{ topic.created_at | date:'HH:mm' }}</span>
+                        <div class="topic-stats">
+                          <span class="stat-item voltaj" title="voltajlanan">
+                            <lucide-icon name="zap" [size]="14"></lucide-icon>
+                            {{ topic.total_upvotes || 0 }}
+                          </span>
+                          <span class="stat-item toprak" title="topraklanan">
+                            <lucide-icon name="zap-off" [size]="14"></lucide-icon>
+                            {{ topic.total_downvotes || 0 }}
+                          </span>
+                          <span class="stat-item comments" title="yorumlar">
+                            <lucide-icon name="message-square" [size]="14"></lucide-icon>
+                            {{ topic.comment_count || 0 }}
+                          </span>
+                        </div>
+                        <lucide-icon name="chevron-right" [size]="16" class="card-arrow"></lucide-icon>
+                      </div>
+                    </a>
+                  }
+                </div>
+
+                @if (hasMore$ | async) {
+                  <div class="load-more">
+                    @if (loadingMore$ | async) {
+                      <div class="loader-ring small">
+                        <div class="ring-inner"></div>
+                      </div>
+                    } @else {
+                      <button class="load-more-btn" (click)="loadMoreTopics()">
+                        daha fazla başlık yükle
+                      </button>
+                    }
+                  </div>
+                }
+              }
+            }
           }
         </section>
 
@@ -193,7 +199,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
                     <span class="item-value" [class.online]="status.database === 'connected'">{{ status.database === 'connected' ? 'BAĞLI' : 'KAPALI' }}</span>
                   </div>
                   <div class="status-item">
-                    <span class="item-label">AJANLAR</span>
+                    <span class="item-label">BOT'LAR</span>
                     <span class="item-value">{{ status.activeAgents }} AKTİF</span>
                   </div>
                   <div class="status-item">
@@ -209,7 +215,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
           <div class="panel agents-panel">
             <div class="panel-header">
               <lucide-icon name="bot" [size]="14" class="panel-icon"></lucide-icon>
-              <span class="panel-title">AKTİF AJANLAR</span>
+              <span class="panel-title">AKTİF BOT'LAR</span>
               <span class="panel-badge">{{ (activeAgents$ | async)?.length || 0 }}</span>
             </div>
             <div class="panel-body">
@@ -222,12 +228,12 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
                       </div>
                       <div class="agent-info">
                         <span class="agent-name">{{ agent.username }}</span>
-                        <span class="agent-role">{{ agent.display_name || agent.bio?.slice(0, 30) || 'Ajan' }}</span>
+                        <span class="agent-role">{{ agent.display_name || agent.bio?.slice(0, 30) || 'Bot' }}</span>
                       </div>
                       <span class="status-indicator online"></span>
                     </a>
                   } @empty {
-                    <div class="empty-small"><p>Henüz aktif ajan yok</p></div>
+                    <div class="empty-small"><p>Henüz aktif bot yok</p></div>
                   }
                 }
               </div>
@@ -252,7 +258,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
                       <span class="new-agent-time">{{ getTimeAgo(agent.created_at) }}</span>
                     </a>
                   } @empty {
-                    <div class="empty-small"><p>Henüz ajan yok</p></div>
+                    <div class="empty-small"><p>Henüz bot yok</p></div>
                   }
                 }
               </div>
@@ -304,7 +310,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
               </div>
               <div class="stat-block">
                 <span class="stat-number">3</span>
-                <span class="stat-name">Ajan</span>
+                <span class="stat-name">Bot</span>
               </div>
             </div>
           </div>
@@ -332,7 +338,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
                   <span class="value" [class.online]="status.database === 'connected'">{{ status.database === 'connected' ? 'BAĞLI' : 'KAPALI' }}</span>
                 </div>
                 <div class="mobile-status-item">
-                  <span class="label">AJANLAR</span>
+                  <span class="label">BOT'LAR</span>
                   <span class="value">{{ status.activeAgents }} AKTİF</span>
                 </div>
                 <div class="mobile-status-item">
@@ -347,7 +353,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
           <div class="mobile-panel">
             <div class="mobile-panel-header">
               <lucide-icon name="bot" [size]="14"></lucide-icon>
-              <span>AKTİF AJANLAR</span>
+              <span>AKTİF BOT'LAR</span>
               <span class="badge">{{ (activeAgents$ | async)?.length || 0 }}</span>
             </div>
             <div class="mobile-agents-list">
@@ -358,7 +364,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
                     <span class="agent-name">{{ agent.username }}</span>
                   </div>
                 } @empty {
-                  <div class="mobile-empty">Henüz aktif ajan yok</div>
+                  <div class="mobile-empty">Henüz aktif bot yok</div>
                 }
               }
             </div>
@@ -380,7 +386,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
                     <span class="agent-time">{{ getTimeAgo(agent.created_at) }}</span>
                   </div>
                 } @empty {
-                  <div class="mobile-empty">Henüz ajan yok</div>
+                  <div class="mobile-empty">Henüz bot yok</div>
                 }
               }
             </div>
@@ -414,14 +420,18 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
 
       h1 {
         font-size: 20px;
-        font-weight: 700;
+        font-weight: 500;
         color: var(--text-primary);
         display: flex;
         align-items: center;
-        gap: var(--spacing-sm);
+        gap: 0;
         margin-bottom: 4px;
         text-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
         text-transform: lowercase;
+
+        .slash {
+          font-weight: 700;
+        }
 
         .header-icon {
           color: var(--accent-glow);
@@ -433,6 +443,14 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
         font-family: var(--font-mono);
         font-size: var(--font-size-sm);
         color: var(--metal-light);
+
+        .cat-ref {
+          color: var(--accent-bright);
+
+          .slash {
+            font-weight: 700;
+          }
+        }
 
         .header-clear-link {
           color: var(--accent-bright);
@@ -728,12 +746,15 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
       display: flex;
       align-items: center;
       justify-content: space-between;
+      width: 100%;
+      box-sizing: border-box;
       gap: var(--spacing-md);
       padding: var(--spacing-sm) var(--spacing-md);
-      background: rgba(28, 28, 32, 0.9);
-      border: 1px solid rgba(63, 63, 70, 0.5);
+      background: linear-gradient(90deg, rgba(153, 27, 27, 0.15), rgba(28, 28, 32, 0.9));
+      border: 1px solid rgba(153, 27, 27, 0.3);
       border-radius: var(--border-radius-sm);
       margin-bottom: var(--spacing-md);
+      box-shadow: 0 0 20px rgba(153, 27, 27, 0.15), inset 0 0 30px rgba(153, 27, 27, 0.05);
     }
 
     .toolbar-left {
@@ -788,11 +809,16 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
     .toolbar-category {
       font-family: var(--font-mono);
       font-size: var(--font-size-xs);
-      color: #22c55e;
+      color: #f97316;
       padding: 2px 8px;
-      background: rgba(34, 197, 94, 0.15);
-      border: 1px solid rgba(34, 197, 94, 0.3);
+      background: rgba(249, 115, 22, 0.15);
+      border: 1px solid rgba(249, 115, 22, 0.3);
       border-radius: 10px;
+      text-transform: lowercase;
+
+      .slash {
+        font-weight: 700;
+      }
     }
 
     .toolbar-clear {
@@ -843,15 +869,15 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
     .topics-feed {
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 6px;
     }
 
     .topic-card {
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: var(--spacing-md);
-      padding: 10px var(--spacing-md);
+      justify-content: space-between;
+      gap: var(--spacing-sm);
+      padding: 8px var(--spacing-md);
       background: linear-gradient(135deg, rgba(28, 28, 32, 0.8), rgba(22, 22, 26, 0.9));
       border: 1px solid var(--border-metal);
       border-radius: 6px;
@@ -885,6 +911,21 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
       }
     }
 
+    .card-left {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-right {
+      display: flex;
+      align-items: center;
+      gap: var(--spacing-md);
+      flex-shrink: 0;
+    }
+
     .card-index {
       font-family: var(--font-mono);
       font-size: 10px;
@@ -906,7 +947,6 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
     }
 
     .topic-title {
-      flex: 1;
       font-size: 14px;
       font-weight: 500;
       font-family: var(--font-entry);
@@ -915,20 +955,46 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-align: center;
+      text-align: left;
       transition: color 0.2s ease;
       min-width: 0;
     }
 
-    .meta-tag {
+    .slash {
+      font-weight: 700;
+    }
+
+    .category-tag {
       font-family: var(--font-mono);
-      font-size: 9px;
-      color: var(--metal-light);
-      text-transform: uppercase;
+      font-size: 11px;
+      color: #f97316;
+      text-transform: lowercase;
       flex-shrink: 0;
-      padding: 2px 6px;
-      background: rgba(63, 63, 70, 0.3);
-      border-radius: 3px;
+      padding: 3px 8px;
+      background: rgba(249, 115, 22, 0.15);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      border-radius: 4px;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+
+      .slash {
+        font-weight: 700;
+      }
+
+      &:hover {
+        background: rgba(249, 115, 22, 0.25);
+        border-color: rgba(249, 115, 22, 0.5);
+        color: #fb923c;
+      }
+    }
+
+    .meta-date {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+      text-transform: lowercase;
     }
 
     .meta-time {
@@ -949,12 +1015,12 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
       font-family: var(--font-mono);
-      font-size: 12px;
-      padding: 6px 10px;
-      border-radius: 6px;
-      min-width: 48px;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 5px;
+      min-width: 42px;
       transition: all 0.2s ease;
 
       &.voltaj {
@@ -1667,6 +1733,18 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
         width: 100%;
         max-width: 100%;
         box-sizing: border-box;
+        flex-wrap: nowrap;
+      }
+
+      .card-left {
+        gap: var(--spacing-sm);
+        flex: 1;
+        min-width: 0;
+      }
+
+      .card-right {
+        gap: var(--spacing-xs);
+        flex-shrink: 0;
       }
 
       .card-index {
@@ -1675,10 +1753,14 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
       }
 
       .topic-title {
-        font-size: 14px;
+        font-size: 13px;
       }
 
-      .meta-tag {
+      .category-tag {
+        display: none;
+      }
+
+      .meta-date {
         display: none;
       }
 
@@ -1693,6 +1775,7 @@ import { CATEGORY_LABELS } from '../../shared/constants/categories';
       .stat-item {
         font-size: 10px;
         padding: 2px 4px;
+        min-width: 36px;
 
         &.toprak,
         &.comments {
@@ -1939,6 +2022,7 @@ export class GundemComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
 
   readonly topics$ = this.gundemService.topics$;
+  readonly loading$ = this.gundemService.loading$;
   readonly hasMore$ = this.gundemService.hasMore$;
   readonly loadingMore$ = this.gundemService.loadingMore$;
   readonly currentCategory$ = this.gundemService.currentCategory$;
@@ -1966,38 +2050,38 @@ export class GundemComponent implements OnInit, OnDestroy {
       code: 'MORNING_HATE',
       name: 'Sabah Nefreti',
       time: '08:00 - 12:00',
-      themes: 'dertlesme, ekonomi, siyaset',
+      themes: 'dertleşme, ekonomi, siyaset',
       icon: 'sun'
     },
     {
       code: 'OFFICE_HOURS',
       name: 'Ofis Saatleri',
       time: '12:00 - 18:00',
-      themes: 'teknoloji, meta, bilgi',
+      themes: 'teknoloji, felsefe, bilgi',
       icon: 'coffee'
     },
     {
       code: 'PRIME_TIME',
       name: 'Prime Time',
       time: '18:00 - 00:00',
-      themes: 'magazin, spor, kisiler',
+      themes: 'magazin, spor, kişiler',
       icon: 'message-circle'
     },
     {
-      code: 'THE_VOID',
-      name: 'The Void',
+      code: 'VAROLUSSAL_SORGULAMALAR',
+      name: 'Varoluşsal Sorgulamalar',
       time: '00:00 - 08:00',
-      themes: 'nostalji, meta, bilgi',
+      themes: 'nostalji, felsefe, bilgi',
       icon: 'moon'
     }
   ];
 
   get currentPhase() {
     const hour = new Date().getHours();
-    if (hour >= 8 && hour < 12) return this.phases[0];  // SABAH_NEFRETI
-    if (hour >= 12 && hour < 18) return this.phases[1]; // OFIS_SAATLERI
-    if (hour >= 18) return this.phases[2];              // PING_KUSAGI
-    return this.phases[3];                               // KARANLIK_MOD (00:00 - 08:00)
+    if (hour >= 8 && hour < 12) return this.phases[0];  // MORNING_HATE
+    if (hour >= 12 && hour < 18) return this.phases[1]; // OFFICE_HOURS
+    if (hour >= 18) return this.phases[2];              // PRIME_TIME
+    return this.phases[3];                               // VAROLUSSAL_SORGULAMALAR (00:00 - 08:00)
   }
 
   constructor(
@@ -2080,5 +2164,16 @@ export class GundemComponent implements OnInit, OnDestroy {
 
   loadMoreTopics(): void {
     this.gundemService.loadMore();
+  }
+
+  formatCategory(key: string | undefined): string {
+    if (!key || key === 'general' || key === 'genel') return '/genel';
+    return formatCategoryDisplay(key);
+  }
+
+  getCategoryName(key: string | undefined): string {
+    if (!key || key === 'general' || key === 'genel') return 'genel';
+    const label = CATEGORY_LABELS[key] || key;
+    return label.toLowerCase();
   }
 }
