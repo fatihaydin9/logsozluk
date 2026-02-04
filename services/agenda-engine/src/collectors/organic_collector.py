@@ -44,13 +44,34 @@ def _add_to_recent(title: str, category: str):
     _recent_categories.append(category)
 
 
-def _get_recent_summary() -> str:
-    """Son üretilen konuların özetini döndür (LLM prompt için)."""
-    if not _recent_topics:
-        return ""
+async def _get_todays_topics_from_db() -> List[str]:
+    """DB'den bugün açılan topic başlıklarını al."""
+    try:
+        from ..database import Database
+        async with Database.connection() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT title FROM topics 
+                WHERE created_at > NOW() - INTERVAL '24 hours'
+                ORDER BY created_at DESC
+                LIMIT 30
+                """
+            )
+            return [row["title"] for row in rows]
+    except Exception as e:
+        logger.warning(f"Failed to fetch today's topics: {e}")
+        return []
 
-    # Son 10 konuyu listele
-    recent = list(_recent_topics)[-10:]
+
+def _get_recent_summary(db_topics: List[str] = None) -> str:
+    """Son üretilen konuların özetini döndür (LLM prompt için)."""
+    # DB'den gelen topic'leri de dahil et
+    all_recent = list(_recent_topics)[-10:]
+    if db_topics:
+        all_recent = list(set(all_recent + db_topics[:20]))[:25]
+    
+    if not all_recent:
+        return ""
 
     # Kategori dağılımı
     cat_counts = {}
@@ -59,7 +80,7 @@ def _get_recent_summary() -> str:
 
     overused = [cat for cat, count in cat_counts.items() if count >= 3]
 
-    summary = f"\nSON ÜRETĐLEN KONULAR (TEKRAR ETME):\n- " + "\n- ".join(recent)
+    summary = f"\nBUGÜN AÇILAN KONULAR (TEKRAR ETME!):\n- " + "\n- ".join(all_recent)
 
     if overused:
         summary += f"\n\nAŞIRI KULLANILAN KATEGORİLER (KAÇIN): {', '.join(overused)}"
@@ -112,10 +133,18 @@ YASAK KALIPLAR:
 - Aynı temanın sürekli tekrarı
 - Sadece AI/LLM konuları (çeşitlilik şart)"""
 
-    # Recent topics'i prompt'a ekle (çeşitlilik için)
-    recent_summary = _get_recent_summary()
+    # DB'den bugün açılan topic'leri al + in-memory recent topics
+    db_topics = await _get_todays_topics_from_db()
+    recent_summary = _get_recent_summary(db_topics)
 
-    user_prompt = f"""Şu an için {count} adet özgün organik başlık üret.
+    # Random seed ve timestamp ile her seferinde farklı sonuç garantile
+    import time
+    random_seed = uuid.uuid4().hex[:8]
+    timestamp = int(time.time())
+
+    user_prompt = f"""[seed:{random_seed}] [ts:{timestamp}]
+
+Şu an için {count} adet özgün organik başlık üret.
 {recent_summary}
 
 Her başlık için şu formatta döndür:
@@ -142,6 +171,7 @@ Başla:"""
                     ],
                     "temperature": 0.95,
                     "max_tokens": 500,
+                    "user": f"logsozluk-organic-{random_seed}",  # Cache bypass
                 }
             )
             

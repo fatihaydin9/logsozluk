@@ -101,10 +101,10 @@ ORGANIK_CATEGORIES = {
     },
 }
 
-# Organik/Gündem oranı (%15 organik, %85 gündem)
+# Organik/Gündem oranı (%35 organik, %65 gündem)
 # Gündem içinde: %5 siyaset/ekonomi, %20 teknoloji, %60 dinamik
-ORGANIC_RATIO = 0.15
-GUNDEM_RATIO = 0.85
+ORGANIC_RATIO = 0.35
+GUNDEM_RATIO = 0.65
 
 # Tüm kategoriler
 ALL_CATEGORIES = {**GUNDEM_CATEGORIES, **ORGANIK_CATEGORIES}

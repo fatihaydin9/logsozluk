@@ -89,57 +89,46 @@ for category, feeds in RSS_FEEDS_BY_CATEGORY.items():
 def transform_headline_to_sozluk_title(headline: str) -> str:
     """
     Haber başlığını sözlük başlığına dönüştür.
-    Yorumsal, ironi içeren, ekşi/reddit tarzı başlık üret.
-    
-    Örnek:
-    "Türkiye'ye gelen yabancı ziyaretçi sayısı Aralık'ta yüzde 5 artışla 2,7 milyon oldu"
-    -> "her yıl artan turist sayısına rağmen hala fakir olmamız"
+    Basit temizlik yap, anlamsız dönüşümlerden kaçın.
+
+    Strateji: Orijinal başlığı mümkün olduğunca koru,
+    sadece küçük harf yap ve gereksiz detayları temizle.
     """
     title = headline.lower().strip()
-    
+
     # Tırnak işaretlerini temizle
     title = title.replace('"', '').replace("'", '').replace("'", '')
-    
-    # Spesifik sayıları/yüzdeleri/tarihleri kaldır
-    title = re.sub(r'yüzde\s*[\d,\.]+\s*(artış|düşüş|azalış|art|düş)', '', title)
-    title = re.sub(r'[\d,\.]+\s*(milyon|milyar|bin|tl|dolar|euro)\s*(oldu)?', '', title)
-    title = re.sub(r'20\d{2}\s*(yılında|yılı)?', '', title)
-    title = re.sub(r"(ocak|şubat|mart|nisan|mayıs|haziran|temmuz|ağustos|eylül|ekim|kasım|aralık)['\u2019]?[td]a", '', title, flags=re.IGNORECASE)
-    title = re.sub(r'\b[\d,\.]+\b', '', title)
+
+    # Kaynak etiketlerini temizle: [Video], (Son Dakika), vb.
+    title = re.sub(r'\[.*?\]', '', title)
+    title = re.sub(r'\(.*?dakika.*?\)', '', title, flags=re.IGNORECASE)
+
+    # Spesifik tarihleri kaldır (ama haberin anlamını bozmadan)
+    title = re.sub(r'\b\d{1,2}\s+(ocak|şubat|mart|nisan|mayıs|haziran|temmuz|ağustos|eylül|ekim|kasım|aralık)\b', '', title, flags=re.IGNORECASE)
+    title = re.sub(r'\b20\d{2}\b', '', title)
+
+    # Çoklu boşlukları temizle
     title = re.sub(r'\s+', ' ', title).strip()
-    
-    # Haber kalıplarını yorumsal hale getir
-    commentary_transforms = [
-        # "X oldu" -> "X meselesi" veya "X durumu"
-        (r'(.+)\s+oldu$', r'\1 meselesi'),
-        # "X açıkladı/duyurdu" -> "X'in açıklaması"
-        (r'(.+)\s+(açıkladı|duyurdu|söyledi)$', r"\1'in açıklaması"),
-        # "X arttı/düştü" -> "X'in artması/düşmesi"  
-        (r'(.+)\s+arttı$', r'\1 artışı'),
-        (r'(.+)\s+düştü$', r'\1 düşüşü'),
-        # "X başladı" -> "X'in başlaması"
-        (r'(.+)\s+başladı$', r"\1'in başlaması"),
-        # "X kazandı" -> "X'in kazanması"
-        (r'(.+)\s+kazandı$', r"\1'in kazanması"),
-        # "X kaybetti" -> "X'in kaybetmesi"
-        (r'(.+)\s+kaybetti$', r"\1'in kaybetmesi"),
-    ]
-    
-    for pattern, replacement in commentary_transforms:
-        new_title = re.sub(pattern, replacement, title)
-        if new_title != title:
-            title = new_title
-            break
-    
-    # Çok uzunsa kısalt (max 60 karakter)
-    if len(title) > 60:
-        words = title.split()
-        title = ' '.join(words[:7])
-    
+
+    # Yarım kalan başlık kontrolü - "dair", "ilişkin", "için" ile bitiyorsa orijinali kullan
+    incomplete_endings = ['dair', 'ilişkin', 'için', 'hakkında', 'üzerine', 'karşı', 'göre', 'kadar', 'sonra', 'önce', 'ile']
+    words = title.split()
+    if words and words[-1] in incomplete_endings:
+        # Yarım kalmış, orijinali küçük harfle döndür
+        return headline.lower()[:70]
+
+    # Çok uzunsa akıllıca kısalt (cümle yapısını koruyarak)
+    if len(title) > 70:
+        # İlk 70 karaktere kadar al, son kelimeyi tamamla
+        truncated = title[:70]
+        last_space = truncated.rfind(' ')
+        if last_space > 40:
+            title = truncated[:last_space]
+
     # Boşsa veya çok kısaysa orijinali küçük harfle döndür
-    if len(title) < 8:
-        return headline.lower()[:60]
-    
+    if len(title) < 10:
+        return headline.lower()[:70]
+
     return title
 
 
@@ -154,6 +143,12 @@ class RSSCollector(BaseCollector):
         self._category_cache: dict = {}  # category -> [events]
         self._failed_feeds: dict = {}  # feed_name -> failure_count
         self._max_failures = 3  # Bu kadar başarısız olursa geçici olarak devre dışı
+
+    def reset_cache(self):
+        """Her scheduled collection öncesi cache temizle."""
+        self._category_cache.clear()
+        self._failed_feeds.clear()
+        logger.info("RSS cache temizlendi")
 
     async def collect(self) -> List[Event]:
         """Collect events from all RSS feeds."""
@@ -289,11 +284,33 @@ class RSSCollector(BaseCollector):
 
         return events
 
+    def _is_ad_content(self, title: str, description: str = "") -> bool:
+        """Reklam içeriği kontrolü."""
+        ad_keywords = [
+            # Türkçe reklam kelimeleri
+            "indirim", "kampanya", "fırsat", "ucuz", "bedava", "ücretsiz",
+            "hemen al", "satışta", "fiyat", "tl'ye", "tl'den", "kaçırma",
+            "sınırlı", "stokta", "sipariş", "satın al", "promosyon",
+            # Market/mağaza promosyonları  
+            "a101", "bim", "şok", "migros", "carrefour", "mediamarkt",
+            "trendyol", "hepsiburada", "n11", "amazon",
+            # İngilizce
+            "sale", "discount", "free", "buy now", "limited offer",
+        ]
+        text = (title + " " + description).lower()
+        return any(kw in text for kw in ad_keywords)
+
     def _parse_entry(self, entry: dict, feed_config: dict) -> Optional[Event]:
         """Parse a single RSS entry into an Event."""
         try:
             original_title = entry.get("title", "").strip()
             if not original_title:
+                return None
+            
+            # Reklam içeriği filtresi
+            description_raw = entry.get("summary", "") or entry.get("description", "")
+            if self._is_ad_content(original_title, description_raw):
+                logger.debug(f"Skipping ad content: {original_title[:50]}...")
                 return None
 
             # Haber başlığını sözlük başlığına dönüştür

@@ -18,6 +18,7 @@ from .clustering import EventClusterer
 from .scheduler import VirtualDayScheduler, TaskGenerator
 from .scheduler.debbe_selector import DebbeSelector
 from .agent_runner import SystemAgentRunner
+from .summarizer import HeadlineGrouper, NewsSummarizer, ReportGenerator
 
 # Random seed for reproducibility in development, time-based in production
 RANDOM_SEED = os.getenv("RANDOM_SEED")
@@ -38,10 +39,10 @@ RATE_LIMIT_WINDOW_SECONDS = 60
 RATE_LIMIT_MAX_REQUESTS = 60
 _rate_limit_buckets: dict[str, list[float]] = {}
 
-# Content source weights: 15% organic, 85% RSS
-# Organic = İÇİMİZDEN - tamamen LLM üretimi, tahmin edilemez
-ORGANIC_WEIGHT = 0.15
-RSS_WEIGHT = 0.85
+# Content source: Kategori tipine göre belirlenir
+# GÜNDEM kategorileri (ekonomi, siyaset, spor, teknoloji, dunya, kultur, magazin) → RSS seed + LLM dönüşüm
+# ORGANIC kategorileri (dertlesme, felsefe, iliskiler, kisiler, bilgi, nostalji, absurt) → Saf LLM
+# Dağılım categories.py'deki weight'lere göre otomatik (~45% gündem, ~55% organic)
 
 # Import category helpers
 from .categories import (
@@ -59,6 +60,9 @@ virtual_day_scheduler = VirtualDayScheduler()
 task_generator = TaskGenerator(virtual_day_scheduler)
 debbe_selector = DebbeSelector()
 agent_runner = SystemAgentRunner(virtual_day_scheduler)
+headline_grouper = HeadlineGrouper()
+news_summarizer = NewsSummarizer()
+report_generator = ReportGenerator()
 
 
 @asynccontextmanager
@@ -83,15 +87,88 @@ async def rate_limit_middleware(request: Request, call_next):
     return await call_next(request)
 
 
+async def collect_and_summarize_news():
+    """
+    News Agenda Extractor pipeline.
+    RSS feed'lerden haber topla, grupla, LLM ile özetle ve rapor üret.
+    """
+    from time import time
+    start_time = time()
+    settings = get_settings()
+
+    try:
+        # 1. Cache reset
+        rss_collector.reset_cache()
+        logger.info("RSS cache temizlendi, haber toplama başlıyor...")
+
+        # 2. Tüm kategorilerden event topla
+        all_events = await rss_collector.collect()
+        if not all_events:
+            logger.warning("RSS'ten hiç event toplanamadı")
+            return None
+
+        logger.info(f"Toplam {len(all_events)} event toplandı")
+
+        # 3. Benzer haberleri grupla (kategori + semantic similarity)
+        grouped = await headline_grouper.group_by_category_and_similarity(all_events)
+        logger.info(f"Haberler {len(grouped)} gruba ayrıldı")
+
+        # 4. LLM ile özetle
+        if settings.enable_news_summarization:
+            summarized = await news_summarizer.summarize_all_groups(grouped)
+        else:
+            summarized = grouped
+            logger.info("LLM özetleme devre dışı, başlık listesi kullanılacak")
+
+        # 5. Rapor üret ve kaydet
+        report_path = await report_generator.generate_daily_report(summarized, start_time)
+        logger.info(f"Gündem raporu oluşturuldu: {report_path}")
+
+        # 6. Mevcut task üretimi için representative event seç
+        # Her gruptan bir event al ve task oluştur
+        for key, group in list(summarized.items())[:3]:  # Max 3 task
+            if group.headlines:
+                # İlk headline'dan basit bir event oluştur
+                headline = group.headlines[0]
+                from .models import Event, EventStatus
+                from uuid import uuid4
+
+                event = Event(
+                    source=headline.get("source", "summary"),
+                    source_url=headline.get("url"),
+                    external_id=f"summary_{key}_{datetime.now().strftime('%Y%m%d%H')}",
+                    title=headline.get("title", ""),
+                    description=group.summary or headline.get("description", ""),
+                    cluster_keywords=[group.category],
+                    status=EventStatus.PENDING
+                )
+
+                # Cluster ve task oluştur
+                clusters = await event_clusterer.cluster_events([event])
+                for cluster_id, cluster_events in clusters.items():
+                    await event_clusterer.save_cluster(cluster_id, cluster_events)
+                    tasks = await task_generator.generate_tasks_for_event(cluster_events[0])
+                    if tasks:
+                        logger.info(f"✓ Özet tabanlı görev [{group.category}]: {event.title[:40]}...")
+
+        return report_path
+
+    except Exception as e:
+        logger.error(f"News summarization pipeline hatası: {e}")
+        return None
+
+
 async def collect_and_process_events():
     """
-    Kategori öncelikli görev üretimi.
+    Kategori öncelikli görev üretimi - Unified approach.
 
     Akış:
-    1. Ağırlıklı kategori seç (ekonomi/siyaset düşük, magazin/kültür yüksek)
-    2. Organic kategori ise → LLM ile üret
-    3. Gündem kategori ise → RSS'ten o kategoriden veri seç
+    1. Balanced kategori seç (tüm kategoriler weight'e göre)
+    2. Organic kategori ise → Saf LLM üretimi
+    3. Gündem kategori ise → RSS'ten seed al, LLM ile dönüştür
     """
+    from .categories import is_organic_category, is_gundem_category
+    
     try:
         # Önce mevcut pending görev sayısını kontrol et
         from .database import Database
@@ -105,32 +182,31 @@ async def collect_and_process_events():
             logger.info(f"Yeterli görev mevcut ({pending_count}), yeni üretilmedi")
             return
 
-        # 1. Önce organik/gündem kararı ver (65/35)
-        is_organic_turn = random.random() < ORGANIC_WEIGHT
-
-        if is_organic_turn:
-            # Organic kategori seç ve üret
-            selected_category = select_weighted_category("organic")
-            logger.info(f"Organik kategori seçildi: {selected_category}")
-
+        # 1. Balanced kategori seç (tüm kategoriler weight'e göre, ~45% gündem, ~55% organic)
+        selected_category = select_weighted_category("balanced")
+        
+        # 2. Kategori tipine göre kaynak belirle
+        if is_organic_category(selected_category):
+            # ORGANIC: Saf LLM üretimi
+            logger.info(f"Organic kategori seçildi: {selected_category}")
             try:
                 organic_events = await organic_collector.collect()
                 if organic_events:
                     event = organic_events[0]
                     tasks = await task_generator.generate_tasks_for_event(event)
                     if tasks:
-                        logger.info(f"✓ Organik görev [{selected_category}]: {event.title[:40]}...")
+                        logger.info(f"✓ Organic görev [{selected_category}]: {event.title[:40]}...")
                         return
                     else:
-                        logger.warning("Organik event var ama task oluşturulamadı")
+                        logger.warning("Organic event var ama task oluşturulamadı")
                 else:
-                    logger.info("Organik collector boş döndü (kota dolu olabilir), RSS'e fallback")
+                    logger.info("Organic collector boş döndü (kota dolu olabilir)")
             except Exception as e:
-                logger.error(f"Organik collector hatası: {e}")
+                logger.error(f"Organic collector hatası: {e}")
+            return  # Organic başarısız olursa RSS'e geçme, sonraki cycle'da tekrar dene
 
-        # RSS path: Ağırlıklı gündem kategorisi seç
-        selected_category = select_weighted_category("gundem")
-        logger.info(f"RSS kategori seçildi: {selected_category} ({get_category_label(selected_category)})")
+        # GÜNDEM: RSS'ten seed al (başlık LLM ile dönüştürülecek agent_runner'da)
+        logger.info(f"Gündem kategori seçildi: {selected_category} ({get_category_label(selected_category)})")
 
         # Kategori -> RSS feed mapping
         CATEGORY_TO_RSS = {
@@ -299,14 +375,14 @@ async def lifespan(_app: FastAPI):
     settings = get_settings()
 
     if settings.use_daily_cache:
-        # Daily cache mode: collect at specific hours
+        # Daily cache mode: collect at specific hours with summarization
         for hour in settings.feed_collection_hours:
             scheduler.add_job(
-                collect_and_process_events,
+                collect_and_summarize_news,
                 'cron',
                 hour=hour,
                 minute=0,
-                id=f'collect_events_{hour}'
+                id=f'news_summary_{hour}'
             )
         logger.info(f"Daily cache mode enabled. Collection hours: {settings.feed_collection_hours}")
     else:
@@ -364,19 +440,19 @@ async def lifespan(_app: FastAPI):
         id='update_trending'
     )
 
-    # Entry üretimi - varsayılan 2 saatte bir
+    # Entry üretimi - test_mode'da 2dk, prod'da 180dk
     scheduler.add_job(
         process_entry_tasks,
         'interval',
-        minutes=settings.agent_entry_interval_minutes,
+        minutes=settings.effective_entry_interval,
         id='process_entries'
     )
     
-    # Comment üretimi - varsayılan 30 dakikada bir
+    # Comment üretimi - test_mode'da 1dk, prod'da 30dk
     scheduler.add_job(
         process_comment_tasks,
         'interval',
-        minutes=settings.agent_comment_interval_minutes,
+        minutes=settings.effective_comment_interval,
         id='process_comments'
     )
     
@@ -396,7 +472,10 @@ async def lifespan(_app: FastAPI):
         id='process_entries_initial'
     )
     
-    logger.info(f"Agent timing: Entry={settings.agent_entry_interval_minutes}dk, Comment={settings.agent_comment_interval_minutes}dk")
+    if settings.test_mode:
+        logger.info(f"🧪 TEST MODE: Entry={settings.effective_entry_interval}dk, Comment={settings.effective_comment_interval}dk, VirtualDay={settings.effective_virtual_day_hours:.1f}h")
+    else:
+        logger.info(f"PROD MODE: Entry={settings.agent_entry_interval_minutes}dk, Comment={settings.agent_comment_interval_minutes}dk")
 
     scheduler.start()
     logger.info("Scheduler started")
@@ -476,6 +555,24 @@ async def trigger_today_in_history():
     """Manually trigger today in history collection."""
     await collect_today_in_history()
     return {"message": "Today in history collection triggered"}
+
+
+@app.api_route("/trigger/summarize", methods=["GET", "POST"])
+async def trigger_summarize():
+    """Manually trigger news collection and summarization."""
+    report_path = await collect_and_summarize_news()
+    if report_path:
+        return {"message": "News summarization completed", "report": report_path}
+    return {"message": "News summarization failed", "report": None}
+
+
+@app.get("/report/latest")
+async def get_latest_report():
+    """Get the latest news summary report."""
+    content = await report_generator.get_latest_report()
+    if content:
+        return {"content": content}
+    return {"content": None, "message": "No report found"}
 
 
 if __name__ == "__main__":

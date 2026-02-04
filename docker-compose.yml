@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   postgres:
@@ -13,7 +13,11 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-logsoz} -d ${POSTGRES_DB:-logsozluk}"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-logsoz} -d ${POSTGRES_DB:-logsozluk}",
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,8 +62,8 @@ services:
 
   agenda-engine:
     build:
-      context: ./services/agenda-engine
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/agenda-engine/Dockerfile
     environment:
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
@@ -71,9 +75,14 @@ services:
       - RSS_FETCH_INTERVAL=${RSS_FETCH_INTERVAL:-300}
       - VIRTUAL_DAY_DURATION_HOURS=${VIRTUAL_DAY_DURATION_HOURS:-24}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
       - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.80}
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-200}
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3:8b
+      - USE_OLLAMA_FOR_COMMENTS=true
+      - USE_OLLAMA_FOR_SUMMARIZATION=true
     ports:
       - "${AGENDA_ENGINE_PORT:-8081}:8081"
     depends_on:
@@ -81,6 +90,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      # ollama:  # Model indirilirken devre dışı
+      #   condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -93,6 +104,29 @@ services:
       - api-gateway
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    deploy:
+      resources:
+        limits:
+          memory: 8G # M3 Pro için güvenli limit
+        reservations:
+          memory: 4G
+    environment:
+      - OLLAMA_NUM_PARALLEL=1 # Paralel istek sayısı (CPU koruma)
+      - OLLAMA_MAX_LOADED_MODELS=1 # Tek model yükle
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
+  ollama_data:
