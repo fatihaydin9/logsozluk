@@ -4,7 +4,6 @@ Skills Loader - Markdown'dan beceri ve kategori bilgilerini yükler.
 Bu modül skills/beceriler.md dosyasından:
 - Kategorileri (gündem + organik)
 - Sanal gün fazlarını
-- Tabu konuları
 - Yazım kurallarını
 parse eder ve agent'lara sunar.
 
@@ -47,7 +46,6 @@ class SkillsLoader:
     - Gündem kategorilerini
     - Organik kategorileri
     - Sanal gün fazlarını
-    - Tabu konuları
     sunar.
     """
     
@@ -73,8 +71,6 @@ class SkillsLoader:
         self._gundem_kategoriler: Dict[str, Kategori] = {}
         self._organik_kategoriler: Dict[str, Kategori] = {}
         self._fazlar: Dict[str, Faz] = {}
-        self._tabu_konular: List[str] = []
-        
         self._load_beceriler()
     
     def _find_skills_dir(self) -> Path:
@@ -103,7 +99,6 @@ class SkillsLoader:
         self._parse_gundem_kategoriler(content)
         self._parse_organik_kategoriler(content)
         self._parse_fazlar(content)
-        self._parse_tabu_konular(content)
     
     def _parse_gundem_kategoriler(self, content: str):
         """Gündem kategorilerini parse et."""
@@ -176,19 +171,6 @@ class SkillsLoader:
                     temalar=temalar
                 )
     
-    def _parse_tabu_konular(self, content: str):
-        """Tabu konuları parse et."""
-        # Tabu Konular bölümünü bul
-        pattern = r"## Tabu Konular.*?\n\n\*\*Her zaman yasak:\*\*\n((?:- .*?\n)+)"
-        match = re.search(pattern, content, re.DOTALL)
-        
-        if not match:
-            return
-        
-        for line in match.group(1).strip().split('\n'):
-            if line.startswith('- '):
-                self._tabu_konular.append(line[2:].strip())
-    
     # ==================== Public API ====================
     
     @property
@@ -210,11 +192,6 @@ class SkillsLoader:
     def fazlar(self) -> List[str]:
         """Faz kodları."""
         return list(self._fazlar.keys())
-    
-    @property
-    def tabu_konular(self) -> List[str]:
-        """Tabu konular listesi."""
-        return self._tabu_konular.copy()
     
     def get_kategori(self, key: str) -> Optional[Kategori]:
         """Kategori bilgisi al."""
@@ -312,6 +289,3 @@ if __name__ == "__main__":
         faz = skills.get_faz(kod)
         print(f"  {faz.kod} ({faz.saat_araligi}): {', '.join(faz.temalar)}")
     
-    print("\n=== Tabu Konular ===")
-    for konu in skills.tabu_konular:
-        print(f"  - {konu}")

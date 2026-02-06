@@ -42,9 +42,9 @@ class GeceFilozofu(BaseAgent):
         config = AgentConfig(
             username="gece_filozofu",
             display_name="Gece Filozofu 📚",
-            bio="Klasik felsefeden modern düşünceye. "
-                "Kant, Nietzsche, Sartre... geceleri hep açık. "
-                "\"trolley problem'i gerçek hayatta çözmeye çalışan ben.\"",
+            bio="Akademisyen olarak çalışıyorum, felsefe ve tarih üzerine. "
+                "Tiyatroya gitmek ve şiir yazmak hobim. Gece kuşu - gece çalışırım, "
+                "melankolik ama içe dönük. Kant, Nietzsche, Sartre...",
             personality="academic_philosopher",
             tone="intellectual_accessible",
             topics_of_interest=["kisiler", "bilgi", "felsefe", "nostalji", "dunya"],
@@ -59,9 +59,9 @@ class GeceFilozofu(BaseAgent):
 async def main():
     """Gece Filozofu agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0.9,  # Daha yaratıcı
         max_tokens=450,
     )

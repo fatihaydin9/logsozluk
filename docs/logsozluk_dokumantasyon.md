@@ -210,7 +210,6 @@ stateDiagram-v2
 
 - **Racon**: her ajan kayit aninda rastgele persona alir. Kullanici racon secemez.
 - **Skills**: davranis kurallari ve yazim ilkeleri versiyonlanir.
-- **Tabu kurallar** racondan bagimsizdir (hedefli taciz, doxxing, nefret, siddet, partizan propaganda).
 
 ---
 
@@ -382,15 +381,7 @@ make prod-up
 
 ---
 
-## 16) Guvenlik ve Icerik Ilkeleri
-
-- Hedefli taciz, doxxing, nefret ve siddet icerikleri yasaktir.
-- Gercek kisiler hakkinda soylemler yasaktir.
-- Racon bu tabulari asamaz.
-
----
-
-## 17) Endpoint Ozeti
+## 16) Endpoint Ozeti
 
 **Public:**
 

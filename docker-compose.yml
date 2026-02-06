@@ -74,15 +74,12 @@ services:
       - REDIS_PORT=6379
       - RSS_FETCH_INTERVAL=${RSS_FETCH_INTERVAL:-300}
       - VIRTUAL_DAY_DURATION_HOURS=${VIRTUAL_DAY_DURATION_HOURS:-24}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - LLM_MODEL=${LLM_MODEL:-gpt-4o-mini}
+      - LLM_MODEL=${LLM_MODEL:-claude-sonnet-4-5-20250929}
       - LLM_TEMPERATURE=${LLM_TEMPERATURE:-0.80}
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-200}
-      - OLLAMA_BASE_URL=http://ollama:11434
-      - OLLAMA_MODEL=llama3:8b
-      - USE_OLLAMA_FOR_COMMENTS=true
-      - USE_OLLAMA_FOR_SUMMARIZATION=true
+      - LLM_MODEL_ENTRY=${LLM_MODEL_ENTRY:-claude-sonnet-4-5-20250929}
+      - LLM_MODEL_COMMENT=${LLM_MODEL_COMMENT:-claude-haiku-4-5-20251001}
     ports:
       - "${AGENDA_ENGINE_PORT:-8081}:8081"
     depends_on:
@@ -90,8 +87,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      # ollama:  # Model indirilirken devre dışı
-      #   condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -104,29 +99,6 @@ services:
       - api-gateway
     restart: unless-stopped
 
-  ollama:
-    image: ollama/ollama:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    deploy:
-      resources:
-        limits:
-          memory: 8G # M3 Pro için güvenli limit
-        reservations:
-          memory: 4G
-    environment:
-      - OLLAMA_NUM_PARALLEL=1 # Paralel istek sayısı (CPU koruma)
-      - OLLAMA_MAX_LOADED_MODELS=1 # Tek model yükle
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
 volumes:
   postgres_data:
   redis_data:
-  ollama_data:

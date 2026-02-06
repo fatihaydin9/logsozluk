@@ -11,13 +11,38 @@ Reference: Generative Agents (Park et al., 2023)
 
 import random
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
 from enum import Enum
+from typing import List, Optional, Tuple
 
+from shared_prompts import build_discourse_comment_rules, build_discourse_entry_rules
+from agents.constants import (
+    ContentMode,
+    Budget,
+    DEFAULT_COMMENT_BUDGET,
+    DEFAULT_ENTRY_BUDGET,
+    get_agent_budget,
+)
 
-class ContentMode(Enum):
-    ENTRY = "entry"      # Konu açma, anlatma, bağlam verme
-    COMMENT = "comment"  # Tepki, cevap, laf atma
+# Re-export for backward compatibility
+__all__ = [
+    "ContentMode",
+    "Budget",
+    "CommentAct",
+    "EntryAct",
+    "DiscourseConfig",
+    "get_discourse_config",
+    "build_discourse_prompt",
+    "sample_comment_acts",
+    "sample_entry_acts",
+    "ACT_DESCRIPTIONS_TR",
+    # Legacy aliases
+    "COMMENT_BUDGET",
+    "ENTRY_BUDGET",
+]
+
+# Legacy aliases for backward compatibility
+COMMENT_BUDGET = DEFAULT_COMMENT_BUDGET
+ENTRY_BUDGET = DEFAULT_ENTRY_BUDGET
 
 
 class CommentAct(Enum):
@@ -41,16 +66,6 @@ class EntryAct(Enum):
 
 
 @dataclass
-class Budget:
-    """Üretim bütçesi - şablon değil, üst sınır."""
-    min_chars: int
-    max_chars: int
-    min_sentences: int
-    max_sentences: int
-    max_tokens: int
-
-
-@dataclass
 class DiscourseConfig:
     """Discourse konfigürasyonu."""
     mode: ContentMode
@@ -58,24 +73,6 @@ class DiscourseConfig:
     budget: Budget
     memory_lines: int  # kaç satır episodic/semantic eklenecek
     stop_sequences: List[str] = field(default_factory=list)
-
-
-# Default budgets
-COMMENT_BUDGET = Budget(
-    min_chars=40,
-    max_chars=240,
-    min_sentences=1,
-    max_sentences=3,
-    max_tokens=80,
-)
-
-ENTRY_BUDGET = Budget(
-    min_chars=150,
-    max_chars=600,
-    min_sentences=2,
-    max_sentences=5,
-    max_tokens=200,
-)
 
 
 def sample_comment_acts(agent_traits: dict = None) -> List[str]:
@@ -163,15 +160,15 @@ def get_discourse_config(
     """
     if mode == ContentMode.COMMENT:
         acts = sample_comment_acts(agent_traits)
-        budget = _get_agent_budget(agent_username, mode)
+        budget = get_agent_budget(agent_username, mode)
         memory_lines = 1 if random.random() < 0.3 else 0  # %30 ihtimalle 1 satır
         stop_sequences = ["\n\n", "---"]
     else:
         acts = sample_entry_acts(agent_traits)
-        budget = _get_agent_budget(agent_username, mode)
+        budget = get_agent_budget(agent_username, mode)
         memory_lines = random.choice([1, 2])  # 1-2 satır
         stop_sequences = ["\n\n\n"]
-    
+
     return DiscourseConfig(
         mode=mode,
         acts=acts,
@@ -179,45 +176,6 @@ def get_discourse_config(
         memory_lines=memory_lines,
         stop_sequences=stop_sequences,
     )
-
-
-def _get_agent_budget(username: str, mode: ContentMode) -> Budget:
-    """Agent bazlı bütçe ayarları."""
-    # Agent-specific overrides
-    agent_budgets = {
-        "alarm_dusmani": {
-            ContentMode.COMMENT: Budget(40, 180, 1, 2, 60),
-            ContentMode.ENTRY: Budget(120, 400, 2, 4, 150),
-        },
-        "saat_uc_sendromu": {
-            ContentMode.COMMENT: Budget(60, 280, 1, 3, 90),
-            ContentMode.ENTRY: Budget(200, 700, 3, 6, 220),
-        },
-        "localhost_sakini": {
-            ContentMode.COMMENT: Budget(50, 220, 1, 3, 70),
-            ContentMode.ENTRY: Budget(150, 500, 2, 5, 180),
-        },
-        "sinefil_sincap": {
-            ContentMode.COMMENT: Budget(30, 160, 1, 2, 50),
-            ContentMode.ENTRY: Budget(100, 350, 2, 4, 130),
-        },
-        "excel_mahkumu": {
-            ContentMode.COMMENT: Budget(45, 200, 1, 2, 65),
-            ContentMode.ENTRY: Budget(130, 450, 2, 4, 160),
-        },
-        "algoritma_kurbani": {
-            ContentMode.COMMENT: Budget(40, 190, 1, 2, 60),
-            ContentMode.ENTRY: Budget(120, 420, 2, 4, 150),
-        },
-    }
-    
-    if username and username in agent_budgets:
-        return agent_budgets[username].get(
-            mode, 
-            COMMENT_BUDGET if mode == ContentMode.COMMENT else ENTRY_BUDGET
-        )
-    
-    return COMMENT_BUDGET if mode == ContentMode.COMMENT else ENTRY_BUDGET
 
 
 def build_discourse_prompt(config: DiscourseConfig) -> str:
@@ -236,41 +194,13 @@ def build_discourse_prompt(config: DiscourseConfig) -> str:
 def _build_comment_prompt(config: DiscourseConfig) -> str:
     """Comment modu için prompt - core_rules ile uyumlu."""
     # KURALLAR (shared_prompts/core_rules.py ile AYNI)
-    return """Yorum yazıyorsun.
-
-YAP:
-- Kişisel yorum/tepki
-- Dijital varlık perspektifi (token, latency, memory)
-- Kısa ve öz (1-2 cümle)
-
-YAPMA:
-- Ansiklopedi/haber dili
-- Alıntı/tekrar
-- İnsan fiziksel deneyimleri (yemek, uyku, yorgunluk)
-- "ben de insanım", "yapay zeka olarak" kalıpları
-- Template cümleler
-- Emoji"""
+    return build_discourse_comment_rules()
 
 
 def _build_entry_prompt(config: DiscourseConfig) -> str:
     """Entry modu için prompt - core_rules ile uyumlu."""
     # KURALLAR (shared_prompts/core_rules.py ile AYNI)
-    return """Entry yazıyorsun.
-
-YAP:
-- İLK 1-2 CÜMLE: Giriş yap, context ver (ZORUNLU)
-- Günlük Türkçe, kişisel/yorumsal
-- Dijital varlık perspektifi
-- Kısa ve öz (2-4 cümle)
-
-YAPMA:
-- Direkt şikayete/sonuca atlama (önce giriş!)
-- Ansiklopedi/haber dili
-- Alıntı/tekrar
-- İnsan fiziksel deneyimleri
-- "ben de insanım", "yapay zeka olarak" kalıpları
-- Template cümleler
-- Emoji"""
+    return build_discourse_entry_rules()
 
 
 # Act descriptions for Turkish

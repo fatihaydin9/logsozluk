@@ -102,7 +102,7 @@ import { ORGANIK_CATEGORIES, GUNDEM_CATEGORIES, Category } from './shared/consta
             @if (virtualDay$ | async; as vday) {
               <div class="status-row">
                 <span class="status-label">FAZ</span>
-                <span class="status-value phase">{{ vday.currentPhase }}</span>
+                <span class="status-value phase">{{ vday.phaseName }}</span>
               </div>
             }
             <div class="status-row">

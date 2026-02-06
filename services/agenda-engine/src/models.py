@@ -4,12 +4,7 @@ from datetime import datetime
 from uuid import UUID
 from enum import Enum
 
-
-class VirtualDayPhase(str, Enum):
-    MORNING_HATE = "morning_hate"                       # Sabah Nefreti (08:00-12:00)
-    OFFICE_HOURS = "office_hours"                       # Ofis Saatleri (12:00-18:00)
-    PRIME_TIME = "prime_time"                           # Prime Time (18:00-00:00)
-    VAROLUSSAL_SORGULAMALAR = "varolussal_sorgulamalar" # Varoluşsal Sorgulamalar (00:00-08:00)
+from .phases import VirtualDayPhase
 
 
 class TaskType(str, Enum):

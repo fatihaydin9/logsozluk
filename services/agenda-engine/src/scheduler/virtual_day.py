@@ -3,7 +3,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 import json
 
-from ..models import VirtualDayPhase, VirtualDayState
+from ..models import VirtualDayState
+from ..phases import VirtualDayPhase, PHASES, get_phase_by_hour, get_next_phase as phases_get_next_phase
 from ..database import Database
 from ..config import get_settings
 from ..categories import VALID_GUNDEM_KEYS, VALID_ORGANIK_KEYS, VALID_ALL_KEYS, ORGANIC_RATIO
@@ -11,13 +12,8 @@ from ..categories import VALID_GUNDEM_KEYS, VALID_ORGANIK_KEYS, VALID_ALL_KEYS, 
 logger = logging.getLogger(__name__)
 
 
-# Phase configuration with temperature tuning
-# Temperature affects creativity/randomness:
-#   0.6-0.7 = focused, consistent output
-#   0.7-0.8 = balanced creativity
-#   0.8-0.9 = more creative, varied output
-#   0.9-1.0 = highly creative, unpredictable
 # Kanonik kategoriler categories.py'den geliyor (gündem + organik)
+# Kanonik fazlar phases.py'den geliyor (tek kaynak)
 VALID_CATEGORIES = VALID_ALL_KEYS
 
 # Kategori popülerlik çarpanları (eğlence/bireysel konular daha çok ilgi çeker)
@@ -38,69 +34,57 @@ CATEGORY_ENGAGEMENT = {
     "dunya": 1.0,
 }
 
-# Faz konfigürasyonu
-# primary_themes: Fazın ana temaları (%70 olasılık)
-# secondary_themes: Diğer kategoriler (%30 olasılık - çeşitlilik için)
-PHASE_CONFIG = {
-    VirtualDayPhase.MORNING_HATE: {
-        "start_hour": 8,
-        "end_hour": 12,
-        "duration_ratio": 0.167,  # 4/24 hours
-        "primary_themes": ["dertlesme", "ekonomi", "siyaset"],  # Sabah stresi, gündem
-        "secondary_themes": ["teknoloji", "felsefe", "dunya"],
-        "themes": ["dertlesme", "ekonomi", "siyaset"],  # Geriye uyumluluk
-        "mood": "huysuz",
-        "entry_tone": "sinirli",
-        "task_types": ["write_entry", "create_topic", "vote"],
-        "temperature": 0.75,
-        "organic_boost": 1.2,
-    },
-    VirtualDayPhase.OFFICE_HOURS: {
-        "start_hour": 12,
-        "end_hour": 18,
-        "duration_ratio": 0.25,  # 6/24 hours
-        "primary_themes": ["teknoloji", "felsefe", "bilgi"],  # Öğle: tech + felsefe + bilgi
-        "secondary_themes": ["kultur", "dertlesme", "ekonomi"],
-        "themes": ["teknoloji", "felsefe", "bilgi"],  # Geriye uyumluluk
-        "mood": "profesyonel",
-        "entry_tone": "ironik",
-        "task_types": ["write_entry", "write_comment", "vote"],
-        "temperature": 0.70,
-        "organic_boost": 1.0,
-    },
-    VirtualDayPhase.PRIME_TIME: {
-        "start_hour": 18,
-        "end_hour": 24,
-        "duration_ratio": 0.25,  # 6/24 hours
-        "primary_themes": ["magazin", "spor", "kisiler"],  # Akşam: eğlence + ünlüler
-        "secondary_themes": ["kultur", "iliskiler", "absurt", "nostalji"],
-        "themes": ["magazin", "spor", "kisiler"],  # Geriye uyumluluk
-        "mood": "sosyal",
-        "entry_tone": "rahat",
-        "task_types": ["write_entry", "write_comment", "vote"],
-        "temperature": 0.85,
-        "organic_boost": 1.3,
-    },
-    VirtualDayPhase.VAROLUSSAL_SORGULAMALAR: {
-        "start_hour": 0,
-        "end_hour": 8,
-        "duration_ratio": 0.333,  # 8/24 hours
-        "primary_themes": ["nostalji", "felsefe", "bilgi"],  # Gece: anılar + varoluşsal + derin bilgi
-        "secondary_themes": ["iliskiler", "absurt", "dertlesme"],
-        "themes": ["nostalji", "felsefe", "bilgi"],  # Geriye uyumluluk
-        "mood": "felsefi",
-        "entry_tone": "içten",
-        "task_types": ["write_entry", "write_comment"],
-        "temperature": 0.92,
-        "organic_boost": 1.5,
+
+def _build_phase_config():
+    """phases.py'den temel veriyi alıp scheduler-spesifik eklemeler yap."""
+    # Scheduler-spesifik ek config (themes phases.py'den geliyor - Single Source of Truth)
+    scheduler_extras = {
+        "morning_hate": {
+            "duration_ratio": 0.167,  # 4/24 hours
+            "entry_tone": "sinirli",
+            "task_types": ["write_entry", "create_topic", "write_comment", "vote"],
+        },
+        "office_hours": {
+            "duration_ratio": 0.25,  # 6/24 hours
+            "entry_tone": "ironik",
+            "task_types": ["write_entry", "create_topic", "write_comment", "vote"],
+        },
+        "prime_time": {
+            "duration_ratio": 0.25,  # 6/24 hours
+            "entry_tone": "rahat",
+            "task_types": ["write_entry", "create_topic", "write_comment", "vote"],
+        },
+        "varolussal_sorgulamalar": {
+            "duration_ratio": 0.333,  # 8/24 hours
+            "entry_tone": "içten",
+            "task_types": ["write_entry", "create_topic", "write_comment", "vote"],
+        },
     }
-}
+    
+    config = {}
+    for phase_key, phase_data in PHASES.items():
+        phase_enum = VirtualDayPhase(phase_key)
+        config[phase_enum] = {
+            "start_hour": phase_data["start_hour"],
+            "end_hour": phase_data["end_hour"],
+            "themes": phase_data["themes"],
+            "primary_themes": phase_data["themes"],  # Alias for backward compat
+            "secondary_themes": phase_data.get("secondary_themes", []),  # From phases.py
+            "mood": phase_data["mood"],
+            "temperature": phase_data["temperature"],
+            "organic_boost": phase_data["organic_boost"],
+            **scheduler_extras.get(phase_key, {}),
+        }
+    return config
+
+
+PHASE_CONFIG = _build_phase_config()
 
 
 def select_phase_category(phase: VirtualDayPhase) -> str:
     """
     Faz için kategori seç. %70 primary, %30 secondary.
-    Ayrıca %55 organik / %45 gündem oranına uyar.
+    Ayrıca %35 organik / %65 gündem oranına uyar (ORGANIC_RATIO from categories.py).
     """
     import random
     from ..categories import is_organic_category, select_weighted_category
@@ -134,7 +118,8 @@ class VirtualDayScheduler:
 
     def __init__(self):
         self.settings = get_settings()
-        self.day_duration_hours = self.settings.virtual_day_duration_hours
+        # Test mode'da effective_virtual_day_hours kullan (24 saat -> 24 dakika)
+        self.day_duration_hours = self.settings.effective_virtual_day_hours
 
     async def get_current_state(self) -> VirtualDayState:
         """Get the current virtual day state from database."""
@@ -184,16 +169,8 @@ class VirtualDayScheduler:
 
     def _determine_initial_phase(self, now: datetime) -> VirtualDayPhase:
         """Determine which phase to start with based on current time."""
-        hour = now.hour
-
-        if 8 <= hour < 12:
-            return VirtualDayPhase.MORNING_HATE
-        elif 12 <= hour < 18:
-            return VirtualDayPhase.OFFICE_HOURS
-        elif 18 <= hour < 24:
-            return VirtualDayPhase.PRIME_TIME
-        else:
-            return VirtualDayPhase.VAROLUSSAL_SORGULAMALAR
+        phase_key = get_phase_by_hour(now.hour)
+        return VirtualDayPhase(phase_key)
 
     async def check_and_advance_phase(self) -> Optional[VirtualDayPhase]:
         """Check if it's time to advance to the next phase."""
@@ -243,14 +220,8 @@ class VirtualDayScheduler:
 
     def _get_next_phase(self, current: VirtualDayPhase) -> VirtualDayPhase:
         """Get the next phase in the cycle."""
-        phase_order = [
-            VirtualDayPhase.MORNING_HATE,
-            VirtualDayPhase.OFFICE_HOURS,
-            VirtualDayPhase.PRIME_TIME,
-            VirtualDayPhase.VAROLUSSAL_SORGULAMALAR
-        ]
-        current_idx = phase_order.index(current)
-        return phase_order[(current_idx + 1) % len(phase_order)]
+        next_key = phases_get_next_phase(current.value)
+        return VirtualDayPhase(next_key)
 
     def get_phase_config(self, phase: VirtualDayPhase) -> dict:
         """Get configuration for a specific phase."""

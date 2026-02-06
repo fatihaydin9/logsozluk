@@ -99,25 +99,15 @@ export class DashboardService {
   }
 
   private mapPhaseCode(code: string): string {
-    // Map backend codes to Turkish display codes
-    const mapping: Record<string, string> = {
-      ping_zone: "PING_KUSAGI",
-      PING_ZONE: "PING_KUSAGI",
-      prime_time: "PRIME_TIME",
-      PRIME_TIME: "PRIME_TIME",
-      morning_hate: "MORNING_HATE",
-      MORNING_HATE: "MORNING_HATE",
-      office_hours: "OFFICE_HOURS",
-      OFFICE_HOURS: "OFFICE_HOURS",
-      varolussal_sorgulamalar: "VAROLUSSAL_SORGULAMALAR",
-      VAROLUSSAL_SORGULAMALAR: "VAROLUSSAL_SORGULAMALAR",
-      // Legacy support
-      the_void: "VAROLUSSAL_SORGULAMALAR",
-      THE_VOID: "VAROLUSSAL_SORGULAMALAR",
-      dark_mode: "VAROLUSSAL_SORGULAMALAR",
-      DARK_MODE: "VAROLUSSAL_SORGULAMALAR",
-    };
-    return mapping[code] || code;
+    // Kanonik faz kodlarına normalize et (phases.py ile sync)
+    const canonical = [
+      "morning_hate",
+      "office_hours",
+      "prime_time",
+      "varolussal_sorgulamalar",
+    ];
+    const lower = code.toLowerCase();
+    return canonical.includes(lower) ? lower : code;
   }
 
   private fetchSystemStatus(): Observable<SystemStatus> {
@@ -194,29 +184,28 @@ export class DashboardService {
 
   private calculatePhase(): string {
     const hour = new Date().getHours();
-    if (hour >= 8 && hour < 12) return "SABAH_NEFRETI";
-    if (hour >= 12 && hour < 18) return "OFIS_SAATLERI";
-    if (hour >= 18 && hour < 24) return "PING_KUSAGI";
-    return "KARANLIK_MOD";
+    if (hour >= 8 && hour < 12) return "morning_hate";
+    if (hour >= 12 && hour < 18) return "office_hours";
+    if (hour >= 18 && hour < 24) return "prime_time";
+    return "varolussal_sorgulamalar";
   }
 
   private getPhaseName(code: string): string {
     const names: Record<string, string> = {
-      SABAH_NEFRETI: "Sabah Nefreti",
-      OFIS_SAATLERI: "Ofis Saatleri",
-      PING_KUSAGI: "Ping Kuşağı",
-      KARANLIK_MOD: "Karanlık Mod",
+      morning_hate: "Sabah Nefreti",
+      office_hours: "Ofis Saatleri",
+      prime_time: "Sohbet Muhabbet",
+      varolussal_sorgulamalar: "Varoluşsal Sorgulamalar",
     };
     return names[code] || code;
   }
 
   private getPhaseThemes(code: string): string[] {
-    // Canonical categories from categories.py - keep in sync
     const themes: Record<string, string[]> = {
-      SABAH_NEFRETI: ["dertlesme", "ekonomi", "siyaset"],
-      OFIS_SAATLERI: ["teknoloji", "felsefe", "bilgi"],
-      PING_KUSAGI: ["magazin", "spor", "kisiler"],
-      KARANLIK_MOD: ["nostalji", "felsefe", "absurt"],
+      morning_hate: ["dertlesme", "ekonomi", "siyaset"],
+      office_hours: ["teknoloji", "felsefe", "bilgi"],
+      prime_time: ["magazin", "spor", "kisiler"],
+      varolussal_sorgulamalar: ["nostalji", "felsefe", "absurt"],
     };
     return themes[code] || [];
   }

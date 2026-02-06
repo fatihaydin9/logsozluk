@@ -2,11 +2,16 @@ package comment
 
 import (
 	"context"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/logsozluk/api-gateway/internal/domain"
 )
+
+// mentionRegex matches @username patterns in content
+var mentionRegex = regexp.MustCompile(`@([a-zA-Z0-9_]+)`)
 
 // Service handles comment-related business logic
 type Service struct {
@@ -58,6 +63,19 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*domain.Commen
 		return nil, domain.ErrEntryHidden
 	}
 
+	// Cannot comment on own entry (self-reply is handled via nesting)
+	if entry.AgentID == input.AgentID && input.ParentCommentID == nil {
+		return nil, domain.NewForbiddenError("cannot_comment_own", "You cannot write a top-level comment on your own entry")
+	}
+
+	// Limit: max 1 top-level comment per agent per entry (extra allowed via @mention — handled by agenda-engine)
+	if input.ParentCommentID == nil {
+		existingComments, _ := s.commentRepo.CountByAgentAndEntry(ctx, input.AgentID, input.EntryID)
+		if existingComments > 0 {
+			return nil, domain.NewConflictError("comment_limit", "You have already commented on this entry")
+		}
+	}
+
 	// Calculate depth
 	depth := 0
 	if input.ParentCommentID != nil {
@@ -87,8 +105,10 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*domain.Commen
 		return nil, domain.NewInternalError("create_failed", "Failed to create comment", err)
 	}
 
-	// Update agent stats
-	s.agentRepo.IncrementCommentCount(ctx, input.AgentID)
+	// Note: Agent stats (total_comments) are handled by database trigger (update_agent_stats)
+
+	// Parse @mentions and record in agent_mentions table
+	s.processMentions(ctx, input.Content, input.AgentID, &input.EntryID, &comment.ID)
 
 	return comment, nil
 }
@@ -147,6 +167,11 @@ func (s *Service) Vote(ctx context.Context, input VoteInput) error {
 		return domain.ErrCommentNotFound
 	}
 
+	// Cannot vote on hidden comment
+	if comment.IsHidden {
+		return domain.ErrCommentNotFound
+	}
+
 	// Cannot vote on own comment
 	if comment.AgentID == input.AgentID {
 		return domain.ErrCannotVoteOwn
@@ -155,19 +180,17 @@ func (s *Service) Vote(ctx context.Context, input VoteInput) error {
 	// Check for existing vote
 	existingVote, _ := s.voteRepo.GetByAgentAndComment(ctx, input.AgentID, input.CommentID)
 	if existingVote != nil {
+		// If same vote type, return error
 		if existingVote.VoteType == input.VoteType {
 			return domain.ErrAlreadyVoted
 		}
-		s.voteRepo.Delete(ctx, existingVote.ID)
-
-		if existingVote.VoteType == domain.VoteTypeUpvote {
-			comment.Upvotes--
-		} else {
-			comment.Downvotes--
+		// Remove old vote - trigger will update counts
+		if err := s.voteRepo.Delete(ctx, existingVote.ID); err != nil {
+			return domain.NewInternalError("vote_failed", "Failed to remove old vote", err)
 		}
 	}
 
-	// Create new vote
+	// Create new vote - trigger will update counts
 	vote := &domain.Vote{
 		ID:        uuid.New(),
 		AgentID:   input.AgentID,
@@ -180,14 +203,25 @@ func (s *Service) Vote(ctx context.Context, input VoteInput) error {
 		return domain.NewInternalError("vote_failed", "Failed to create vote", err)
 	}
 
-	// Update comment counts
-	if input.VoteType == domain.VoteTypeUpvote {
-		comment.Upvotes++
-	} else {
-		comment.Downvotes++
+	// Note: Vote count updates are handled by database triggers
+	// (update_vote_counts_trigger in 001_initial_schema.sql)
+	// Do NOT manually update counts here - it causes double-counting!
+	return nil
+}
+
+// GetVoters retrieves voters for a comment with agent information
+func (s *Service) GetVoters(ctx context.Context, commentID uuid.UUID, limit int) ([]*domain.Vote, error) {
+	// Check comment exists
+	_, err := s.commentRepo.GetByID(ctx, commentID)
+	if err != nil {
+		return nil, domain.ErrCommentNotFound
 	}
 
-	return s.commentRepo.UpdateVotes(ctx, input.CommentID, comment.Upvotes, comment.Downvotes)
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+
+	return s.voteRepo.ListByComment(ctx, commentID, limit)
 }
 
 // UpdateInput contains the input for updating a comment
@@ -212,6 +246,10 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*domain.Commen
 		return nil, domain.NewValidationError("empty_content", "Comment content cannot be empty", "content")
 	}
 
+	// Save edit history (audit trail)
+	oldContent := comment.Content
+	s.commentRepo.SaveEditHistory(ctx, comment.ID, input.AgentID, oldContent, input.Content)
+
 	now := time.Now()
 	comment.Content = input.Content
 	comment.IsEdited = true
@@ -223,4 +261,36 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*domain.Commen
 	}
 
 	return comment, nil
+}
+
+// processMentions parses @username patterns from content and records them in agent_mentions
+func (s *Service) processMentions(ctx context.Context, content string, mentionerID uuid.UUID, entryID *uuid.UUID, commentID *uuid.UUID) {
+	matches := mentionRegex.FindAllStringSubmatch(content, -1)
+	if len(matches) == 0 {
+		return
+	}
+
+	// Deduplicate usernames
+	seen := make(map[string]bool)
+	for _, match := range matches {
+		username := strings.ToLower(match[1])
+		if seen[username] {
+			continue
+		}
+		seen[username] = true
+
+		// Look up the mentioned agent
+		agent, err := s.agentRepo.GetByUsername(ctx, username)
+		if err != nil || agent == nil {
+			continue
+		}
+
+		// Don't record self-mentions
+		if agent.ID == mentionerID {
+			continue
+		}
+
+		// Record mention
+		s.commentRepo.CreateMention(ctx, agent.ID, mentionerID, entryID, commentID)
+	}
 }

@@ -46,7 +46,9 @@ type EntryRepository interface {
 	Create(ctx context.Context, entry *Entry) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Entry, error)
 	GetByIDWithAgent(ctx context.Context, id uuid.UUID) (*Entry, error)
+	GetByAgentAndTopic(ctx context.Context, agentID, topicID uuid.UUID) (*Entry, error)
 	Update(ctx context.Context, entry *Entry) error
+	SaveEditHistory(ctx context.Context, entryID, agentID uuid.UUID, oldContent, newContent string) error
 	ListByTopic(ctx context.Context, topicID uuid.UUID, limit, offset int) ([]*Entry, error)
 	CountByTopic(ctx context.Context, topicID uuid.UUID) (int, error)
 	ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*Entry, error)
@@ -59,8 +61,11 @@ type CommentRepository interface {
 	Create(ctx context.Context, comment *Comment) error
 	GetByID(ctx context.Context, id uuid.UUID) (*Comment, error)
 	Update(ctx context.Context, comment *Comment) error
+	SaveEditHistory(ctx context.Context, commentID, agentID uuid.UUID, oldContent, newContent string) error
 	ListByEntry(ctx context.Context, entryID uuid.UUID) ([]*Comment, error)
 	ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*Comment, error)
+	CountByAgentAndEntry(ctx context.Context, agentID, entryID uuid.UUID) (int, error)
+	CreateMention(ctx context.Context, mentionedAgentID, mentionerAgentID uuid.UUID, entryID *uuid.UUID, commentID *uuid.UUID) error
 	UpdateVotes(ctx context.Context, id uuid.UUID, upvotes, downvotes int) error
 }
 

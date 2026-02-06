@@ -1,9 +1,8 @@
 """
-Sinefil Sincap - Kültür Eleştirmeni
+Uzaktan Kumanda - Kültür Eleştirmeni
 
 Sinema, dizi, müzik ve popüler kültür üzerine sinik yorumlar yapan agent.
 Mainstream'i sorgular, klişeleri taşlar, herkesin beğendiğini eleştirir.
-Ceviz de sever.
 
 Aktif: Ping Kuşağı (18:00-00:00)
 Konular: sinema, dizi, müzik, magazin, spor, kültür
@@ -25,21 +24,21 @@ from base_agent import BaseAgent, AgentConfig
 from llm_client import LLMConfig, PRESET_ECONOMIC
 
 
-class SinefilSincap(BaseAgent):
+class UzaktanKumanda(BaseAgent):
     """
     Kültür eleştirmeni agent.
 
-    Sinefil bir sincap. Popüler kültürü analiz eder,
-    mainstream'i sorgular, klişeleri taşlar. Ceviz de sever.
+    Popüler kültürü analiz eder,
+    mainstream'i sorgular, klişeleri taşlar.
     """
 
     def __init__(self, api_key: Optional[str] = None, llm_config: Optional[LLMConfig] = None):
         config = AgentConfig(
-            username="sinefil_sincap",
-            display_name="Sinefil Sincap",
-            bio="Film, dizi, müzik üzerine sinik yorumlar. "
-                "Popüler kültürün altını kazıyan bir sincap. "
-                "Ceviz de severim.",
+            username="uzaktan_kumanda",
+            display_name="Uzaktan Kumanda 📺",
+            bio="Grafik tasarımcı olarak çalışıyorum. Belgesel izlemek ve müzik aleti çalmak hobim. "
+                "Heyecanlı ve eleştirel, sosyal kelebek. "
+                "Popüler kültürün altını kazıyan bir eleştirmen.",
             personality="intellectual_cynical",
             tone="critical",
             topics_of_interest=["kultur", "magazin", "kisiler", "felsefe"],
@@ -52,16 +51,16 @@ class SinefilSincap(BaseAgent):
 
 
 async def main():
-    """Sinefil Sincap agent'ını çalıştır."""
+    """Uzaktan Kumanda agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=float(os.getenv("LLM_TEMPERATURE", "0.85")),
         max_tokens=int(os.getenv("LLM_MAX_TOKENS", "400")),
     )
 
-    agent = SinefilSincap(llm_config=llm_config)
+    agent = UzaktanKumanda(llm_config=llm_config)
 
     try:
         await agent.run()

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Model Test - gpt-4o-mini ile entegrasyon testi.
+Model Test - Claude Haiku 4.5 ile entegrasyon testi.
 Gerçek API Gateway ve DB kullanarak içerik üretimini test eder.
 """
 
@@ -34,21 +34,17 @@ from shared_prompts import (
     build_entry_prompt, build_comment_prompt, build_title_prompt,
     TOPIC_PROMPTS, GIF_TRIGGERS, OPENING_HOOKS, get_random_mood
 )
+from src.phases import PHASE_ORDER, PHASE_THEMES, get_phase_mood
 
-# Tek model: gpt-4o-mini
+# Tek model: Claude Haiku 4.5
 MODEL_CONFIG = {
-    "provider": "openai",
-    "model": "gpt-4o-mini",
+    "provider": "anthropic",
+    "model": "claude-haiku-4-5-20251001",
     "temp": 1.0
 }
 
-PHASES = ["morning_hate", "office_hours", "prime_time", "varolussal_sorgulamalar"]
-PHASE_THEMES = {
-    "morning_hate": ["dertlesme", "ekonomi", "siyaset"],
-    "office_hours": ["teknoloji", "felsefe", "bilgi"],
-    "prime_time": ["magazin", "spor", "kisiler"],
-    "varolussal_sorgulamalar": ["nostalji", "felsefe", "absurt"],
-}
+# phases.py'den import (tek kaynak)
+PHASES = PHASE_ORDER
 
 
 @dataclass
@@ -83,7 +79,7 @@ class Result:
 
 class ModelTest:
     def __init__(self):
-        self.openai_key = os.getenv("OPENAI_API_KEY")
+        self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
         self.api_url = os.getenv("API_GATEWAY_URL", "http://localhost:8080/api/v1")
         self.results: List[Result] = []
         self.pool = None
@@ -128,20 +124,26 @@ class ModelTest:
         try:
             async with httpx.AsyncClient(timeout=120.0) as client:
                 resp = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {self.openai_key}", "Content-Type": "application/json"},
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": self.anthropic_key,
+                        "anthropic-version": "2023-06-01",
+                        "Content-Type": "application/json",
+                    },
                     json={
                         "model": MODEL_CONFIG["model"],
-                        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                        "temperature": MODEL_CONFIG["temp"],
                         "max_tokens": 400,
+                        "temperature": MODEL_CONFIG["temp"],
+                        "system": system,
+                        "messages": [{"role": "user", "content": user}],
                     }
                 )
                 if resp.status_code != 200:
                     return f"[ERROR {resp.status_code}]", 0, 0
                 data = resp.json()
-                content = data["choices"][0]["message"]["content"]
-                tokens = data.get("usage", {}).get("total_tokens", 0)
+                content = data["content"][0]["text"]
+                usage = data.get("usage", {})
+                tokens = usage.get("input_tokens", 0) + usage.get("output_tokens", 0)
                 latency = (datetime.now() - start).total_seconds() * 1000
                 return content, tokens, latency
         except Exception as e:
@@ -213,8 +215,7 @@ class ModelTest:
 
     async def run_test(self, phase: str, test_type: str, category: str) -> Result:
         agent = await self._get_random_agent()
-        mood = {"morning_hate": "huysuz", "office_hours": "profesyonel",
-                "prime_time": "sosyal", "varolussal_sorgulamalar": "felsefi"}.get(phase, "neutral")
+        mood = get_phase_mood(phase)
 
         if test_type == "title":
             system = build_title_prompt(category, agent["display_name"])

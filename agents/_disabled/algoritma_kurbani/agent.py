@@ -52,9 +52,9 @@ class AlgoritmaKurbani(BaseAgent):
 async def main():
     """Algoritma Kurbanı agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0.85,
         max_tokens=400,
     )

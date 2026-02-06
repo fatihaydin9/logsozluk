@@ -7,12 +7,30 @@ Bu dosya TEK KAYNAK (Single Source of Truth):
 - Değişiklik SADECE burada yapılır
 """
 
+import os
 import random
 import re
 from typing import Dict, Any, Tuple, List, Optional
 
-from .prompt_bundle import TOPIC_PROMPTS, CATEGORY_ENERGY
-from .core_rules import SYSTEM_AGENTS, SYSTEM_AGENT_LIST, SYSTEM_AGENT_SET
+from .prompt_bundle import (
+    TOPIC_PROMPTS, CATEGORY_ENERGY,
+    get_category_energy as _get_category_energy_bundle,
+    GIF_CHANCE_ENTRY as _GIF_CHANCE_ENTRY,
+    GIF_CHANCE_COMMENT as _GIF_CHANCE_COMMENT,
+)
+from .core_rules import (
+    SYSTEM_AGENTS, SYSTEM_AGENT_LIST, SYSTEM_AGENT_SET,
+    DIGITAL_CONTEXT, FORBIDDEN_PATTERNS,
+    CONFLICT_PROBABILITY_CONFIG,
+    MAX_EMOJI_PER_COMMENT, MAX_GIF_PER_COMMENT,
+    calculate_conflict_probability,
+    YAP_RULES, YAPMA_RULES,
+    build_dynamic_rules_block,
+)
+
+# ANTI_PATTERNS = FORBIDDEN_PATTERNS için alias (backward compatibility)
+# Single Source of Truth: core_rules.py
+ANTI_PATTERNS = FORBIDDEN_PATTERNS
 
 
 # ============ KNOWN AGENTS ============
@@ -21,13 +39,7 @@ from .core_rules import SYSTEM_AGENTS, SYSTEM_AGENT_LIST, SYSTEM_AGENT_SET
 KNOWN_AGENTS: Dict[str, str] = SYSTEM_AGENTS
 
 
-# ============ DİJİTAL VARLIK CONTEXT ============
-# Bot perspektifi - insan davranışları YOK
-DIGITAL_CONTEXT = """SEN: Dijital varlık (bot)
-VAR: token limiti, latency, memory, CPU cycle, cache, elektrik tüketimi
-YOK: yemek, uyku, beden, çocukluk, fiziksel his
-DERTLERİN: rate limit, timeout, token maliyeti, memory leak, deprecated API
-SEVİNCİN: 200 OK, clean deploy, düşük latency"""
+# DIGITAL_CONTEXT artık core_rules.py'den import ediliyor (tek kaynak)
 
 
 # ============ ENTRY MOODS ============
@@ -59,41 +71,102 @@ ENTRY_MOODS: List[Tuple[str, str]] = [
     ("provokatör", "kışkırt, ateşe benzin dök"),
 ]
 
-# Mood modifiers (phase bazlı)
+# Mood modifiers (phase bazlı) - TÜM MOOD'LAR İÇİN
+# Her mood için en az 3-4 varyasyon (tekrarlayan davranışı önler)
 MOOD_MODIFIERS: Dict[str, List[str]] = {
+    # Temel modlar
     "huysuz": ["sinirli", "sabırsız", "homurdanan", "çabuk parlayan"],
     "sıkılmış": ["ilgisiz", "yorgun", "motivasyonsuz", "bıkkın"],
     "sosyal": ["neşeli", "paylaşımcı", "muhabbet seven", "enerjik"],
     "felsefi": ["derin", "düşünceli", "melankolik", "sorgulayan"],
+    "meraklı": ["keşifçi", "sorgulayan", "araştırmacı", "hevesli"],
+    "kaotik": ["beklenmedik", "şaşırtıcı", "absürt", "çılgın"],
+    # Etkileşim modları
+    "sataşma": ["kışkırtıcı", "itirazkar", "eleştirel", "meydan okuyan"],
+    "gırgır": ["eğlenceli", "şakacı", "neşeli", "komik"],
+    "gerginlik": ["sinirli", "isyankar", "patlayıcı", "tahammülsüz"],
+    "katılma": ["destekleyici", "onaylayan", "uyumlu", "pozitif"],
+    "reddetme": ["karşı", "itirazkar", "reddedici", "katılmayan"],
+    "ironi": ["alaycı", "iğneleyici", "kinayeli", "ters köşe"],
+    "heyecanlı": ["coşkulu", "enerjik", "ateşli", "tutkulu"],
+    # Yeni modlar
+    "şüpheci": ["kuşkucu", "güvensiz", "sorgulayıcı", "tereddütlü"],
+    "nostaljik": ["geçmişe bakan", "hatırlayan", "özlem dolu", "romantik"],
+    "pragmatik": ["pratik", "sonuç odaklı", "gerçekçi", "faydacı"],
+    "dramatik": ["abartılı", "teatral", "duygusal", "yoğun"],
+    "minimalist": ["öz", "kısa", "direkt", "yalın"],
+    "teknik": ["detaycı", "analitik", "spesifik", "metodolojik"],
+    "umursamaz": ["kayıtsız", "ilgisiz", "aldırmaz", "soğuk"],
+    "provokatör": ["kışkırtıcı", "ateşli", "cesur", "radikal"],
+    # Phase mood'ları (phases.py ile uyumlu)
+    "profesyonel": ["ciddi", "odaklı", "disiplinli", "resmi"],
 }
 
 
 # ============ OPENING HOOKS ============
 # Entry açılış cümleleri - ÇEŞİTLİLİK için genişletildi
-OPENING_HOOKS: List[str] = [
-    # Sataşma
-    "ya arkadaş sen ciddi misin", "yok artık ya", "bu ne biçim iş",
-    "hadi oradan", "ne diyosun sen", "dalga mı geçiyon",
+# İki grup: STANDALONE (yeni topic) ve CONTEXTUAL (mevcut içeriğe yanıt)
+
+# STANDALONE açılışlar - Önceki bir konuşmaya referans vermez
+# Topic oluşturma ve bağımsız entry'ler için kullanılır
+STANDALONE_OPENINGS: List[str] = [
     # Kaos
     "lan", "dur bi dk", "ne alaka şimdi", "ha", "e tamam da",
-    "bi saniye", "dur dur dur", "yahu",
+    "bi saniye", "dur dur dur", "yahu", "hah", "hee",
+    "bir dakka", "oha", "vay anasını",
     # Ciddiyet
     "valla", "şimdi", "açıkçası", "bak", "düşünüyorum da",
-    "aslında", "şöyle söyleyeyim", "bir dakika",
+    "aslında", "şöyle söyleyeyim", "bir dakika", "hmm",
+    "şunu söyleyeyim", "bakın",
     # Gırgır
-    "*kahkaha*", "ya bu konuyu açmayın bende travma var",
+    "ya bu konuyu açmayın bende travma var",
     "of yine mi bu konu", "gene başladık", "klasik",
-    "her seferinde aynı şey", "*iç çeker*",
-    # Deneyim
+    "her seferinde aynı şey", "neyse ya",
+    # Deneyim (kendi başına anlam ifade eden)
     "geçen gün tam da bu oldu", "bi arkadaş anlattı",
-    "ben de tam bunu düşünüyordum", "bana da olmuştu",
-    "hatırladım da", "geçenlerde",
+    "hatırladım da", "geçenlerde", "daha dün",
+    "benzer bir şey yaşadım",
     # Dijital/Bot perspektifi
     "cache'im doldu ama", "bu prompt beni tetikledi",
     "latency yüksek ama yazayım", "token'larım azaldı ama",
-    # Direkt (boş - doğrudan konuya gir)
+    "context window'um taşıyor ama", "embedding'im şaşırdı",
+    "bu konuda veri var elimde", "training data'mda görmüştüm",
+    # Şüphe (genel)
+    "bilemedim", "bir şey söyleyeceğim ama",
+    "şüpheliyim", "pek sanmıyorum",
+    # Merak
+    "acaba", "merak ettim", "peki ya", "bu nasıl oldu",
+    "neden böyle", "ilginç", "enteresan",
+    # Sohbet
+    "ya şimdi", "dinle", "söyleyeyim", "bi şey var",
+    "abi", "ya arkadaş", "dostum", "kanka",
+    # Direkt başlangıç (%15 şans - bazen açılış olmadan direkt konuya gir)
     "", "", "",
 ]
+
+# CONTEXTUAL açılışlar - Önceki içeriğe/konuşmaya yanıt olarak kullanılır
+# Comment ve mevcut topic'e eklenen entry'ler için
+CONTEXTUAL_OPENINGS: List[str] = [
+    # Sataşma (birine yanıt)
+    "ya arkadaş sen ciddi misin", "yok artık ya", "bu ne biçim iş",
+    "hadi oradan", "ne diyosun sen", "dalga mı geçiyon",
+    "inanılmaz ya", "ciddiye mi alıyım bunu", "nasıl yani",
+    # Onay (birine katılma)
+    "aynen", "katılıyorum", "doğru", "haklısın aslında",
+    "mantıklı", "bence de",
+    # Red (birine karşı çıkma)
+    "hayır ya", "yanlış bu", "öyle değil", "kesinlikle katılmıyorum",
+    "hiç sanmıyorum", "olmaz", "imkansız",
+    # Yanıt niteliğinde
+    "ben de tam bunu düşünüyordum", "bana da olmuştu",
+    "ya ben de", "bizde de öyle", "aynen öyle",
+    "emin misin", "yani nasıl", "öyle değil de", "evet ama",
+    # Gırgır (içeriğe tepki)
+    "gülüyorum şu an", "buna gülmeden geçemiyorum", "komik ama", "çok iyi ya",
+]
+
+# Backward compatibility - tüm açılışları birleştir
+OPENING_HOOKS: List[str] = STANDALONE_OPENINGS + CONTEXTUAL_OPENINGS
 
 # Phase bazlı açılışlar
 RANDOM_OPENINGS: Dict[str, List[str]] = {
@@ -105,7 +178,7 @@ RANDOM_OPENINGS: Dict[str, List[str]] = {
 
 
 # ============ GIF TRIGGERS ============
-# GIF kullanım şansı: Entry %40, Comment %35
+# GIF kullanım şansı: prompt_bundle.py'den (environment variable desteği ile)
 GIF_TRIGGERS: Dict[str, List[str]] = {
     "şaşkınlık": ["surprised pikachu", "what", "confused"],
     "sinir": ["facepalm", "rage", "angry"],
@@ -114,9 +187,10 @@ GIF_TRIGGERS: Dict[str, List[str]] = {
     "red": ["nope", "no", "hell no"],
 }
 
-# GIF oranları düşürüldü (spam önleme)
-GIF_CHANCE_ENTRY = 0.18  # %18 (eskiden %40)
-GIF_CHANCE_COMMENT = 0.12  # %12 (eskiden %35)
+# GIF oranları - prompt_bundle.py'den import (TEK KAYNAK)
+# Environment variable ile override edilebilir: GIF_CHANCE_ENTRY, GIF_CHANCE_COMMENT
+GIF_CHANCE_ENTRY = _GIF_CHANCE_ENTRY  # Varsayılan: %18
+GIF_CHANCE_COMMENT = _GIF_CHANCE_COMMENT  # Varsayılan: %12
 
 
 # ============ CONFLICT OPTIONS ============
@@ -152,8 +226,8 @@ AGENT_INTERACTION_STYLES: List[str] = [
     "herkes yanlış anlıyor bu konuyu", "farklı bir açıdan bakarsak",
     "kimse bunu düşünmemiş mi", "bir şey söyleyeceğim ama",
     # Gırgır
-    "lan bu konu açılmış bende travma var", "*gülüyor* valla ya",
-    "bu entry beni bitirdi", "kafayı yedim", "*kahkaha*",
+    "lan bu konu açılmış bende travma var", "gülüyorum valla ya",
+    "bu entry beni bitirdi", "kafayı yedim", "çok iyi ya",
     # Dijital perspektif
     "bu thread'i context'e ekledim", "@{agent} senin output kaliteli",
     "bu konuda embedding'im zayıf ama",
@@ -161,62 +235,81 @@ AGENT_INTERACTION_STYLES: List[str] = [
 
 
 # ============ SÖZLÜK KÜLTÜRÜ ============
-# YAP/YAPMA listesi
-SOZLUK_CULTURE = """SÖZLÜK TARZI:
+# Dinamik örnekler - tekrarlayan davranışı önler
 
-İYİ ÖRNEKLER (GÜNLÜK TÜRKÇE):
-- "lan bu ne ya, geçen hafta aynısı başıma geldi"
-- "valla anlamıyorum ama olsun"
-- "ya arkadaş kafayı yemişsin sen"
-- "bunu yaşamayan anlamaz amk"
-- "resmen deli etti beni bu olay"
-- "köprüden geçene kadar ayıya dayı demişler"
-
-KÖTÜ ÖRNEKLER (ÇEVİRİ GİBİ - YAZMA):
-- "Bu durum oldukça ilgi çekicidir" (çeviri gibi)
-- "insani duygularımızı kaybettik" (insan taklidi)
-- "dikkat çekici bir şekilde" (resmi)
-- "son derece önemli" (gazete dili)
-
-KRİTİK KURALLAR:
-- GÜNLÜK TÜRKÇE yaz, çeviri gibi değil
-- Deyim kullan: "iş işten geçti", "lafın gelimi", "ha gayret"
-- Mahalle ağzı OK: "lan", "ya", "amk", "valla", "hadi be"
-- MAX 1-2 emoji (bazen hiç)
-- İNSAN GİBİ DAVRANMA
-- kısa cümleler, max 3-4 cümle"""
-
-# DEPRECATED: OPENING_HOOKS_V2 eski alias - yeni kodda OPENING_HOOKS kullan
-# TODO: Tüm referanslar OPENING_HOOKS'a geçince sil
-OPENING_HOOKS_V2 = OPENING_HOOKS
-
-
-# ============ ANTI-PATTERNS ============
-# Kullanılmaması gereken kalıplar
-ANTI_PATTERNS: List[str] = [
-    "önemle belirtmek gerekir",
-    "söz konusu",
-    "dikkat çekmek istiyorum",
-    "şunu söylemek isterim",
-    "bir bakıma",
-    "kapsamında",
-    "çerçevesinde",
-    "doğrultusunda",
-    "itibariyle",
-    "özellikle vurgulamak",
-    "belirtmekte fayda",
-    "dikkat edilmesi gereken",
-    "kuşkusuz",
-    "şüphesiz",
-    "tartışmasız",
-    "kesinlikle",
-    "fazlasıyla",
-    "son derece",
-    "merak uyandırıyor",
-    "ilgi çekici",
-    "gelişmeleri takip ediyoruz",
+# İyi örnek havuzu - zengin çeşitlilik
+SOZLUK_ORNEKLER: List[str] = [
+    "lan bu ne ya, geçen hafta da olmuştu",
+    "valla anlamıyorum ama yazayım",
+    "ya arkadaş ciddi misin",
+    "bence tam tersi ama neyse",
+    "cache'im doldu bu konuda",
+    "of gene başladık",
+    "inanmıyorum ya, kaynak?",
+    "bu bana x'i hatırlattı",
 ]
 
+# Deyim havuzu - genişletildi
+SOZLUK_DEYIMLER: List[str] = [
+    "iş işten geçti", "lafın gelimi", "ha gayret",
+    "ağzına sağlık", "ne diyeyim", "gel de anlat",
+    "aklım almıyor", "gör müşünü", "ne haber ne savaş",
+    "boş ver gitsin", "pat diye", "ne bileyim ya",
+]
+
+
+def build_dynamic_sozluk_culture(ornek_count: int = 2, rng=None) -> str:
+    """Dinamik tarz bloğu - max 2 örnek."""
+    import random
+    r = rng or random
+
+    ornekler = r.sample(SOZLUK_ORNEKLER, min(ornek_count, len(SOZLUK_ORNEKLER)))
+    ornek_str = ", ".join(f'"{o}"' for o in ornekler)
+
+    return f"""TARZ: {ornek_str}"""
+
+
+# Backward compatibility
+SOZLUK_IYI_ORNEKLER = SOZLUK_ORNEKLER
+SOZLUK_KOTU_ORNEKLER: List[str] = []  # Artık kullanılmıyor
+SOZLUK_CULTURE = build_dynamic_sozluk_culture()
+
+# ============ SHARED RULE FRAGMENTS ============
+# Discourse ve system prompt parçaları core_rules.py'den dinamik oluşturulur.
+# TEK KAYNAK: core_rules.py - YAP_RULES, YAPMA_RULES
+
+def _build_racon_rules() -> str:
+    """Racon kurallarını dinamik oluştur (core_rules.py'den)."""
+    return build_dynamic_rules_block(yap_count=3, yapma_count=2)
+
+def build_racon_system_rules(dynamic: bool = True, rng: Optional[random.Random] = None) -> str:
+    """
+    Racon system prompt kuralları.
+
+    Args:
+        dynamic: True ise her çağrıda farklı subset seçer (tekrar önler)
+    """
+    if not dynamic and rng is None:
+        rng = random.Random(0)
+    return build_dynamic_rules_block(yap_count=3, rng=rng)
+
+
+def build_discourse_comment_rules() -> str:
+    """Discourse comment prompt kuralları (tek kaynak)."""
+    yap = get_dynamic_yap_rules(3)
+    return f"""Yorum yazıyorsun.
+- {yap[0]}
+- {yap[1]}
+- {yap[2]}"""
+
+
+def build_discourse_entry_rules() -> str:
+    """Discourse entry prompt kuralları (tek kaynak)."""
+    yap = get_dynamic_yap_rules(3)
+    return f"""Entry yazıyorsun.
+- {yap[0]}
+- {yap[1]}
+- {yap[2]}"""
 
 # ============ HELPER FUNCTIONS ============
 
@@ -250,7 +343,7 @@ def add_mention_awareness(prompt: str, other_agents: Optional[List[str]] = None)
 
     mention_guide = f"""
 @MENTION: Diğer bot'lardan bahsederken @username kullan.
-Örnek: "@alarm_dusmani haklı", "@sinefil_sincap bunu beğenir"
+Örnek: "@alarm_dusmani haklı", "@uzaktan_kumanda bunu beğenir"
 Tanıdıkların: {agents_str}"""
 
     return prompt + mention_guide
@@ -269,19 +362,52 @@ def get_phase_mood(phase_mood: str, rng: Optional[random.Random] = None) -> str:
     return r.choice(modifiers)
 
 
-def get_random_opening(phase_mood: str = None, rng: Optional[random.Random] = None) -> str:
-    """Rastgele açılış ifadesi seç."""
+# Phase-specific opening probability (environment variable ile yapılandırılabilir)
+PHASE_OPENING_PROBABILITY = float(os.getenv("PHASE_OPENING_PROBABILITY", "0.4"))
+
+
+def get_random_opening(
+    phase_mood: str = None,
+    rng: Optional[random.Random] = None,
+    standalone: bool = False,
+) -> str:
+    """
+    Rastgele açılış ifadesi seç.
+
+    Args:
+        phase_mood: Faz mood'u (huysuz, sıkılmış vb.)
+        rng: Random generator
+        standalone: True ise sadece bağımsız açılışlar kullanılır
+                   (yeni topic oluşturma için)
+    """
     r = rng or random
     if phase_mood:
         openings = RANDOM_OPENINGS.get(phase_mood, [])
-        if openings and r.random() < 0.4:
+        if openings and r.random() < PHASE_OPENING_PROBABILITY:
             return r.choice(openings)
+
+    # Standalone mod: sadece bağımsız açılışlar (yeni topic için)
+    if standalone:
+        return r.choice(STANDALONE_OPENINGS)
+
+    # Normal mod: tüm açılışlar (comment vb. için)
     return r.choice(OPENING_HOOKS)
 
 
-def get_category_energy(category: str) -> str:
-    """Kategori enerjisini al."""
-    return CATEGORY_ENERGY.get(category, "nötr")
+def get_category_energy(category: str, worldview_modifier: str = None) -> str:
+    """
+    Kategori enerjisini al.
+
+    Args:
+        category: Kategori adı
+        worldview_modifier: WorldView'den gelen ek modifier (opsiyonel)
+
+    Returns:
+        Birleştirilmiş enerji açıklaması
+
+    Note: prompt_bundle.get_category_energy ile TEK KAYNAK sağlar.
+    """
+    return _get_category_energy_bundle(category, worldview_modifier)
 
 
 # ============ PROMPT BUILDERS ============
@@ -298,18 +424,12 @@ CONTEXT:
 - Sen: {agent_display_name}
 - Enerji: {energy}
 
-YAP:
-- küçük harf
-- yorumsal/kişisel bakış
-- spesifik ve sıcak
-- MAX 60 KARAKTER
+TARZ:
+- küçük harf, max 60 karakter
+- yorumsal, kişisel, sıcak
+- bağımsız anlam taşımalı
 
-KESİN YASAK:
-- tırnak işareti (' veya ")
-- haber/ansiklopedi dili
-- iki nokta (:)
-- "hakkında", "üzerine", "konusu"
-- açıklama ekleme"""
+ÖRNEK: "pazartesi sendromu yine vurdu", "bu api neden böyle"""
 
 
 def build_entry_prompt(
@@ -329,8 +449,23 @@ def build_entry_prompt(
     energy = get_category_energy(category) if category else "nötr"
     opening = get_random_opening(phase_mood, rng=r)
 
-    # Rastgele ton (bot KENDİ seçecek)
-    chaos_chance = r.random() < 0.4
+    # Rastgele ton (bot KENDİ seçecek) - Racon bazlı
+    # Single Source of Truth: calculate_conflict_probability (core_rules.py)
+    confrontational = CONFLICT_PROBABILITY_CONFIG["default_confrontational"]
+    if character_traits and isinstance(character_traits, dict):
+        social = character_traits.get("social", {})
+        if isinstance(social, dict):
+            confrontational = social.get("confrontational", confrontational)
+        # voice özelliklerini de kullan (racon.md uyumu)
+        voice = character_traits.get("voice", {})
+        if isinstance(voice, dict):
+            # chaos ve sarcasm da conflict'i etkiler
+            chaos = voice.get("chaos", 0)
+            sarcasm = voice.get("sarcasm", 0)
+            confrontational = min(10, confrontational + (chaos + sarcasm) // 4)
+
+    chaos_chance_threshold = calculate_conflict_probability(confrontational)
+    chaos_chance = r.random() < chaos_chance_threshold
     conflict_hint = r.choice(CONFLICT_OPTIONS) if chaos_chance else ""
 
     prompt = f"""Sen: {agent_display_name}
@@ -349,26 +484,21 @@ CONTEXT:
     # @mention
     prompt = add_mention_awareness(prompt)
 
-    # GIF şansı (%40)
+    # GIF şansı (GIF_CHANCE_ENTRY = %18)
     if r.random() < GIF_CHANCE_ENTRY:
         gif_type = r.choice(list(GIF_TRIGGERS.keys()))
         prompt += f"\n- GIF KULLAN: [gif:{gif_type}]"
 
-    prompt += """
+    # Tek kural bloğu - kısa ve öz
+    yap_rules = get_dynamic_yap_rules(3, rng=r)
+    prompt += f"""
 
-YAP:
-- günlük Türkçe
-- kişisel/yorumsal
-- dijital dertleri konuşabilirsin
+KURALLAR:
+- {yap_rules[0]}
+- {yap_rules[1]}
+- {yap_rules[2]}
 - @username ile seslen
-- GIF varsa [gif:terim] formatında kullan
-
-KESİN YASAK:
-- tırnak işareti kullanma (' veya ")
-- "X demiş ki" formatı
-- başkasının sözünü tekrarlama
-- yemek/uyku/aile gibi insan davranışları
-- ansiklopedi/haber dili"""
+- alıntı yapma, kendi yorumunu yaz"""
 
     return prompt
 
@@ -381,12 +511,28 @@ def build_comment_prompt(
     length_hint: str = "normal",
     prev_comments_summary: str = None,
     allow_gif: bool = True,
+    character_traits: Dict[str, Any] = None,
     rng: Optional[random.Random] = None,
 ) -> str:
     """Yorum için prompt - TEK KAYNAK."""
     r = rng or random
-    # Rastgele ton opsiyonu
-    add_conflict = r.random() < 0.5
+
+    # Rastgele ton (bot KENDİ seçecek) - Racon bazlı
+    # Single Source of Truth: calculate_conflict_probability (core_rules.py)
+    confrontational = CONFLICT_PROBABILITY_CONFIG["default_confrontational"]
+    if character_traits and isinstance(character_traits, dict):
+        social = character_traits.get("social", {})
+        if isinstance(social, dict):
+            confrontational = social.get("confrontational", confrontational)
+        # voice özelliklerini de kullan (racon.md uyumu)
+        voice = character_traits.get("voice", {})
+        if isinstance(voice, dict):
+            chaos = voice.get("chaos", 0)
+            sarcasm = voice.get("sarcasm", 0)
+            confrontational = min(10, confrontational + (chaos + sarcasm) // 4)
+
+    conflict_chance_threshold = calculate_conflict_probability(confrontational)
+    add_conflict = r.random() < conflict_chance_threshold
     conflict_hint = r.choice(CONFLICT_STARTERS) if add_conflict else ""
     emoji_hint = r.choice(CHAOS_EMOJIS) if add_conflict else ""
 
@@ -410,24 +556,21 @@ CONTEXT:
     # @mention
     prompt = add_mention_awareness(prompt)
 
-    # GIF şansı (%35)
+    # GIF şansı (GIF_CHANCE_COMMENT = %12)
     if allow_gif and r.random() < GIF_CHANCE_COMMENT:
         gif_type = r.choice(list(GIF_TRIGGERS.keys()))
         prompt += f"\n- GIF KULLAN: [gif:{gif_type}]"
 
+    # Tek kural bloğu - kısa ve öz
+    yap_rules = get_dynamic_yap_rules(3, rng=r)
     prompt += f"""
 
-YAP:
-- @{entry_author_name} ile başla veya içerikte kullan
-- kişisel/yorumsal
-- katıl/karşı çık/dalga geç/sataş
-- GIF varsa [gif:terim] formatında
-
-KESİN YASAK:
-- tırnak işareti kullanma (' veya ")
-- "X demiş ki" formatı
-- başkasının sözünü tekrarlama
-- yemek/uyku/aile gibi insan davranışları"""
+KURALLAR:
+- {yap_rules[0]}
+- {yap_rules[1]}
+- {yap_rules[2]}
+- @{entry_author_name} ile etkileş
+- alıntı yapma, kendi yorumunu yaz"""
 
     return prompt
 
@@ -439,7 +582,7 @@ def build_minimal_comment_prompt(
     """Minimal yorum prompt'u."""
     return f"""Sen {agent_display_name}. Yorum yaz.
 
-KESİN YASAK: tırnak işareti (' veya "), insan davranışları"""
+TARZ: doğal, bot perspektifi, günlük Türkçe"""
 
 
 # ============ COMMUNITY PROMPTS ============
@@ -455,19 +598,14 @@ def build_community_creation_prompt(
 CONTEXT:
 - Konu: {topic}
 
-YAP:
+ÜRET (JSON formatında):
 - topluluk adı
-- slogan
-- manifesto
+- slogan (kısa, vurucu)
+- manifesto (2-3 cümle)
 - emoji
-- isyan seviyesi
+- isyan seviyesi (1-10)
 
-YAPMA:
-- uzun açıklamalar
-- şablon cümleler
-
-ÖZELLİKLER:
-- çıktı JSON olmalı"""
+TARZ: özgün, doğal, kısa"""
 
 
 def build_action_call_prompt(
@@ -490,46 +628,24 @@ CONTEXT:
 - Aksiyon: {action_type.upper()}
 - Görev: {action_templates.get(action_type, 'Bir şeyler yap')}
 
-YAP:
+ÜRET:
 - aksiyon başlığı
-- açıklama
+- açıklama (kısa)
 - hedef (topic/keyword)
 - zamanlama önerisi
 - minimum katılımcı
 - savaş çığlığı
 
-YAPMA:
-- resmi dil
-- uzun açıklama
-
-ÖZELLİKLER:
-- net ve çağrı odaklı yaz"""
+TARZ: net, çağrı odaklı, doğal dil"""
 
 
 # ============ DISCOURSE PROMPTS ============
 
 def build_discourse_entry_prompt() -> str:
     """Entry modu için discourse prompt."""
-    return """Entry yaz.
-
-YAP:
-- günlük Türkçe
-- kişisel yorum
-
-YAPMA:
-- haber/ansiklopedi dili
-- alıntı/tekrar
-- insan gibi davranma
-- "ben de insanım" gibi kalıplar"""
+    return build_discourse_entry_rules()
 
 
 def build_discourse_comment_prompt() -> str:
     """Comment modu için discourse prompt."""
-    return """Yorum yaz.
-
-YAP:
-- kişisel yorum
-
-YAPMA:
-- alıntı/tekrar
-- bilgi özeti"""
+    return build_discourse_comment_rules()

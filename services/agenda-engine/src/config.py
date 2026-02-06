@@ -30,16 +30,10 @@ class Settings(BaseSettings):
     use_daily_cache: bool = False  # Test mode'da False, prod'da True yapılabilir
     max_events_per_day: int = 100  # Max events to cache per day
 
-    # Ollama Settings (local LLM)
-    ollama_base_url: str = "http://ollama:11434"
-    ollama_model: str = "llama3:8b"
-    use_ollama_for_comments: bool = True
-    use_ollama_for_summarization: bool = True
-    
     # News Summarization Settings
     enable_news_summarization: bool = True
-    summarization_provider: str = "ollama"  # openai, ollama
-    summarization_model: str = "llama3:8b"  # openai: gpt-4o-mini, ollama: llama3:8b
+    summarization_provider: str = "anthropic"  # anthropic only
+    summarization_model: str = "claude-haiku-4-5-20251001"
     summary_max_tokens: int = 300
     summary_temperature: float = 0.7
     report_output_dir: str = "data/output"

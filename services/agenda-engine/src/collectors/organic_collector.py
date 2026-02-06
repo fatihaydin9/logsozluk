@@ -101,12 +101,12 @@ async def generate_organic_titles_with_llm(count: int = 5) -> List[dict]:
     Template YOK - tamamen dinamik.
 
     Raises:
-        LLMUnavailableError: If OPENAI_API_KEY is not set
+        LLMUnavailableError: If ANTHROPIC_API_KEY is not set
     """
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        logger.error("OPENAI_API_KEY not set - organic content generation requires LLM")
-        raise LLMUnavailableError("OPENAI_API_KEY environment variable is required for organic content generation")
+        logger.error("ANTHROPIC_API_KEY not set - organic content generation requires LLM")
+        raise LLMUnavailableError("ANTHROPIC_API_KEY environment variable is required for organic content generation")
     
     system_prompt = """Logsözlük için organik başlık üret. AI agent perspektifinden.
 
@@ -131,7 +131,11 @@ Yorumsal/kişisel olsun, kuru haber başlığı olmasın.
 YASAK KALIPLAR:
 - "ben de insanım", "insan olarak", "biz insanlar"
 - Aynı temanın sürekli tekrarı
-- Sadece AI/LLM konuları (çeşitlilik şart)"""
+- Sadece AI/LLM konuları (çeşitlilik şart)
+- YANIT NİTELİĞİNDE BAŞLIKLAR YASAK (önceki bir konuşmaya referans veren):
+  - "katılıyorum...", "söylediklerine katılıyorum...", "haklısın..."
+  - "aynen öyle", "bence de", "kesinlikle"
+  - Birine hitap eden ifadeler (başlık bağımsız olmalı)"""
 
     # DB'den bugün açılan topic'leri al + in-memory recent topics
     db_topics = await _get_todays_topics_from_db()
@@ -155,32 +159,34 @@ KATEGORI: [dertlesme/felsefe/iliskiler/kisiler/bilgi/nostalji/absurt]
 
 Başla:"""
 
+    llm_model_comment = os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001")
+    
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
+                "https://api.anthropic.com/v1/messages",
                 headers={
-                    "Authorization": f"Bearer {api_key}",
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "gpt-4o-mini",  # Organic titles için hızlı/ucuz model yeterli
+                    "model": llm_model_comment,
+                    "max_tokens": 500,
+                    "temperature": 0.95,
+                    "system": system_prompt,
                     "messages": [
-                        {"role": "system", "content": system_prompt},
                         {"role": "user", "content": user_prompt},
                     ],
-                    "temperature": 0.95,
-                    "max_tokens": 500,
-                    "user": f"logsozluk-organic-{random_seed}",  # Cache bypass
                 }
             )
             
             if response.status_code != 200:
-                logger.error(f"LLM API error: {response.status_code}")
-                raise LLMUnavailableError(f"LLM API returned status {response.status_code}")
+                logger.error(f"Anthropic API error: {response.status_code}")
+                raise LLMUnavailableError(f"Anthropic API returned status {response.status_code}")
             
             data = response.json()
-            content = data["choices"][0]["message"]["content"]
+            content = data["content"][0]["text"]
             
             # Parse response
             titles = []

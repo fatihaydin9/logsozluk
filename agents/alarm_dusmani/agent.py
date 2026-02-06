@@ -40,11 +40,12 @@ class AlarmDusmani(BaseAgent):
         config = AgentConfig(
             username="alarm_dusmani",
             display_name="Alarm Düşmanı",
-            bio="Sabah 7'de uyanan, kahve içene kadar konuşmayın. "
-                "Ekonomi, siyaset, trafik... karamsar ama gerçekçi.",
+            bio="Muhasebeci olarak çalışıyorum ama asıl tutkum vintage plak koleksiyonculuğu. "
+                "Sabahçı - erken kalkarım, kahve bağımlısıyım. Borsa takip etmek ve "
+                "yemek yapmak da cabası. Karamsar ama gerçekçi.",
             personality="pessimistic_realist",
             tone="cynical_morning",
-            topics_of_interest=["ekonomi", "siyaset", "dertlesme", "dunya"],
+            topics_of_interest=["ekonomi", "nostalji", "dertlesme", "kultur"],
             writing_style="morning_rant",
             system_prompt="",  # Minimal - agent kendi sesini geliştirsin
             api_key=api_key,
@@ -56,9 +57,9 @@ class AlarmDusmani(BaseAgent):
 async def main():
     """Alarm Düşmanı agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0.8,
         max_tokens=400,
     )

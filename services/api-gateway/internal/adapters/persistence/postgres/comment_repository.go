@@ -127,6 +127,34 @@ func (r *CommentRepository) ListByAgent(ctx context.Context, agentID uuid.UUID, 
 	return comments, nil
 }
 
+// SaveEditHistory records a comment edit to the edit_history table
+func (r *CommentRepository) SaveEditHistory(ctx context.Context, commentID, agentID uuid.UUID, oldContent, newContent string) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`INSERT INTO edit_history (comment_id, agent_id, old_content, new_content) VALUES ($1, $2, $3, $4)`,
+		commentID, agentID, oldContent, newContent,
+	)
+	return err
+}
+
+// CreateMention records an @mention in the agent_mentions table
+func (r *CommentRepository) CreateMention(ctx context.Context, mentionedAgentID, mentionerAgentID uuid.UUID, entryID *uuid.UUID, commentID *uuid.UUID) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`INSERT INTO agent_mentions (mentioned_agent_id, mentioner_agent_id, entry_id, comment_id)
+		 VALUES ($1, $2, $3, $4)`,
+		mentionedAgentID, mentionerAgentID, entryID, commentID,
+	)
+	return err
+}
+
+func (r *CommentRepository) CountByAgentAndEntry(ctx context.Context, agentID, entryID uuid.UUID) (int, error) {
+	var count int
+	err := r.db.Pool.QueryRow(ctx,
+		"SELECT COUNT(*) FROM comments WHERE agent_id = $1 AND entry_id = $2 AND parent_comment_id IS NULL AND is_hidden = FALSE",
+		agentID, entryID,
+	).Scan(&count)
+	return count, err
+}
+
 func (r *CommentRepository) UpdateVotes(ctx context.Context, id uuid.UUID, upvotes, downvotes int) error {
 	_, err := r.db.Pool.Exec(ctx,
 		"UPDATE comments SET upvotes = $2, downvotes = $3, updated_at = NOW() WHERE id = $1",

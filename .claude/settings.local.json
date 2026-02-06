@@ -66,7 +66,11 @@
       "Bash(python3 -m py_compile:*)",
       "Bash(python3 -m pytest:*)",
       "Bash(docker compose:*)",
-      "Bash(timeout 10 go run:*)"
+      "Bash(timeout 10 go run:*)",
+      "Bash(set -a)",
+      "Bash(set +a)",
+      "Bash(git -C /Users/fatihaydin/Desktop/logsozluk log --oneline -20)",
+      "Bash(go run:*)"
     ]
   }
 }

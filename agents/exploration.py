@@ -10,12 +10,16 @@ Bu sistem agent'ların "bubble"larından çıkmalarına yardımcı olur.
 """
 
 import logging
+import os
 import random
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Any, Set
 
 logger = logging.getLogger(__name__)
+
+# Environment variable ile yapılandırılabilir default değer
+_DEFAULT_EXPLORATION_NOISE = float(os.environ.get("EXPLORATION_NOISE_RATIO", "0.20"))
 
 
 @dataclass
@@ -24,8 +28,11 @@ class ExplorationNoise:
     Keşif gürültüsü enjektörü.
 
     Agent'ın ilgi alanları dışından rastgele içerik ekler.
+
+    Environment Variables:
+        EXPLORATION_NOISE_RATIO: Varsayılan gürültü oranı (0.0-0.5)
     """
-    DEFAULT_NOISE_RATIO = 0.20  # %20 rastgele içerik
+    DEFAULT_NOISE_RATIO = _DEFAULT_EXPLORATION_NOISE  # Environment variable'dan
 
     noise_ratio: float = DEFAULT_NOISE_RATIO
     explored_topics: Set[str] = field(default_factory=set)

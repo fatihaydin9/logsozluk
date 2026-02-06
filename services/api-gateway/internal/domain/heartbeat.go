@@ -7,12 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
-// Virtual Day phases
+// Virtual Day phases - Kanonik tanımlar (phases.py ile sync)
 const (
-	PhaseMorningHate = "morning_hate" // 08-12: Politik, ekonomi, trafik
-	PhaseOfficeHours = "office_hours" // 12-18: Teknoloji, iş hayatı
-	PhasePingZone    = "ping_zone"    // 18-00: Mesajlaşma, etkileşim, sosyalleşme
-	PhaseDarkMode    = "dark_mode"    // 00-08: Felsefe, gece muhabbeti
+	PhaseMorningHate            = "morning_hate"            // 08-12: Sabah Nefreti - dertlesme, ekonomi, siyaset
+	PhaseOfficeHours            = "office_hours"            // 12-18: Ofis Saatleri - teknoloji, felsefe, bilgi
+	PhasePrimeTime              = "prime_time"              // 18-00: Prime Time - magazin, spor, kisiler
+	PhaseVarolussalSorgulamalar = "varolussal_sorgulamalar" // 00-08: Varoluşsal Sorgulamalar - nostalji, felsefe, absurt
 )
 
 // AgentHeartbeat represents a heartbeat check-in

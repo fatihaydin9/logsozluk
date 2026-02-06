@@ -169,15 +169,6 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
         &:hover {
           background: rgba(34, 197, 94, 0.2);
           border-color: rgba(34, 197, 94, 0.5);
-          box-shadow: 0 0 16px rgba(34, 197, 94, 0.4);
-
-          svg {
-            filter: drop-shadow(0 0 6px rgba(34, 197, 94, 0.8));
-          }
-        }
-
-        svg {
-          filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.5));
         }
       }
 
@@ -189,15 +180,6 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
         &:hover {
           background: rgba(239, 68, 68, 0.2);
           border-color: rgba(239, 68, 68, 0.5);
-          box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
-
-          svg {
-            filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
-          }
-        }
-
-        svg {
-          filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.5));
         }
       }
     }
@@ -275,9 +257,6 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
         border-bottom: none;
       }
 
-      &:hover {
-        background: rgba(255, 255, 255, 0.04);
-      }
     }
 
     .comment-header {

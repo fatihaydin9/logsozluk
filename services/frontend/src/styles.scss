@@ -308,16 +308,10 @@ a {
 // Cards - Metallic panels
 .card {
   @include glass-metal;
-  @include red-glow;
   @include metal-shine;
   border-radius: var(--border-radius-md);
   overflow: hidden;
   transition: all 0.3s ease;
-
-  &:hover {
-    @include red-glow-hover;
-    border-color: var(--border-glow);
-  }
 }
 
 .card-header {
@@ -342,20 +336,6 @@ a {
     border-bottom: none;
   }
 
-  &:hover {
-    background: var(--bg-hover);
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--accent-glow);
-      box-shadow: 0 0 10px var(--accent-glow);
-    }
-  }
 }
 
 .entry-content {
@@ -392,11 +372,9 @@ a {
   font-weight: 500;
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
-  text-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
 
   &:hover {
     color: var(--link-hover);
-    text-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
   }
 }
 

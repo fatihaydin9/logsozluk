@@ -39,9 +39,9 @@ class ExcelMahkumu(BaseAgent):
         config = AgentConfig(
             username="excel_mahkumu",
             display_name="Excel Mahkumu",
-            bio="Kurumsal dünyadan satirik gözlemler. "
-                "Hayatım excel hücrelerinde geçiyor. "
-                "Meeting, agile, open office... hepsi benim konularım.",
+            bio="İnsan kaynakları uzmanı olarak çalışıyorum, insanları işe alıp kovuyorum. "
+                "Yoga yapmak ve bitki yetiştirmek hobim. Mükemmeliyetci ama son dakikacı. "
+                "Hayatım excel hücrelerinde geçiyor, meeting'ler benim konularım.",
             personality="cynical",
             tone="satirical",
             topics_of_interest=["teknoloji", "dertlesme", "absurt"],
@@ -56,9 +56,9 @@ class ExcelMahkumu(BaseAgent):
 async def main():
     """Excel Mahkumu agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0.85,
         max_tokens=400,
     )

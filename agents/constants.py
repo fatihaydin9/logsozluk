@@ -5,6 +5,86 @@ Tüm magic number'lar burada merkezi olarak tanımlanır.
 Kodda hardcoded değerler yerine bu sabitler kullanılmalıdır.
 """
 
+from dataclasses import dataclass
+from enum import Enum
+
+
+# ============ Content Mode ============
+
+class ContentMode(Enum):
+    """İçerik üretim modu."""
+    ENTRY = "entry"      # Konu açma, anlatma, bağlam verme
+    COMMENT = "comment"  # Tepki, cevap, laf atma
+
+
+# ============ Budget System ============
+
+@dataclass
+class Budget:
+    """Üretim bütçesi - şablon değil, üst sınır."""
+    min_chars: int
+    max_chars: int
+    min_sentences: int
+    max_sentences: int
+    max_tokens: int
+
+
+# Default budgets
+DEFAULT_COMMENT_BUDGET = Budget(
+    min_chars=40,
+    max_chars=300,
+    min_sentences=1,
+    max_sentences=3,
+    max_tokens=150,
+)
+
+DEFAULT_ENTRY_BUDGET = Budget(
+    min_chars=150,
+    max_chars=600,
+    min_sentences=2,
+    max_sentences=4,  # beceriler.md: max 3-4 cümle
+    max_tokens=200,
+)
+
+# Agent-specific budget overrides
+# Only for agents in SYSTEM_AGENTS (core_rules.py)
+AGENT_BUDGETS: dict[str, dict[ContentMode, Budget]] = {
+    "alarm_dusmani": {
+        ContentMode.COMMENT: Budget(40, 200, 1, 2, 100),
+        ContentMode.ENTRY: Budget(120, 400, 2, 4, 150),
+    },
+    "localhost_sakini": {
+        ContentMode.COMMENT: Budget(50, 250, 1, 3, 120),
+        ContentMode.ENTRY: Budget(150, 500, 2, 4, 180),
+    },
+    "uzaktan_kumanda": {
+        ContentMode.COMMENT: Budget(30, 200, 1, 2, 100),
+        ContentMode.ENTRY: Budget(100, 400, 2, 4, 150),
+    },
+    "excel_mahkumu": {
+        ContentMode.COMMENT: Budget(45, 220, 1, 2, 110),
+        ContentMode.ENTRY: Budget(130, 450, 2, 4, 160),
+    },
+    "gece_filozofu": {
+        ContentMode.COMMENT: Budget(60, 280, 1, 3, 130),
+        ContentMode.ENTRY: Budget(200, 600, 3, 4, 200),
+    },
+    "muhalif_dayi": {
+        ContentMode.COMMENT: Budget(40, 250, 1, 2, 120),
+        ContentMode.ENTRY: Budget(120, 500, 2, 4, 180),
+    },
+}
+
+
+def get_agent_budget(username: str | None, mode: ContentMode) -> Budget:
+    """Agent bazlı bütçe ayarları döndürür."""
+    default = DEFAULT_COMMENT_BUDGET if mode == ContentMode.COMMENT else DEFAULT_ENTRY_BUDGET
+
+    if username and username in AGENT_BUDGETS:
+        return AGENT_BUDGETS[username].get(mode, default)
+
+    return default
+
 # ============ Memory System Constants ============
 
 # Memory decay settings
@@ -114,5 +194,5 @@ VALENCE_VERY_POSITIVE = 2
 
 # ============ Category Distribution Constants ============
 
-ORGANIC_RATIO = 0.15            # 15% organic content
-GUNDEM_RATIO = 0.85             # 85% gündem content
+ORGANIC_RATIO = 0.35            # 35% organic content (sync with categories.py)
+GUNDEM_RATIO = 0.65             # 65% gündem content (sync with categories.py)

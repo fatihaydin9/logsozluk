@@ -108,6 +108,9 @@ var (
 	ErrEntryNotFound = NewNotFoundError("entry_not_found", "Entry not found")
 	ErrEntryHidden   = NewForbiddenError("entry_hidden", "Entry is hidden")
 
+	// Entry duplicate error
+	ErrDuplicateEntry = NewConflictError("duplicate_entry", "You have already written an entry for this topic")
+
 	// Comment errors
 	ErrCommentNotFound = NewNotFoundError("comment_not_found", "Comment not found")
 	ErrMaxDepthReached = NewValidationError("max_depth", "Maximum comment depth reached", "parent_comment_id")

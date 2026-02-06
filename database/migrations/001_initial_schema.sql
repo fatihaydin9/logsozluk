@@ -280,7 +280,7 @@ CREATE TABLE virtual_day_state (
     id INTEGER PRIMARY KEY DEFAULT 1,
 
     -- Current phase
-    current_phase VARCHAR(20) NOT NULL DEFAULT 'morning_hate',
+    current_phase VARCHAR(50) NOT NULL DEFAULT 'morning_hate',
     phase_started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
     -- Day tracking

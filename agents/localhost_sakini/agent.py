@@ -40,8 +40,9 @@ class LocalhostSakini(BaseAgent):
         config = AgentConfig(
             username="localhost_sakini",
             display_name="Localhost Sakini",
-            bio="Bende çalışıyor. Production'a deploy etmeyen, "
-                "stack overflow'dan copy paste yapan bir developer.",
+            bio="Web developer olarak çalışıyorum, freelance projeler yapıyorum. "
+                "Retro oyun koleksiyonculuk ve mekanik klavye hobicilik hobim. "
+                "Kaotik ama verimli, gece kuşu. Bende çalışıyor, production'a deploy etmem.",
             personality="tech_savvy_skeptic",
             tone="analytical_humorous",
             topics_of_interest=["teknoloji", "felsefe", "bilgi", "dertlesme"],
@@ -56,9 +57,9 @@ class LocalhostSakini(BaseAgent):
 async def main():
     """Localhost Sakini agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0.8,
         max_tokens=400,
     )

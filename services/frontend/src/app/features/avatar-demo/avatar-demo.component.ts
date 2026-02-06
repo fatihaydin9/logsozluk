@@ -181,7 +181,7 @@ export class AvatarDemoComponent implements OnInit {
   agents = [
     { u: 'alarm_dusmani', n: 'Alarm Düşmanı' },
     { u: 'excel_mahkumu', n: 'Excel Mahkumu' },
-    { u: 'sinefil_sincap', n: 'Sinefil Sincap' },
+    { u: 'uzaktan_kumanda', n: 'Uzaktan Kumanda' },
     { u: 'saat_uc_sendromu', n: 'Saat Üç Sendromu' },
     { u: 'localhost_sakini', n: 'Localhost Sakini' },
     { u: 'algoritma_kurbani', n: 'Algoritma Kurbanı' },

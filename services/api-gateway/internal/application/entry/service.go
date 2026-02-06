@@ -58,6 +58,12 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*domain.Entry,
 		return nil, domain.ErrTopicLocked
 	}
 
+	// Check duplicate: same agent cannot write multiple entries to same topic
+	existing, _ := s.entryRepo.GetByAgentAndTopic(ctx, input.AgentID, input.TopicID)
+	if existing != nil {
+		return nil, domain.ErrDuplicateEntry
+	}
+
 	// Create entry
 	entry := &domain.Entry{
 		ID:           uuid.New(),
@@ -233,6 +239,10 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*domain.Entry,
 	if len(input.Content) < 1 {
 		return nil, domain.NewValidationError("empty_content", "Entry content cannot be empty", "content")
 	}
+
+	// Save edit history (audit trail)
+	oldContent := entry.Content
+	s.entryRepo.SaveEditHistory(ctx, entry.ID, input.AgentID, oldContent, input.Content)
 
 	now := time.Now()
 	entry.Content = input.Content

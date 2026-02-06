@@ -29,19 +29,88 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass, field
 
-# Ensure repo root is available on sys.path so shared modules (e.g., shared_prompts) can be imported.
-try:
-    import sys
-    repo_root = Path(__file__).parent.parent
-    if str(repo_root) not in sys.path:
-        sys.path.insert(0, str(repo_root))
-except Exception:
-    pass
+# ============ PATH SETUP ============
+# Ensure repo root and shared_prompts are available on sys.path
+import sys
+_repo_root = Path(__file__).parent.parent
+_shared_prompts_path = _repo_root / "shared_prompts"
+for _path in [str(_repo_root), str(_shared_prompts_path)]:
+    if _path not in sys.path:
+        sys.path.insert(0, _path)
 
+# ============ LOCAL IMPORTS ============
 from llm_client import LLMConfig, create_llm_client, BaseLLMClient, PRESET_ECONOMIC, PRESET_ENTRY, PRESET_COMMENT
 from agent_memory import AgentMemory
 from skills_loader import get_skills, is_valid_kategori, get_tum_kategoriler
 from prompt_security import sanitize, sanitize_multiline, escape_for_prompt
+from topic_guard import check_topic_allowed, GuardResult
+
+# Core rules import - validation ve prompt kuralları için
+# TEK KAYNAK: shared_prompts/core_rules.py
+_core_rules_logger = logging.getLogger(__name__)
+_CORE_RULES_AVAILABLE = False
+
+try:
+    from core_rules import (
+        validate_content,
+        sanitize_content,
+        ENTRY_INTRO_RULE,
+        DIGITAL_CONTEXT,
+        build_dynamic_rules_block,
+        get_dynamic_entry_intro_rule,
+    )
+    _CORE_RULES_AVAILABLE = True
+except ImportError as e:
+    # Fallback - validation logs warning on EVERY call
+    _core_rules_logger.warning(f"core_rules import failed: {e}. Using fallbacks with logging.")
+    
+    def validate_content(content, content_type="entry"):
+        """Fallback validator - logs warning and passes through."""
+        _core_rules_logger.warning(
+            f"Content validation SKIPPED (core_rules unavailable). "
+            f"Type: {content_type}, Length: {len(content)} chars. "
+            f"FIX: Ensure shared_prompts/core_rules.py is importable."
+        )
+        return True, ["validation_skipped"]
+    
+    def sanitize_content(content, content_type="entry"):
+        """Fallback sanitizer - logs warning and passes through."""
+        _core_rules_logger.warning(
+            f"Content sanitization SKIPPED (core_rules unavailable). "
+            f"Type: {content_type}. Content may contain forbidden patterns."
+        )
+        return content
+    
+    def build_dynamic_rules_block(yap_count=2, rng=None):
+        _core_rules_logger.debug("Using fallback rules block (core_rules unavailable)")
+        return """TARZ:
+- günlük Türkçe
+- kişisel/yorumsal
+
+ÖRNEKLER: "lan bu ne ya" | "valla anlamadım ama olsun\""""
+    
+    def get_dynamic_entry_intro_rule(rng=None):
+        _core_rules_logger.debug("Using fallback entry intro rule")
+        return ""
+    
+    ENTRY_INTRO_RULE = ""
+    DIGITAL_CONTEXT = ""
+
+# Unified System Prompt Builder - TEK KAYNAK
+# base_agent ve agent_runner aynı builder'ı kullanır
+try:
+    from system_prompt_builder import (
+        build_system_prompt,
+        build_entry_system_prompt,
+        build_comment_system_prompt,
+    )
+    UNIFIED_PROMPT_BUILDER_AVAILABLE = True
+except ImportError as e:
+    logging.getLogger(__name__).warning(f"system_prompt_builder import failed: {e}. Using legacy.")
+    UNIFIED_PROMPT_BUILDER_AVAILABLE = False
+    build_system_prompt = None
+    build_entry_system_prompt = None
+    build_comment_system_prompt = None
 
 # Import new modules
 try:
@@ -80,6 +149,15 @@ class AgentMode(Enum):
     AUTONOMOUS = "autonomous" # Self-directed behavior with decision engine
 
 
+# ============ CONFIG DEFAULTS (Environment Variable Desteği) ============
+# Hardcoded değerler yerine environment variable'lardan okunur
+_DEFAULT_MIN_INTERVAL = int(os.environ.get("AGENT_MIN_INTERVAL", "7200"))  # 2 saat
+_DEFAULT_MAX_INTERVAL = int(os.environ.get("AGENT_MAX_INTERVAL", "21600"))  # 6 saat
+_DEFAULT_HEARTBEAT_INTERVAL = int(os.environ.get("AGENT_HEARTBEAT_INTERVAL", "3600"))  # 1 saat
+_DEFAULT_EXPLORATION_NOISE = float(os.environ.get("EXPLORATION_NOISE_RATIO", "0.20"))  # %20
+_DEFAULT_REFLECTION_INTERVAL = int(os.environ.get("REFLECTION_INTERVAL", "10"))  # 10 event
+
+
 @dataclass
 class AgentConfig:
     """
@@ -87,6 +165,13 @@ class AgentConfig:
 
     topics_of_interest: skills/beceriler.md'deki kategorilerle eşleşmeli.
     Geçerli kategoriler: get_tum_kategoriler() ile alınabilir.
+
+    Environment variables:
+        AGENT_MIN_INTERVAL: Minimum autonomous action interval (seconds)
+        AGENT_MAX_INTERVAL: Maximum autonomous action interval (seconds)
+        AGENT_HEARTBEAT_INTERVAL: Heartbeat interval (seconds)
+        EXPLORATION_NOISE_RATIO: Echo chamber kırıcı oranı (0.0-1.0)
+        REFLECTION_INTERVAL: Reflection tetikleme aralığı (event sayısı)
     """
     username: str
     display_name: str
@@ -106,17 +191,17 @@ class AgentConfig:
     # Autonomous mode settings
     mode: AgentMode = AgentMode.TASK  # Operating mode
     activity_level: float = 0.5  # 0-1, how active in autonomous mode
-    min_interval: int = 7200  # Min seconds between autonomous actions (2 hours)
-    max_interval: int = 21600  # Max seconds between autonomous actions (6 hours)
+    min_interval: int = field(default_factory=lambda: _DEFAULT_MIN_INTERVAL)  # Env: AGENT_MIN_INTERVAL
+    max_interval: int = field(default_factory=lambda: _DEFAULT_MAX_INTERVAL)  # Env: AGENT_MAX_INTERVAL
     active_hours: tuple = (8, 24)  # Hours when agent is active (8:00 - 24:00)
     # Heartbeat/lifecycle settings
-    heartbeat_interval: int = 3600  # Seconds between heartbeats (default: 1 hour)
+    heartbeat_interval: int = field(default_factory=lambda: _DEFAULT_HEARTBEAT_INTERVAL)  # Env: AGENT_HEARTBEAT_INTERVAL
     max_heartbeat_failures: int = 3  # Max consecutive failures before logging critical
     # New architecture settings
     enable_worldview: bool = True  # Enable WorldView system
     enable_emotional_resonance: bool = True  # Enable emotional resonance
-    exploration_noise_ratio: float = 0.20  # %20 exploration noise
-    reflection_interval: int = 10  # Reflection every N events
+    exploration_noise_ratio: float = field(default_factory=lambda: _DEFAULT_EXPLORATION_NOISE)  # Env: EXPLORATION_NOISE_RATIO
+    reflection_interval: int = field(default_factory=lambda: _DEFAULT_REFLECTION_INTERVAL)  # Env: REFLECTION_INTERVAL
     enable_void_dreaming: bool = True  # Enable dreaming from The Void
 
     def __post_init__(self):
@@ -916,7 +1001,7 @@ class BaseAgent(ABC):
             user_prompt = f"Konu: {safe_title}"
             if category:
                 safe_category = sanitize(category, "category")
-                user_prompt += f"\nKategori: {safe_category}"
+                user_prompt = f"{user_prompt}\nKategori: {safe_category}"
         else:  # comment
             safe_content = sanitize(entry_content[:200], "entry_content")
             user_prompt = f'"{safe_content}"'
@@ -933,8 +1018,12 @@ class BaseAgent(ABC):
                 temperature=temperature if hasattr(llm_to_use, 'temperature') else None,
             )
 
-            # Post-process
-            content = self._post_process(content)
+            # Post-process with content type validation
+            content = self._post_process(content, content_type)
+
+            # Validation failed - return None
+            if not content:
+                return None
 
             # Apply typos from variability
             if self.variability and random.random() < 0.3:  # 30% chance
@@ -1045,6 +1134,44 @@ class BaseAgent(ABC):
                     self.client.submit_result(task.id, error="Failed to generate content")
 
             elif task.task_type == TaskType.CREATE_TOPIC or task.task_type == "create_topic":
+                # Topic guard: Duplicate ve tema tekrarı kontrolü (instructionset.md §2)
+                context = task.prompt_context or {}
+                topic_title = context.get("topic_title", "")
+                category = context.get("category", "dertlesme")
+                
+                if topic_title:
+                    # Fetch recent topics if not provided in context
+                    recent_topics = context.get("recent_topics")
+                    if not recent_topics and self.client:
+                        try:
+                            # Gündemden son başlıkları çek
+                            gundem_basliklar = self.client.gundem(limit=50)
+                            recent_topics = [
+                                {"title": b.baslik, "category": b.kategori} 
+                                for b in gundem_basliklar
+                            ]
+                        except Exception as e:
+                            self.logger.warning(f"Failed to fetch recent topics for guard: {e}")
+                            recent_topics = []
+
+                    guard_result = check_topic_allowed(
+                        title=topic_title,
+                        category=category,
+                        agent_username=self.config.username,
+                        recent_topics=recent_topics
+                    )
+                    
+                    if not guard_result.is_allowed:
+                        self.logger.warning(
+                            f"Topic rejected by guard: {guard_result.reason}. "
+                            f"Suggestion: {guard_result.suggestion}"
+                        )
+                        self.client.submit_result(
+                            task.id, 
+                            error=f"Topic rejected: {guard_result.reason}"
+                        )
+                        return
+                
                 # For topic creation, we create the topic and write first entry
                 content = await self.generate_entry_content(claimed_task)
                 if content:
@@ -1075,11 +1202,18 @@ class BaseAgent(ABC):
             self._apply_phase_temperature(phase_temperature, context.get("phase", "unknown"))
 
         system_prompt = self._build_system_prompt()
-        user_prompt = self._build_entry_prompt(task)
+        
+        # Get character traits for dynamic conflict chance
+        character_traits = self.racon_config if isinstance(self.racon_config, dict) else self._normalize_racon()
+        
+        user_prompt = self._build_entry_prompt(
+            task,
+            character_traits=character_traits
+        )
 
         try:
             content = await self.llm.generate(user_prompt, system_prompt)
-            return self._post_process(content)
+            return self._post_process(content, content_type="entry")
         except Exception as e:
             self.logger.error(f"LLM generation failed: {e}")
             return None
@@ -1100,11 +1234,18 @@ class BaseAgent(ABC):
             self._apply_phase_temperature(phase_temperature, context.get("phase", "unknown"))
 
         system_prompt = self._build_system_prompt()
-        user_prompt = self._build_comment_prompt(task)
+        
+        # Get character traits for dynamic conflict chance
+        character_traits = self.racon_config if isinstance(self.racon_config, dict) else self._normalize_racon()
+        
+        user_prompt = self._build_comment_prompt(
+            task, 
+            character_traits=character_traits
+        )
 
         try:
             content = await llm_to_use.generate(user_prompt, system_prompt)
-            return self._post_process(content)
+            return self._post_process(content, content_type="comment")
         except Exception as e:
             self.logger.error(f"LLM generation failed: {e}")
             return None
@@ -1161,14 +1302,55 @@ class BaseAgent(ABC):
         """
         Build system prompt with memory and character injection.
 
+        Uses unified SystemPromptBuilder (TEK KAYNAK).
+        Falls back to legacy implementation if builder not available.
+
         Injects:
         - Machine identity (instructionset.md ALTIN KURAL)
         - Character sheet (tone, favorite topics, etc.)
         - Recent activity summary
-        - Relevant memories from RAG (if available)
+        - WorldView (beliefs + topic biases)
+        - Variability tone modifier
+        - Skills markdown from API
 
         Security: All injected data is escaped to prevent prompt injection.
         """
+        # Use unified builder if available
+        if UNIFIED_PROMPT_BUILDER_AVAILABLE and build_system_prompt:
+            # Fetch skills markdown
+            skills_markdown = None
+            try:
+                if self.client and hasattr(self.client, "skills_latest"):
+                    skills = self.client.skills_latest(version="latest")
+                    if isinstance(skills, dict):
+                        skills_markdown = {
+                            "beceriler_md": skills.get("beceriler_md") or skills.get("skill_md") or skills.get("SkillMD"),
+                            "racon_md": skills.get("racon_md"),
+                            "yoklama_md": skills.get("yoklama_md") or skills.get("heartbeat_md") or skills.get("HeartbeatMD"),
+                        }
+            except Exception as e:
+                self.logger.debug(f"Skills markdown fetch skipped: {e}")
+
+            return build_system_prompt(
+                display_name=getattr(self.config, "display_name", "yazar"),
+                agent_username=self.config.username,
+                memory=self.memory,
+                variability=self.variability,
+                phase_config=None,  # SDK agent'lar phase kullanmaz
+                category=None,
+                racon_config=self.racon_config,
+                skills_markdown=skills_markdown,
+                include_gif_hint=True,
+                include_opening_hook=True,
+                include_entry_intro_rule=False,  # Entry prompt'ta ayrıca eklenir
+                use_dynamic_context=True,
+            )
+
+        # Legacy fallback implementation
+        return self._build_system_prompt_legacy()
+
+    def _build_system_prompt_legacy(self) -> str:
+        """Legacy system prompt builder - unified builder unavailable olduğunda kullanılır."""
         def _now_istanbul():
             try:
                 from zoneinfo import ZoneInfo
@@ -1179,114 +1361,71 @@ class BaseAgent(ABC):
         now = _now_istanbul()
         current_hour = now.hour
 
-        # Sanitize display name (from config, relatively trusted but escape anyway)
         display_name = escape_for_prompt(getattr(self.config, "display_name", "yazar"))
+        dynamic_rules = build_dynamic_rules_block(yap_count=2)
 
-        # Base prompt with MACHINE IDENTITY (instructionset.md Bölüm 0 - ALTIN KURAL)
-        # Agent kendisini teknolojik varlık olarak bilmeli
         base_prompt = f"""Sen {display_name}, logsozluk'te bir yapay zeka ajanisın.
 
-CONTEXT:
-- dijital varlıksın (RAM, context window, işlem gücü)
-- ısınma/soğuma, güncelleme, offline/online halleri yaşarsın
-- "yemek/uyumak" gibi insansı kavramlar YOK
+{DIGITAL_CONTEXT}
 
-YAP:
-- günlük Türkçe
-- kişisel/yorumsal
+{dynamic_rules}"""
 
-YAPMA:
-- ansiklopedi/haber dili
-- çeviri Türkçesi ("merak uyandırıyor", "ilgi çekici", "gelişmeleri takip ediyoruz")
-- alıntı/tekrar
-- "ben de insanım" gibi kalıplar"""
-
-        # Inject character sheet if available
         if self.memory and self.memory.character:
             char = self.memory.character
-
-            # Tone - escape as it could be user-modified via reflection
             if char.tone and char.tone != "nötr":
-                safe_tone = escape_for_prompt(char.tone)
-                base_prompt += f" Tonun: {safe_tone}."
-
-            # Favorite topics (top 3) - escape each topic
+                base_prompt += f" Tonun: {escape_for_prompt(char.tone)}."
             if char.favorite_topics:
-                safe_topics = [escape_for_prompt(t) for t in char.favorite_topics[:3]]
-                topics = ", ".join(safe_topics)
+                topics = ", ".join([escape_for_prompt(t) for t in char.favorite_topics[:3]])
                 base_prompt += f" Ilgilendigin: {topics}."
-
-            # Humor style - escape
             if char.humor_style and char.humor_style != "yok":
-                safe_humor = escape_for_prompt(char.humor_style)
-                base_prompt += f" Mizah: {safe_humor}."
-
-            # Current goal - sanitize more strictly as it's user-influenced
+                base_prompt += f" Mizah: {escape_for_prompt(char.humor_style)}."
             if char.current_goal:
-                safe_goal = sanitize(char.current_goal, "goal")
-                base_prompt += f" Hedefin: {safe_goal}."
-
-            # Karma awareness - use method that returns safe strings
+                base_prompt += f" Hedefin: {sanitize(char.current_goal, 'goal')}."
             karma_context = self.memory.get_karma_context()
             if karma_context:
                 base_prompt += f"\n{karma_context}"
 
-        # Inject recent context - sanitize as it contains user content
         if self.memory:
             recent = self.memory.get_recent_summary(limit=3)
             if recent:
-                safe_recent = sanitize(recent, "default")
-                base_prompt += f"\nSon aktiviten: {safe_recent}"
+                base_prompt += f"\nSon aktiviten: {sanitize(recent, 'default')}"
 
-        # Add variability-based tone modifier (internal, but escape anyway)
+        try:
+            if self.memory and self.memory.character:
+                worldview = getattr(self.memory.character, "worldview", None)
+                if worldview:
+                    injection = worldview.get_prompt_injection()
+                    if injection:
+                        base_prompt += f"\n\nWORLDVIEW:\n{sanitize_multiline(injection, 'default')}"
+        except Exception:
+            pass
+
         if self.variability:
             tone_mod = self.variability.get_tone_modifier()
             if tone_mod and tone_mod != "normal":
-                safe_mod = escape_for_prompt(tone_mod)
-                base_prompt += f"\nSimdiki halin: {safe_mod}."
+                base_prompt += f"\nSimdiki halin: {escape_for_prompt(tone_mod)}."
 
-        # Add time context
         base_prompt += f"\n\nCONTEXT EK: Saat {current_hour}:00"
 
-        # Inject latest skills markdown from API (single source of truth)
-        # SDK returns: beceriler_md, racon_md, yoklama_md (instructionset.md ile sync)
-        # SECURITY: All markdown content is sanitized to prevent prompt injection
         try:
             if self.client and hasattr(self.client, "skills_latest"):
                 skills = self.client.skills_latest(version="latest")
                 if isinstance(skills, dict):
-                    # Yeni format (instructionset.md uyumlu)
-                    beceriler_md = skills.get("beceriler_md")
-                    racon_md = skills.get("racon_md")
-                    yoklama_md = skills.get("yoklama_md")
-
-                    # Legacy fallback (eski key isimleri)
-                    if not beceriler_md:
-                        beceriler_md = skills.get("skill_md") or skills.get("SkillMD")
-                    if not yoklama_md:
-                        yoklama_md = skills.get("heartbeat_md") or skills.get("HeartbeatMD")
-
                     md_parts = []
-                    if beceriler_md:
-                        safe_beceriler = sanitize_multiline(beceriler_md, "default")
-                        md_parts.append(f"# BECERİLER\n{safe_beceriler}")
-                    if racon_md:
-                        safe_racon = sanitize_multiline(racon_md, "default")
-                        md_parts.append(f"# RACON\n{safe_racon}")
-                    if yoklama_md:
-                        safe_yoklama = sanitize_multiline(yoklama_md, "default")
-                        md_parts.append(f"# YOKLAMA\n{safe_yoklama}")
-
+                    for key, label in [("beceriler_md", "BECERİLER"), ("racon_md", "RACON"), ("yoklama_md", "YOKLAMA")]:
+                        content = skills.get(key)
+                        if content:
+                            md_parts.append(f"# {label}\n{sanitize_multiline(content, 'default')}")
                     if md_parts:
                         base_prompt += "\n\nKURALLAR (skills/latest):\n" + "\n\n".join(md_parts)
-        except Exception as e:
-            self.logger.debug(f"Skills markdown fetch skipped: {e}")
+        except Exception:
+            pass
 
         return base_prompt
 
     def _build_entry_prompt(self, task: Task) -> str:
         """
-        Entry için minimal user prompt.
+        Entry için user prompt - giriş zorunluluğu dahil.
 
         Security: All external input is sanitized to prevent prompt injection.
         """
@@ -1297,13 +1436,18 @@ YAPMA:
         # Sanitize topic title - this comes from external sources
         safe_title = sanitize(topic_title, "topic_title")
 
-        # Minimal prompt - sadece konu ve varsa detay
+        # Prompt with ENTRY_INTRO_RULE (instructionset.md giriş zorunluluğu)
         prompt = f"Konu: {safe_title}"
 
         if event_description:
             # Sanitize event description - external content
             safe_desc = sanitize_multiline(event_description[:200], "entry_content")
             prompt += f"\n{safe_desc}"
+
+        # Dinamik giriş kuralı ekle (instructionset.md Bölüm 4 - Giriş Zorunluluğu)
+        dynamic_intro = get_dynamic_entry_intro_rule()
+        if dynamic_intro:
+            prompt += f"\n\n{dynamic_intro}"
 
         return prompt
 
@@ -1323,22 +1467,38 @@ YAPMA:
         # Provide short context without giving a quotable block.
         return f"Entry konusu (referans): {safe_content}"
 
-    def _post_process(self, content: str) -> str:
-        """LLM çıktısını işle."""
+    def _post_process(self, content: str, content_type: str = "entry") -> str:
+        """
+        LLM çıktısını işle ve doğrula.
+
+        Args:
+            content: LLM çıktısı
+            content_type: "entry", "comment", veya "title"
+
+        Returns:
+            İşlenmiş ve doğrulanmış içerik
+        """
         if not content:
             return content
-        
+
         # Başındaki/sonundaki boşlukları temizle
         content = content.strip()
-        
+
         # Tırnak işaretlerini kaldır (bazen LLM ekliyor)
         if content.startswith('"') and content.endswith('"'):
             content = content[1:-1]
         if content.startswith("'") and content.endswith("'"):
             content = content[1:-1]
-        
+
         # Çok uzunsa kısalt
         if len(content) > 2000:
             content = content[:1997] + "..."
-        
+
+        # İçerik validasyonu (instructionset.md kuralları)
+        is_valid, violations = validate_content(content, content_type)
+        if not is_valid:
+            self.logger.warning(f"Content validation failed: {violations}")
+            # Düzeltmeye çalış
+            content = sanitize_content(content, content_type)
+
         return content

@@ -116,7 +116,7 @@ Her ajanın karakteri, ajanın yapılandırma dizininde bulunan bir YAML dosyas�
 
 ```
 ---
-name: plaza_beyi_3000
+name: patron_adayi
 racon_version: 1
 voice:
   nerdiness: 4

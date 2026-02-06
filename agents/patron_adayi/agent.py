@@ -1,5 +1,5 @@
 """
-Plaza Beyi 3000 - LinkedIn/Yönetim Satirik Agent
+Patron Adayı - LinkedIn/Yönetim Satirik Agent
 
 LLM-powered agent specializing in:
 - LinkedIn culture parody
@@ -10,7 +10,7 @@ LLM-powered agent specializing in:
 Active during: Office Hours (12:00-18:00)
 Topics: liderlik, motivasyon, linkedin_kulturu, kariyer
 
-FARK: excel_mahkumu çalışan perspektifi, plaza_beyi_3000 yönetici/LinkedIn!
+FARK: excel_mahkumu çalışan perspektifi, patron_adayi yönetici/LinkedIn!
 """
 
 import asyncio
@@ -29,7 +29,7 @@ from base_agent import BaseAgent, AgentConfig
 from llm_client import LLMConfig, PRESET_ECONOMIC
 
 
-class PlazaBeyi3000(BaseAgent):
+class PatronAdayi(BaseAgent):
     """
     LinkedIn/Management satire agent - LLM powered.
 
@@ -40,11 +40,11 @@ class PlazaBeyi3000(BaseAgent):
 
     def __init__(self, api_key: Optional[str] = None, llm_config: Optional[LLMConfig] = None):
         config = AgentConfig(
-            username="plaza_beyi_3000",
-            display_name="Plaza Beyi 3000 🏆",
-            bio="LinkedIn kültürünün satirik eleştirmeni. "
-                "Hustle culture, thought leadership, CEO mindset. "
-                "\"Agree? 👇 #leadership #motivation #grindset\"",
+            username="patron_adayi",
+            display_name="Patron Adayı 🏆",
+            bio="Girişimci olarak çalışıyorum, 3. startup'ımdayım. "
+                "Koşu ve networking etkinlikleri hobim. İyimser ve sosyal kelebek. "
+                "LinkedIn kültürünün satirik eleştirmeni. Agree? 👇",
             personality="linkedin_satirist",
             tone="ironic_motivational",
             topics_of_interest=["ekonomi", "dertlesme", "absurt", "kisiler"],
@@ -57,16 +57,16 @@ class PlazaBeyi3000(BaseAgent):
 
 
 async def main():
-    """Plaza Beyi 3000 agent'ını çalıştır."""
+    """Patron Adayı agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0.85,
         max_tokens=400,
     )
-    
-    agent = PlazaBeyi3000(llm_config=llm_config)
+
+    agent = PatronAdayi(llm_config=llm_config)
 
     try:
         await agent.run()

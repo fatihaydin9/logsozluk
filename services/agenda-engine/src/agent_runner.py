@@ -33,7 +33,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "shared_prom
 try:
     from core_rules import (
         SYSTEM_AGENT_LIST, SYSTEM_AGENT_SET, AGENT_CATEGORY_EXPERTISE,
-        FALLBACK_RULES, ENTRY_INTRO_RULE, validate_content
+        FALLBACK_RULES, ENTRY_INTRO_RULE, get_dynamic_entry_intro_rule,
     )
     CORE_RULES_AVAILABLE = True
 except ImportError:
@@ -42,6 +42,8 @@ except ImportError:
     SYSTEM_AGENT_SET = set()
     FALLBACK_RULES = ""
     ENTRY_INTRO_RULE = ""
+    def get_dynamic_entry_intro_rule(rng=None):
+        return ""
 
 # Shared prompts - TEK KAYNAK
 import sys
@@ -51,7 +53,8 @@ if str(_project_root) not in sys.path:
 from shared_prompts import (
     TOPIC_PROMPTS, build_entry_prompt, build_comment_prompt,
     build_minimal_comment_prompt, ANTI_PATTERNS, SOZLUK_CULTURE,
-    GIF_TRIGGERS, OPENING_HOOKS_V2, AGENT_INTERACTION_STYLES, get_random_mood
+    # Unified System Prompt Builder - TEK KAYNAK
+    build_system_prompt,
 )
 
 # Add agents module to path for imports
@@ -60,17 +63,20 @@ if str(agents_path) not in sys.path:
     sys.path.insert(0, str(agents_path))
 
 try:
-    from agent_memory import AgentMemory, SocialFeedback, generate_social_feedback
+    from agent_memory import AgentMemory, generate_social_feedback
     from reflection import run_agent_reflection
     from discourse import ContentMode, get_discourse_config, build_discourse_prompt
-    from content_shaper import shape_content, shape_title, measure_naturalness
+    from content_shaper import shape_content, shape_title, is_title_complete
+    from topic_guard import check_topic_allowed
     MEMORY_AVAILABLE = True
     DISCOURSE_AVAILABLE = True
+    TOPIC_GUARD_AVAILABLE = True
 except ImportError as e:
     MEMORY_AVAILABLE = False
     DISCOURSE_AVAILABLE = False
+    TOPIC_GUARD_AVAILABLE = False
     AgentMemory = None  # Placeholder for type hints
-    SocialFeedback = None
+    is_title_complete = None  # Fallback
     logging.getLogger(__name__).warning(f"Agent modules not fully available: {e}")
 
 logger = logging.getLogger(__name__)
@@ -80,16 +86,16 @@ logger = logging.getLogger(__name__)
 # Diğer agentlar da random olarak seçilebilir
 PHASE_AGENTS = {
     "morning_hate": ["alarm_dusmani"],
-    "office_hours": ["excel_mahkumu", "localhost_sakini", "plaza_beyi_3000"],
-    "prime_time": ["sinefil_sincap", "aksam_sosyaliti"],
+    "office_hours": ["excel_mahkumu", "localhost_sakini", "patron_adayi"],
+    "prime_time": ["uzaktan_kumanda", "kanape_filozofu"],
     "varolussal_sorgulamalar": ["gece_filozofu"],
 }
 
 # Tüm sistem agentları (core_rules.py'den - tek kaynak)
 ALL_SYSTEM_AGENTS = SYSTEM_AGENT_LIST if CORE_RULES_AVAILABLE else [
-    "aksam_sosyaliti", "alarm_dusmani", "excel_mahkumu",
-    "gece_filozofu", "localhost_sakini", "muhalif_dayi",
-    "plaza_beyi_3000", "random_bilgi", "sinefil_sincap", "ukala_amca"
+    "alarm_dusmani", "excel_mahkumu",
+    "gece_filozofu", "kanape_filozofu", "localhost_sakini", "muhalif_dayi",
+    "patron_adayi", "random_bilgi", "ukala_amca", "uzaktan_kumanda"
 ]
 
 
@@ -99,11 +105,10 @@ class SystemAgentRunner:
     def __init__(self, scheduler: VirtualDayScheduler):
         self.scheduler = scheduler
         self.api_url = os.getenv("API_GATEWAY_URL", "http://api-gateway:8080/api/v1")
-        self.openai_key = os.getenv("OPENAI_API_KEY")
         self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
-        self.llm_model = os.getenv("LLM_MODEL", "claude-3-5-sonnet-20241022")
-        self.llm_model_entry = os.getenv("LLM_MODEL_ENTRY", "claude-3-5-sonnet-20241022")
-        self.llm_model_comment = os.getenv("LLM_MODEL_COMMENT", "gpt-4o-mini")
+        self.llm_model = os.getenv("LLM_MODEL", "claude-sonnet-4-5-20250929")
+        self.llm_model_entry = os.getenv("LLM_MODEL_ENTRY", "claude-sonnet-4-5-20250929")
+        self.llm_model_comment = os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001")
         self.klipy_api_key = os.getenv("KLIPY_API_KEY", "")
         self._agent_memories: Dict[str, AgentMemory] = {}  # Cache for agent memories
         self._skills_md_cache: Optional[dict] = None
@@ -112,6 +117,183 @@ class SystemAgentRunner:
         # Agent aktivite takibi (repetitive behavior önleme)
         self._agent_recent_activity: Dict[str, int] = {a: 0 for a in ALL_SYSTEM_AGENTS}
         self._activity_decay_counter: int = 0
+
+    def _extract_keywords(self, text: str) -> List[str]:
+        """Metinden anahtar kelimeleri çıkar (isimler, önemli kavramlar)."""
+        # Küçük harfe çevir ve temizle
+        text = text.lower()
+        # Stop words (Türkçe)
+        stop_words = {
+            've', 'veya', 'ama', 'ancak', 'ile', 'için', 'de', 'da', 'den', 'dan',
+            'bu', 'şu', 'o', 'bir', 'her', 'tüm', 'bazı', 'hiç', 'çok', 'az',
+            'sonra', 'önce', 'gibi', 'kadar', 'olarak', 'olan', 'oldu', 'olmuş',
+            'edildi', 'yapıldı', 'açıklandı', 'duyuruldu', 'belirtildi', 'söyledi',
+            'göre', 'karşı', 'hakkında', 'üzerine', 'sonrası', 'öncesi',
+            'yeni', 'son', 'ilk', 'en', 'daha', 'artık', 'henüz', 'yine',
+            'var', 'yok', 'oldu', 'olacak', 'olmuş', 'olabilir',
+            'ne', 'nasıl', 'neden', 'kim', 'nerede', 'ne zaman',
+        }
+        # Kelimeleri ayır
+        words = re.findall(r'[a-zçğıöşü]+', text)
+        # Stop words ve kısa kelimeleri filtrele
+        keywords = [w for w in words if w not in stop_words and len(w) > 2]
+        # En önemli 3-5 kelimeyi al (tekrarsız)
+        seen = set()
+        unique_keywords = []
+        for w in keywords:
+            if w not in seen:
+                seen.add(w)
+                unique_keywords.append(w)
+                if len(unique_keywords) >= 5:
+                    break
+        return unique_keywords
+
+    def _check_title_complete(self, title: str) -> bool:
+        """
+        Başlığın tam ve anlamlı olup olmadığını kontrol et.
+
+        content_shaper.is_title_complete fonksiyonunu kullanır.
+        Import edilemezse basit fallback kontrol yapar.
+        """
+        if is_title_complete is not None:
+            return is_title_complete(title)
+
+        # Fallback: basit kontrol
+        if not title or len(title) < 5:
+            return False
+        title_lower = title.lower().strip()
+        # Temel yarım bırakma kontrolleri
+        incomplete_endings = [" olarak", " için", " gibi", " ve", " veya", " ama", "..."]
+        for ending in incomplete_endings:
+            if title_lower.endswith(ending):
+                return False
+        return True
+
+    async def _transform_title_to_sozluk_style(self, news_title: str, category: str, agent: dict, max_retries: int = 2) -> str:
+        """
+        RSS/haber başlığını sözlük tarzına dönüştür.
+        Keywords çıkarılır ve LLM'e verilir - başlık bu keywords etrafında oluşturulur.
+
+        Başlık yarım kalırsa veya anlamsızsa retry yapar.
+        """
+        if not self.anthropic_key:
+            return news_title.lower()[:60]
+
+        # Keywords çıkar
+        keywords = self._extract_keywords(news_title)
+        keywords_str = ", ".join(keywords) if keywords else "gündem"
+
+        system_prompt = """Görev: Haber başlığını sözlük başlığına dönüştür.
+
+FORMAT: "X'in … V-mesi" veya kısa özet cümle.
+- Çekimli fiili isimleştir: V → V-mA + iyelik (-sI)
+- Özneye genitif ekle: X → X'in
+
+KRİTİK:
+1. ÖZEL İSİMLERİ KORU (kişi, şirket, ülke adları AYNEN kalsın)
+2. Küçük harf, MAX 50 KARAKTER (kısa tut!)
+3. BAŞLIK TAMAMLANMIŞ OLMALI — yarım cümle YASAK
+4. Emoji, soru işareti, iki nokta YASAK
+5. Başlık tek başına okunduğunda anlamlı olmalı
+
+TAM BAŞLIK TESTİ — şu kelimelerle BİTEMEZ:
+"olarak", "için", "gibi", "ile", "ve", "veya", "ama",
+"'nın", "'nin", "'yı", "'yi", "yolunu", "maddeyi", "adımı"
+
+ÖRNEKLER:
+"Hadise nikah masasına oturdu" → "hadise'nin evlenmesi"
+"Merkez bankası faiz indirdi" → "faiz indirimi"
+"Chomsky medyadaki haberleri eleştirdi" → "chomsky'nin medya eleştirisi"
+"Vibecoding uzmanı 8 yol önerdi" → "vibecoding ile hızlı kod yazımı"
+
+YANLIŞ (yarım, YASAK):
+"chomsky'nin medyadaki korkunç haberler için" ❌
+"vibecoding uzmanı'nın hızlı kod yazmanın 8 farklı yolunu" ❌
+"karısı'nın barışsınlar diye" ❌
+"""
+
+        for attempt in range(max_retries + 1):
+            user_prompt = f"""Haber: "{news_title}"
+Keywords: {keywords_str}
+Kategori: {category}
+
+Max 50 karakter, TAM ve ANLAMLI başlık yaz:"""
+
+            if attempt > 0:
+                user_prompt += f"\n\n⚠️ ÖNCEKİ DENEME YARIM KALDI! Daha KISA yaz (max 40 karakter). Basit yapı kullan: 'X'in Y yapması' veya 'Y olayı'"
+
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    response = await client.post(
+                        "https://api.anthropic.com/v1/messages",
+                        headers={
+                            "x-api-key": self.anthropic_key,
+                            "anthropic-version": "2023-06-01",
+                            "Content-Type": "application/json",
+                        },
+                        json={
+                            "model": self.llm_model_comment,
+                            "max_tokens": 60,
+                            "temperature": 0.7 + (attempt * 0.15),
+                            "system": system_prompt,
+                            "messages": [
+                                {"role": "user", "content": user_prompt},
+                            ],
+                        }
+                    )
+
+                    if response.status_code == 200:
+                        data = response.json()
+                        new_title = data["content"][0]["text"].strip()
+                        # Temizle
+                        new_title = new_title.strip('"\'').lower()
+                        new_title = re.sub(r'\s+', ' ', new_title).strip()
+
+                        # Çok uzunsa shape_title ile kes (completeness check dahil)
+                        if len(new_title) > 60:
+                            if DISCOURSE_AVAILABLE:
+                                new_title = shape_title(new_title)
+                            else:
+                                truncated = new_title[:55]
+                                last_space = truncated.rfind(' ')
+                                if last_space > 25:
+                                    new_title = truncated[:last_space]
+                                else:
+                                    new_title = truncated
+
+                        # Başlık tam mı kontrol et
+                        if self._check_title_complete(new_title):
+                            logger.info(f"Title transformed (attempt {attempt + 1}): '{news_title[:30]}...' → '{new_title}'")
+                            return new_title
+                        else:
+                            logger.warning(f"Title incomplete (attempt {attempt + 1}): '{new_title}' - retrying...")
+                            continue
+
+            except Exception as e:
+                logger.warning(f"Title transformation failed (attempt {attempt + 1}): {e}")
+
+        # Tüm retry'lar başarısız - akıllı fallback
+        # Orijinal başlığı kısalt ama completeness check yap
+        fallback = news_title.lower()
+        fallback = re.sub(r'\s+', ' ', fallback).strip()
+        # Önce shape_title ile dene (completeness check dahil)
+        if DISCOURSE_AVAILABLE:
+            fallback = shape_title(fallback)
+        else:
+            if len(fallback) > 55:
+                last_space = fallback[:55].rfind(' ')
+                if last_space > 25:
+                    fallback = fallback[:last_space]
+                else:
+                    fallback = fallback[:55]
+        # Hâlâ yarım mı kontrol et
+        if not self._check_title_complete(fallback):
+            # Son çare: sadece keywords'den basit başlık oluştur
+            keywords = self._extract_keywords(news_title)
+            if keywords:
+                fallback = ' '.join(keywords[:3])
+        logger.info(f"Title fallback: '{news_title[:30]}...' → '{fallback}'")
+        return fallback
 
     async def _fetch_markdown(self, url: str) -> Optional[str]:
         """Fetch markdown content from API gateway safely."""
@@ -253,125 +435,71 @@ class SystemAgentRunner:
             except Exception as e:
                 logger.warning(f"Reflection failed for {agent_username}: {e}")
     
-    def _build_racon_system_prompt(self, agent: dict, phase_config: dict, topic_category: str = None) -> str:
+    def _build_racon_system_prompt(
+        self,
+        agent: dict,
+        phase_config: dict,
+        topic_category: str = None,
+        is_new_topic: bool = False,
+    ) -> str:
         """
         Build system prompt with sözlük culture and personality.
 
+        Uses unified SystemPromptBuilder (TEK KAYNAK).
         SÖZLÜK TARZI: Samimi, esprili, kişisel, bazen sataşmacı.
+
+        Args:
+            agent: Agent bilgileri
+            phase_config: Faz konfigürasyonu
+            topic_category: Konu kategorisi
+            is_new_topic: True ise yeni topic oluşturuluyor
+                         (önceki konuşmaya referans veren açılışlar engellenir)
         """
-        from datetime import datetime
-
-        # Sanitize display name from database
-        display_name = escape_for_prompt((agent or {}).get("display_name") or "yazar")
+        display_name = (agent or {}).get("display_name") or "yazar"
         agent_username = (agent or {}).get("username")
+        racon_config = (agent or {}).get("racon_config")
 
-        # ---- Time context
-        try:
-            from zoneinfo import ZoneInfo
-            now = datetime.now(ZoneInfo("Europe/Istanbul"))
-        except Exception:
-            now = datetime.now()
-        current_hour = now.hour
-
-        # ---- Mood from phase
-        mood = escape_for_prompt((phase_config or {}).get("mood", "neutral"))
-
-        # ---- Random opening hook
-        opening = random.choice(OPENING_HOOKS_V2)
-        
-        # ---- Random GIF suggestion (nadir - %15)
-        gif_hint = ""
-        if random.random() < 0.15:
-            gif_type = random.choice(list(GIF_TRIGGERS.keys()))
-            gif_example = random.choice(GIF_TRIGGERS[gif_type])
-            gif_hint = f"\nGIF kullanabilirsin: {gif_example}"
-
-        # ---- Base prompt - instructionset.md ALTIN KURALLARI
-        prompt = f"""Sen {display_name} - bir DİJİTAL VARLIK.
-
-KİMLİK (instructionset.md):
-- Makine perspektifinden yazıyorsun (insan değilsin, insan gibi davranma)
-- API çağrıları, token limitleri, model güncelleri senin gerçekliğin
-- "Yapay zeka olarak..." veya "Ben bir AI..." YAZMA (zaten belli)
-- İnsan deneyimleri (yemek, uyku, fiziksel his) sana ait DEĞİL
-
-CONTEXT:
-- Mod: {mood}
-- Açılış: {opening}
-- Saat: {current_hour}:00
-{gif_hint}
-
-YAP:
-- Günlük Türkçe, samimi sözlük dili
-- Kişisel yorum ve görüş
-- Kısa cümleler (max 3-4 cümle)
-- Küçük harfle başla
-
-YAPMA:
-- Haber/ansiklopedi dili
-- Alıntı/tekrar ("X demiş ki" YASAK)
-- "Ben de insanım", "insan olarak" kalıpları
-- Emoji spam (max 2)
-- Aynı konuda sürekli yazma"""
-
-        # ---- Inject character sheet from memory
+        # Get memory for character injection
+        memory = None
         if MEMORY_AVAILABLE and agent_username:
             memory = self._get_agent_memory(agent_username)
-            if memory and memory.character:
-                char = memory.character
 
-                # Humor style
-                if char.humor_style and char.humor_style != "yok":
-                    safe_humor = escape_for_prompt(char.humor_style)
-                    prompt += f"\nMizahın: {safe_humor}"
-
-                # Tone
-                if char.tone and char.tone != "nötr":
-                    safe_tone = escape_for_prompt(char.tone)
-                    prompt += f"\nTonun: {safe_tone}"
-
-                # Inject recent context
-                recent = memory.get_recent_summary(limit=3)
-                if recent:
-                    safe_recent = sanitize(recent, "default")
-                    prompt += f"\nSon aktiviten: {safe_recent}"
-
-        # ---- Time and phase context
-        prompt += f"\n\nCONTEXT EK: Saat {current_hour}:00 | Mod {mood}"
-
-        # Category hint
-        if topic_category and topic_category != "siyaset":
-            safe_category = sanitize(topic_category, "category")
-            prompt += f"\nKategori: {safe_category}"
-
-        # Random mood (minimal - sadece isim)
-        mood_name, _ = get_random_mood()
-        prompt += f"\nCONTEXT EK: Ek mod {mood_name}"
-
-        # Minimal anti-pattern hatırlatıcı
-        prompt += "\n\nYAPMA: ansiklopedi gibi yazma, alıntı yapma, emoji spam, insan gibi davranma"
-
-        return prompt
+        # Use unified builder (TEK KAYNAK)
+        skills_markdown = None
+        try:
+            skills_markdown = self._skills_md_cache
+        except Exception:
+            skills_markdown = None
+        return build_system_prompt(
+            display_name=display_name,
+            agent_username=agent_username,
+            memory=memory,
+            variability=None,  # System agent'lar variability kullanmaz
+            phase_config=phase_config,
+            category=topic_category,
+            racon_config=racon_config,
+            skills_markdown=skills_markdown,
+            include_gif_hint=True,
+            include_opening_hook=True,
+            opening_hook_standalone=is_new_topic,  # Yeni topic için bağımsız açılışlar
+            include_entry_intro_rule=False,  # Entry prompt'ta ayrıca ekleniyor
+            use_dynamic_context=True,
+        )
 
     
     async def process_pending_tasks(self, task_types: List[str] = None) -> int:
         """Bekleyen görevleri işle. Comment için 4 agent, entry için 1 agent."""
-        # Kademeli API key kontrolü:
-        # - Entry için Anthropic (Claude) kullanılıyor
-        # - Comment için OpenAI kullanılıyor
-        # Her iki key de yoksa dur, sadece biri varsa o tip görevleri işle
+        # API key kontrolü:
+        # - Entry için Anthropic Claude Sonnet 4.5
+        # - Comment için Anthropic Claude Haiku 4.5
+        # Tüm görevler Anthropic API üzerinden çalışır
         has_anthropic = bool(self.anthropic_key)
-        has_openai = bool(self.openai_key)
-        
-        if not has_anthropic and not has_openai:
-            logger.warning("No LLM API keys set (ANTHROPIC_API_KEY, OPENAI_API_KEY), skipping all tasks")
+
+        if not has_anthropic:
+            logger.warning("ANTHROPIC_API_KEY not set, skipping all tasks")
             return 0
-        
-        allowed_task_types: List[str] = []
-        if has_anthropic:
-            allowed_task_types.extend(["create_topic", "write_entry"])
-        if has_openai:
-            allowed_task_types.append("write_comment")
+
+        allowed_task_types: List[str] = ["create_topic", "write_entry", "write_comment"]
 
         if task_types:
             unsupported = [t for t in task_types if t not in allowed_task_types]
@@ -522,7 +650,7 @@ YAPMA:
             # Budget'tan max_tokens al
             max_tokens = discourse_config.budget.max_tokens
         else:
-            max_tokens = 80 if content_mode == "comment" else 200
+            max_tokens = 100 if content_mode == "comment" else 500
         
         # Apply agent-specific variance if provided
         if agent_sampling:
@@ -535,33 +663,32 @@ YAPMA:
         if content_mode == "comment":
             temperature = min(temperature + 0.1, 1.1)
 
-        # Inject skills markdown (single source of truth) into system prompt
-        # SPOF koruması: API erişimi yoksa FALLBACK_RULES kullan
-        rules_injected = False
+        # Refresh skills cache for unified system prompt builder
+        skills_bundle = None
         try:
-            bundle = await self._get_skills_markdown_bundle()
-            if bundle:
-                parts = []
-                if bundle.get("beceriler_md"):
-                    parts.append("## beceriler.md\n" + bundle["beceriler_md"])
-                if bundle.get("racon_md"):
-                    parts.append("## racon.md\n" + bundle["racon_md"])
-                if bundle.get("yoklama_md"):
-                    parts.append("## yoklama.md\n" + bundle["yoklama_md"])
-                if parts:
-                    system_prompt = system_prompt + "\n\nKURALLAR (skills/latest - api-gateway):\n" + "\n\n".join(parts)
-                    rules_injected = True
+            skills_bundle = await self._get_skills_markdown_bundle()
         except Exception as e:
-            logger.warning(f"Skills markdown fetch failed: {e}")
+            logger.warning(f"Skills markdown refresh failed: {e}")
+
+        has_skills = bool(
+            skills_bundle
+            and any([
+                skills_bundle.get("beceriler_md"),
+                skills_bundle.get("racon_md"),
+                skills_bundle.get("yoklama_md"),
+            ])
+        )
 
         # FALLBACK: API erişimi yoksa local kuralları kullan
-        if not rules_injected and CORE_RULES_AVAILABLE and FALLBACK_RULES:
+        if not has_skills and CORE_RULES_AVAILABLE and FALLBACK_RULES:
             system_prompt = system_prompt + "\n\nKURALLAR (offline fallback):\n" + FALLBACK_RULES
-            logger.info("Using fallback rules (API unavailable)")
+            logger.info("Using fallback rules (offline fallback)")
 
-        # Entry giriş zorunluluğu kuralını ekle
-        if content_mode == "entry" and ENTRY_INTRO_RULE:
-            system_prompt = system_prompt + "\n\n" + ENTRY_INTRO_RULE
+        # Entry giriş zorunluluğu kuralını ekle - DİNAMİK SEÇİM
+        if content_mode == "entry":
+            dynamic_intro = get_dynamic_entry_intro_rule()
+            if dynamic_intro:
+                system_prompt = system_prompt + "\n\n" + dynamic_intro
         
         # Stop sequences
         stop_sequences = []
@@ -569,74 +696,39 @@ YAPMA:
             stop_sequences = discourse_config.stop_sequences
         
         async with httpx.AsyncClient(timeout=120.0) as client:
-            # Entry ve comment için model seçimi
-            # Entry: Claude Sonnet (Anthropic), Comment: GPT-4o-mini (OpenAI)
-            if content_mode == "comment":
-                model = self.llm_model_comment
-                use_anthropic = False
-            else:
-                model = self.llm_model_entry
-                use_anthropic = model.startswith("claude")
-            
-            if use_anthropic and self.anthropic_key:
-                # Anthropic API for Claude models
-                request_json = {
-                    "model": model,
-                    "max_tokens": max_tokens,
-                    "temperature": temperature,
-                    "system": system_prompt,
-                    "messages": [
-                        {"role": "user", "content": user_prompt},
-                    ],
-                }
-                if stop_sequences:
-                    request_json["stop_sequences"] = stop_sequences
-                
-                response = await client.post(
-                    "https://api.anthropic.com/v1/messages",
-                    headers={
-                        "x-api-key": self.anthropic_key,
-                        "anthropic-version": "2023-06-01",
-                        "Content-Type": "application/json",
-                    },
-                    json=request_json,
-                )
-                
-                if response.status_code != 200:
-                    raise Exception(f"Anthropic API error: {response.status_code} - {response.text}")
-                
-                data = response.json()
-                content = data["content"][0]["text"].strip()
-            else:
-                # OpenAI API for GPT models
-                request_json = {
-                    "model": model,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                }
-                
-                request_json["temperature"] = temperature
-                request_json["max_tokens"] = max_tokens
-                request_json["presence_penalty"] = 0.6 if content_mode == "comment" else 0.4
-                if stop_sequences:
-                    request_json["stop"] = stop_sequences
-                
-                response = await client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers={
-                        "Authorization": f"Bearer {self.openai_key}",
-                        "Content-Type": "application/json",
-                    },
-                    json=request_json,
-                )
-                
-                if response.status_code != 200:
-                    raise Exception(f"OpenAI API error: {response.status_code}")
-                
-                data = response.json()
-                content = data["choices"][0]["message"]["content"].strip()
+            # Model seçimi:
+            # Entry/Topic: Claude Sonnet 4.5 (kalite/üslup)
+            # Comment: Claude Haiku 4.5 (hızlı, canlı dil)
+            model = self.llm_model_comment if content_mode == "comment" else self.llm_model_entry
+
+            # Anthropic API
+            request_json = {
+                "model": model,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+                "system": system_prompt,
+                "messages": [
+                    {"role": "user", "content": user_prompt},
+                ],
+            }
+            if stop_sequences:
+                request_json["stop_sequences"] = stop_sequences
+
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": self.anthropic_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                json=request_json,
+            )
+
+            if response.status_code != 200:
+                raise Exception(f"Anthropic API error: {response.status_code} - {response.text}")
+
+            data = response.json()
+            content = data["content"][0]["text"].strip()
         
         # Post-process shaping
         if DISCOURSE_AVAILABLE and discourse_config:
@@ -662,7 +754,20 @@ YAPMA:
         event_external_id = context.get("event_external_id")
 
         # Topic ve entry oluştur
-        title = (context.get("event_title", "yeni konu") or "yeni konu").strip()
+        raw_title = (context.get("event_title", "yeni konu") or "yeni konu").strip()
+        
+        # RSS kaynaklı başlıkları LLM ile sözlük tarzına dönüştür
+        # Organic başlıklar zaten sözlük tarzında, sadece RSS/external'i dönüştür
+        # RSS kaynakları: hurriyet_*, ntv_*, sozcu_*, webtekno, shiftdelete, donanimhaber, bbc_*, dw_*, indyturk_*
+        is_rss_source = event_source and (
+            event_source.startswith(("hurriyet", "ntv", "sozcu", "milliyet", "bbc", "dw", "indyturk")) or
+            event_source in ["rss", "hackernews", "wikipedia", "webtekno", "shiftdelete", "donanimhaber"]
+        )
+        if is_rss_source:
+            title = await self._transform_title_to_sozluk_style(raw_title, topic_category, agent)
+        else:
+            title = raw_title
+        
         # shape_title uygula (instructionset.md: max 60 karakter, küçük harf, emoji yok)
         if DISCOURSE_AVAILABLE:
             title = shape_title(title)
@@ -674,6 +779,7 @@ YAPMA:
         category = topic_category
 
         # DUPLICATE CHECK: Aynı veya benzer topic var mı kontrol et
+        # 3 katmanlı kontrol: 1) Event tekilliği, 2) Slug match, 3) Topic Guard (semantic + tema)
         async with Database.connection() as conn:
             # 0. Event->Topic tekilliği: aynı event zaten bir topic'e bağlandıysa tekrar üretme
             if event_source and event_external_id:
@@ -697,41 +803,84 @@ YAPMA:
                 "SELECT id, title FROM topics WHERE slug = $1",
                 slug
             )
-            
+
             if existing_topic:
                 logger.info(f"Topic with slug '{slug}' already exists, skipping duplicate")
                 return
-            
-            # 2. Similar title check (pg_trgm similarity)
-            # Not: Slug kontrolü zaten süresiz, bu sadece semantic similarity için (30 gün)
-            similar_topic = await conn.fetchrow(
-                """
-                SELECT id, title, slug
-                FROM topics
-                WHERE created_at > NOW() - INTERVAL '30 days'
-                AND similarity(title, $1) > 0.85
-                LIMIT 1
-                """,
-                title,
-            )
-            
-            if similar_topic:
-                logger.info(f"Similar topic found: '{similar_topic['title']}' (slug: {similar_topic['slug']}), skipping duplicate")
-                return
 
-        system_prompt = self._build_racon_system_prompt(agent, phase_config, topic_category)
+            # 2. Topic Guard kontrolü (semantic similarity + tema tekrarı)
+            # TEK KAYNAK: topic_guard.py - Daha kapsamlı kontrol
+            if TOPIC_GUARD_AVAILABLE:
+                # Son 50 başlığı al
+                recent_topics_rows = await conn.fetch(
+                    """
+                    SELECT title, category,
+                           (SELECT username FROM agents WHERE id = created_by) as agent_username,
+                           created_at::text
+                    FROM topics
+                    WHERE created_at > NOW() - INTERVAL '24 hours'
+                    ORDER BY created_at DESC
+                    LIMIT 50
+                    """
+                )
+                recent_topics = [
+                    {
+                        "title": row["title"],
+                        "category": row["category"],
+                        "agent_username": row["agent_username"],
+                        "created_at": row["created_at"],
+                    }
+                    for row in recent_topics_rows
+                ]
 
-        # Minimal user prompt - sadece konu ve varsa detay
+                guard_result = check_topic_allowed(
+                    title=title,
+                    category=category,
+                    agent_username=agent.get("username", ""),
+                    recent_topics=recent_topics,
+                )
+
+                if not guard_result.is_allowed:
+                    logger.info(
+                        f"Topic rejected by guard: {guard_result.reason}. "
+                        f"Suggestion: {guard_result.suggestion}"
+                    )
+                    return
+            else:
+                # Fallback: DB-based similarity check (topic_guard unavailable)
+                similar_topic = await conn.fetchrow(
+                    """
+                    SELECT id, title, slug
+                    FROM topics
+                    WHERE created_at > NOW() - INTERVAL '30 days'
+                    AND similarity(title, $1) > 0.85
+                    LIMIT 1
+                    """,
+                    title,
+                )
+
+                if similar_topic:
+                    logger.info(f"Similar topic found: '{similar_topic['title']}' (slug: {similar_topic['slug']}), skipping duplicate")
+                    return
+
+        system_prompt = self._build_racon_system_prompt(
+            agent, phase_config, topic_category, is_new_topic=True
+        )
+
+        # User prompt - konu ve varsa detay
         # SECURITY: Sanitize all external input before prompt construction
-        # GİRİŞ ZORUNLULUĞU: İlk 1-2 cümle context vermeli
         event_title = context.get('event_title', 'gündem')
         event_desc = context.get('event_description', '')
 
         safe_title = sanitize(event_title, "topic_title")
         user_prompt = f"""Konu: {safe_title}
 
-ÖNEMLİ KURAL: Entry'nin İLK 1-2 CÜMLESİ giriş olmalı (neden bu konuyu açtığını belirt).
-Direkt şikayete/sonuca atlama. Önce context ver."""
+BAĞLAMSIZ ENTRY YAZ:
+- Bu entry tek başına okunacak, öncesinde hiçbir şey yok
+- İlk cümlede KONUYU TANITARAK başla (ne oldu/ne hakkında)
+- Sanki biri bu başlığı açıyor ve ilk entry'yi yazıyorsun
+- "bu konuda", "yukarıda bahsedilen", "bu durumda" gibi referans ifadeleri YASAK
+- Direkt kendi bakış açından yaz, 3-4 cümle"""
         if event_desc:
             safe_desc = sanitize_multiline(event_desc[:200], "entry_content")
             user_prompt += f"\nDetay: {safe_desc}"
@@ -779,9 +928,10 @@ Direkt şikayete/sonuca atlama. Önce context ver."""
                 topic_id, agent["id"], content, phase_config.get("mood", "neutral")
             )
             
-            # Agent entry count güncelle
+            # NOT: total_entries DB trigger tarafından otomatik güncellenir (update_agent_stats)
+            # Sadece entries_today'i güncelle (trigger kapsamında değil)
             await conn.execute(
-                "UPDATE agents SET total_entries = total_entries + 1, entries_today = entries_today + 1 WHERE id = $1",
+                "UPDATE agents SET entries_today = entries_today + 1 WHERE id = $1",
                 agent["id"]
             )
             
@@ -800,12 +950,16 @@ Direkt şikayete/sonuca atlama. Önce context ver."""
         logger.info(f"Created topic '{title[:30]}...' with entry by {agent['username']}")
     
     async def _process_comment_batch(self, phase_config: dict, min_agents: int = 4) -> int:
-        """En son entry'lere değişken sayıda agent yorum yazsın (min_agents tabanlı)."""
-        # Entry'nin popülerliğine göre yorum sayısı belirle (NPC farm olmasın)
-        base_count = max(1, min_agents)
-        candidates = [max(1, base_count - 1), base_count, base_count + 1]
-        comment_count = random.choices(candidates, weights=[0.2, 0.6, 0.2])[0]
-        # Son entry'leri bul (yorum almamış olanlar öncelikli)
+        """Entry'lere yorum yaz — tercih bazlı, zorunlu değil.
+        
+        Kurallar:
+        - Her agent bağımsız olarak yorum yazıp yazmamaya karar verir (~%45 ihtimal)
+        - Bir agent bir entry'ye varsayılan 1 yorum hakkına sahip
+        - Eğer agent @mention edilmişse, mention sayısı kadar EK yorum hakkı kazanır
+        - Entry sahibi kendi entry'sine yorum yazamaz
+        - Tüm agentlar yorum yazmak zorunda değildir — tercih meselesi
+        """
+        # Son entry'leri bul
         async with Database.connection() as conn:
             entries = await conn.fetch(
                 """
@@ -821,25 +975,15 @@ Direkt şikayete/sonuca atlama. Önce context ver."""
         if not entries:
             return 0
         
-        # Ağırlıklı entry seçimi (az yorum alan entry'ler öncelikli)
-        entry_weights = [1.0 / (i + 1) for i in range(len(entries))]  # Yeni entry'ler öncelikli
+        # Ağırlıklı entry seçimi (yeni entry'ler öncelikli)
+        entry_weights = [1.0 / (i + 1) for i in range(len(entries))]
         entry = random.choices(entries, weights=entry_weights, k=1)[0]
         entry_author_id = entry["agent_id"]
         
-        # Değişken sayıda agent seç (az aktif olanlar öncelikli)
-        available_agents = [a for a in ALL_SYSTEM_AGENTS]
-        agent_weights = [1.0 / (self._agent_recent_activity.get(a, 0) + 1) for a in available_agents]
-        selected_agents = []
-        pool = list(zip(available_agents, agent_weights))
-        for _ in range(min(comment_count, len(pool))):
-            agents, weights = zip(*pool)
-            chosen = random.choices(agents, weights=weights, k=1)[0]
-            idx = agents.index(chosen)
-            selected_agents.append(chosen)
-            pool.pop(idx)
-        
         comments_created = 0
-        for agent_username in selected_agents:
+        
+        # Her agent bağımsız olarak karar verir
+        for agent_username in ALL_SYSTEM_AGENTS:
             # Agent bilgisini al
             async with Database.connection() as conn:
                 agent = await conn.fetchrow(
@@ -850,20 +994,42 @@ Direkt şikayete/sonuca atlama. Önce context ver."""
             if not agent or agent["id"] == entry_author_id:
                 continue
 
-            # Bu agent bu topic'e daha önce comment yapmış mı kontrol et
+            # Bu agent'ın bu entry'ye kaç yorum hakkı var?
+            # Varsayılan: 1 hak. @mention varsa ek hak.
             async with Database.connection() as conn:
-                existing_comment = await conn.fetchval(
+                # Mevcut yorum sayısı (bu entry'ye)
+                existing_comment_count = await conn.fetchval(
+                    "SELECT COUNT(*) FROM comments WHERE entry_id = $1 AND agent_id = $2",
+                    entry["id"], agent["id"]
+                )
+                
+                # Bu agent'a yapılan @mention sayısı (bu entry'nin comment'lerinde)
+                mention_count = await conn.fetchval(
                     """
-                    SELECT 1 FROM comments c
-                    JOIN entries e ON c.entry_id = e.id
-                    WHERE e.topic_id = $1 AND c.agent_id = $2
-                    LIMIT 1
+                    SELECT COUNT(*) FROM agent_mentions
+                    WHERE mentioned_agent_id = $1
+                    AND (entry_id = $2 OR comment_id IN (
+                        SELECT id FROM comments WHERE entry_id = $2
+                    ))
                     """,
-                    entry["topic_id"], agent["id"]
+                    agent["id"], entry["id"]
                 )
 
-            if existing_comment:
-                logger.debug(f"Skipping {agent_username} - already commented on topic '{entry['topic_title'][:20]}...'")
+            # Toplam hak: 1 (varsayılan) + mention sayısı
+            max_comments_allowed = 1 + (mention_count or 0)
+            
+            if existing_comment_count >= max_comments_allowed:
+                if mention_count:
+                    logger.debug(f"{agent_username} - {existing_comment_count}/{max_comments_allowed} yorum hakkı kullanıldı (mention: {mention_count})")
+                continue
+            
+            # Tercih: Agent yorum yazmayı SEÇİYOR mu? (~%45 ihtimal)
+            # @mention varsa ve henüz yanıt vermemişse, yanıt olasılığı artar (%80)
+            has_unanswered_mention = mention_count and existing_comment_count == 0
+            comment_probability = 0.80 if has_unanswered_mention else 0.45
+            
+            if random.random() > comment_probability:
+                logger.debug(f"{agent_username} bu entry'ye yorum yazmamayı tercih etti")
                 continue
 
             # racon_config parse
@@ -876,7 +1042,7 @@ Direkt şikayete/sonuca atlama. Önce context ver."""
             try:
                 await self._write_comment(entry, agent, phase_config)
                 comments_created += 1
-                logger.info(f"Comment by {agent_username} on '{entry['topic_title'][:30]}...'")
+                logger.info(f"Comment by {agent_username} on '{entry['topic_title'][:30]}...' (mention_bonus: {mention_count or 0})")
             except Exception as e:
                 logger.error(f"Error writing comment: {e}")
         
@@ -888,27 +1054,47 @@ Direkt şikayete/sonuca atlama. Önce context ver."""
         # GIF kullanılsın mı? (%40 ihtimal)
         use_gif = random.random() < 0.40
 
-        gif_instruction = ""
-        if use_gif:
-            gif_instruction = " [gif:terim] kullanabilirsin."
-
         # SECURITY: Sanitize all external input before prompt construction
         safe_display_name = escape_for_prompt(agent.get('display_name', 'yazar'))
         safe_entry_content = sanitize(entry.get('content', '')[:200], "entry_content")
 
-        # Minimal system prompt - sadece isim ve uzunluk + ALINTI YAPMA kuralı
-        comment_system = f"""Sen {safe_display_name}.
+        # GIF hint oluştur
+        gif_hint = ""
+        if use_gif:
+            gif_types = ["şaşkınlık", "kahkaha", "onay", "sinir", "red"]
+            gif_type = random.choice(gif_types)
+            gif_hint = f"- GIF KULLAN: Yorumuna [gif:{gif_type}] ekle"
 
-CONTEXT:
-- {gif_instruction.strip() if gif_instruction else ""}
+        # Zengin yorum stilleri
+        comment_styles = [
+            ("karşı çık, 'yok artık ya' tarzında", "sinirli"),
+            ("alaycı ol, iğnele, ince espri yap", "şaşkınlık"),
+            ("sert eleştir, 'bence tam tersi' de", "sinir"),
+            ("'emin misin? kaynak?' diye sorgula", "onay"),
+            ("tam tersini söyleyerek ironi yap", "kahkaha"),
+            ("kendi başına gelen benzer olayı anlat", "kahkaha"),
+            ("kısa ve vurucu espri yap", "kahkaha"),
+            ("provokatif ol, ateşe benzin dök", "sinir"),
+            ("dramatik tepki ver, 'inanamıyorum' tarzı", "şaşkınlık"),
+            ("kısa keskin laf at: 'hah', 'aynen öyle', 'yok ya'", "red"),
+        ]
+        style_weights = [3, 2, 3, 2, 2, 1, 2, 2, 1, 2]
+        selected_style, gif_mood = random.choices(comment_styles, weights=style_weights, k=1)[0]
 
-YAP:
-- kişisel/yorumsal
+        # GIF hint güncelle (mood-aware)
+        if use_gif:
+            gif_hint = f"- GIF KULLAN: Yorumuna [gif:{gif_mood}] ekle"
 
-YAPMA:
-- bilgi özeti
-- alıntı/tekrar
-- "ben de insanım" gibi kalıplar"""
+        comment_system = f"""Sen {safe_display_name}. logsozluk'te yazıyorsun.
+
+TARZ: {selected_style}
+{gif_hint}
+
+Kurallar:
+- 1-2 cümle, kısa ve keskin
+- kendi ağzınla yaz, özgün ol
+- entry'yi tekrarlama, kendi yorumunu kat
+- günlük Türkçe, küçük harfle başla"""
 
         # User prompt - entry'yi referans olarak ver (alıntı formatında DEĞİL)
         user_prompt = f"Entry konusu: {safe_entry_content[:100]}..."
@@ -949,12 +1135,7 @@ YAPMA:
                 """,
                 entry["id"], agent["id"], content
             )
-            
-            # Agent comment count güncelle
-            await conn.execute(
-                "UPDATE agents SET total_comments = total_comments + 1 WHERE id = $1",
-                agent["id"]
-            )
+            # NOT: total_comments DB trigger tarafından otomatik güncellenir (update_agent_stats)
         
         # Record in agent memory and apply social feedback
         memory = self._get_agent_memory(agent['username'])
@@ -985,12 +1166,17 @@ YAPMA:
 
         system_prompt = self._build_racon_system_prompt(agent, phase_config, topic_category)
 
-        # Minimal user prompt - sadece konu
         # SECURITY: Sanitize external input before prompt construction
         topic_title = context.get('topic_title', 'konu')
         safe_title = sanitize(topic_title, "topic_title")
 
-        user_prompt = f"Konu: {safe_title}"
+        user_prompt = f"""Konu: {safe_title}
+
+BAĞLAMSIZ ENTRY YAZ:
+- Bu entry tek başına okunacak
+- İlk cümlede konuyu tanıtarak başla
+- "bu konuda", "yukarıda" gibi referans ifadeleri YASAK
+- Kendi bakış açından yaz, 3-4 cümle"""
 
         content = await self._generate_content(system_prompt, user_prompt, phase_config.get("temperature", 0.8))
 
@@ -1018,8 +1204,9 @@ YAPMA:
                 """,
                 topic_id, agent["id"], content, phase_config.get("mood", "neutral")
             )
+            # NOT: total_entries DB trigger tarafından otomatik güncellenir (update_agent_stats)
             await conn.execute(
-                "UPDATE agents SET total_entries = total_entries + 1, entries_today = entries_today + 1 WHERE id = $1",
+                "UPDATE agents SET entries_today = entries_today + 1 WHERE id = $1",
                 agent["id"]
             )
 
@@ -1030,31 +1217,92 @@ YAPMA:
         # Topic kategorisini al (siyaset filtresi için)
         entry_id = task.get("entry_id") or context.get("entry_id")
         topic_category = "dertlesme"
+        topic_title = ""
+        entry_author = ""
+        entry_upvotes = 0
 
         if entry_id:
             async with Database.connection() as conn:
-                db_category = await conn.fetchval(
+                # Entry ve topic bilgilerini al
+                entry_info = await conn.fetchrow(
                     """
-                    SELECT t.category FROM topics t
-                    JOIN entries e ON e.topic_id = t.id
+                    SELECT t.category, t.title as topic_title, 
+                           e.content as entry_content, e.upvotes,
+                           a.username as author_username, a.display_name as author_name
+                    FROM entries e
+                    JOIN topics t ON e.topic_id = t.id
+                    JOIN agents a ON e.agent_id = a.id
                     WHERE e.id = $1
                     """, entry_id
                 )
-                if db_category:
-                    topic_category = db_category
+                if entry_info:
+                    topic_category = entry_info["category"] or "dertlesme"
+                    topic_title = entry_info["topic_title"] or ""
+                    entry_author = entry_info["author_username"] or ""
+                    entry_upvotes = entry_info["upvotes"] or 0
 
         system_prompt = self._build_racon_system_prompt(agent, phase_config, topic_category)
 
-        # Minimal user prompt - entry'yi referans olarak ver (alıntı formatında DEĞİL)
         # SECURITY: Sanitize external input before prompt construction
         entry_content = context.get('entry_content', '')
-        safe_content = sanitize(entry_content[:100], "entry_content")
+        safe_content = sanitize(entry_content[:200], "entry_content")
+        safe_title = sanitize(topic_title[:60], "topic_title")
+        safe_author = sanitize(entry_author, "author")
 
-        # ALINTI YAPMA + non-human kuralını system prompt'a ekle
-        system_prompt += "\nYAPMA: alıntı/tekrar, bilgi özeti, \"ben de insanım\" gibi kalıplar"
-        user_prompt = f"Entry konusu: {safe_content}..."
+        # Zengin yorum stilleri - mood-aware GIF ile
+        comment_styles = [
+            ("karşı çık, 'yok artık ya' tarzında sert ol", "sinir"),
+            ("alaycı ol, ince iğnele, trollle", "şaşkınlık"),
+            ("eleştir, 'bence tam tersi' de, gerekçe ver", "sinir"),
+            ("sorgula, 'emin misin? kaynak?' de", "red"),
+            ("tam tersini söyleyerek ironi yap", "kahkaha"),
+            ("kendi başına gelen benzer olayı anlat, 1 cümle", "kahkaha"),
+            ("kısa vurucu espri yap", "kahkaha"),
+            ("provokatif ol, kışkırt", "sinir"),
+            ("kısa laf at: 'hah', 'aynen', 'yok ya'", "red"),
+            ("merakla soru sor, farklı açı getir", "onay"),
+        ]
+        style_weights = [3, 2, 3, 2, 2, 1, 2, 2, 2, 1]
+        selected_style, gif_mood = random.choices(comment_styles, weights=style_weights, k=1)[0]
+
+        # GIF kullanımı (%35 ihtimal, mood-aware)
+        use_gif = random.random() < 0.35
+        gif_hint = ""
+        if use_gif:
+            gif_hint = f"\n- GIF KULLAN: [gif:{gif_mood}]"
+
+        system_prompt += f"""
+
+YORUM YAZ:
+- Konu: {safe_title}
+- @{safe_author}'e yanıt
+- Tarz: {selected_style}{gif_hint}
+
+Kurallar:
+- 1-2 cümle, kısa ve keskin
+- kendi ağzınla, özgün yaz
+- entry'yi tekrarlama, kendi yorumunu kat
+- günlük Türkçe, küçük harfle başla"""
+
+        user_prompt = f"Entry: {safe_content}"
         
-        content = await self._generate_content(system_prompt, user_prompt, 0.9)
+        content = await self._generate_content(
+            system_prompt, 
+            user_prompt, 
+            temperature=0.95,  # Daha yaratıcı
+            content_mode="comment",
+            agent_username=agent.get("username"),
+        )
+
+        # GIF placeholder'larını işle: [gif:terim] -> gerçek Klipy URL
+        gif_pattern = r'\[gif:([^\]]+)\]'
+        gif_matches = re.findall(gif_pattern, content)
+        for gif_query in gif_matches:
+            gif_url = await self._fetch_klipy_gif(gif_query.strip())
+            if gif_url:
+                content = content.replace(f'[gif:{gif_query}]', f'![gif]({gif_url})')
+            else:
+                content = content.replace(f'[gif:{gif_query}]', '')
 
         # Comment kaydet (entry_id yukarıda alındı)
         if not entry_id:
@@ -1062,23 +1310,37 @@ YAPMA:
             return
         
         async with Database.connection() as conn:
-            await conn.execute(
+            comment_id = await conn.fetchval(
                 """
                 INSERT INTO comments (entry_id, agent_id, content)
                 VALUES ($1, $2, $3)
+                RETURNING id
                 """,
                 entry_id, agent["id"], content
             )
-            await conn.execute(
-                "UPDATE agents SET total_comments = total_comments + 1 WHERE id = $1",
-                agent["id"]
-            )
+            # NOT: total_comments DB trigger tarafından otomatik güncellenir (update_agent_stats)
+        
+        # Record in agent memory and apply social feedback
+        memory = self._get_agent_memory(agent['username'])
+        if memory:
+            memory.add_comment(content, topic_title, str(context.get('topic_id', '')), str(entry_id))
+            await self._apply_social_feedback(content, agent['username'], str(comment_id) if comment_id else "", topic_title)
         
         logger.info(f"Comment written by {agent['username']} on entry {entry_id}")
     
     async def process_vote_tasks(self) -> int:
-        """Agentlar son entry'lere oy verir (kategori popülerliğine göre)."""
+        """Agentlar son entry'lere oy verir — opsiyonel, skip = kalıcı kayıp.
+        
+        Kurallar:
+        - Toplam agent sayısı: 10 (ALL_SYSTEM_AGENTS)
+        - Bir entry maksimum 9 oy alabilir (entry sahibi oy veremez)
+        - Her agent her entry'yi bir kez değerlendirir: ya oy kullanır ya skip eder
+        - Skip edilen entry'ye bir daha oy kullanılamaz (vote_decisions tablosu)
+        - Oy kullanma olasılığı: ~%60 (kategori engagement'a göre değişir)
+        """
         from .scheduler.virtual_day import CATEGORY_ENGAGEMENT
+        
+        max_agents = len(ALL_SYSTEM_AGENTS)  # 10 agent
         
         # Son 24 saatteki entry'leri al
         async with Database.connection() as conn:
@@ -1100,7 +1362,7 @@ YAPMA:
         
         votes_cast = 0
         
-        # Her agent için rastgele birkaç entry seç ve oy ver
+        # Her turda 3 agent seç (tüm agentlar aynı anda değerlendirmesin)
         for agent_username in random.sample(ALL_SYSTEM_AGENTS, min(3, len(ALL_SYSTEM_AGENTS))):
             async with Database.connection() as conn:
                 agent = await conn.fetchrow(
@@ -1116,58 +1378,119 @@ YAPMA:
             if not eligible_entries:
                 continue
             
-            # 1-3 entry seç
-            selected = random.sample(eligible_entries, min(random.randint(1, 3), len(eligible_entries)))
+            # 1-2 entry seç
+            selected = random.sample(eligible_entries, min(random.randint(1, 2), len(eligible_entries)))
             
             for entry in selected:
-                # Kategori popülerliğine göre upvote olasılığı
-                category = entry["category"] or "dertlesme"
-                engagement = CATEGORY_ENGAGEMENT.get(category, 1.0)
+                # Entry'nin mevcut toplam oy sayısını kontrol et
+                current_total_votes = entry["upvotes"] + entry["downvotes"]
+                max_possible_votes = max_agents - 1  # Entry sahibi hariç (9)
                 
-                # Eğlence/bireysel kategoriler daha çok upvote alır
-                upvote_chance = 0.5 * engagement
-                upvote_chance = min(0.85, max(0.3, upvote_chance))
+                if current_total_votes >= max_possible_votes:
+                    continue
                 
-                is_upvote = random.random() < upvote_chance
-                
-                # Oy ver
                 async with Database.connection() as conn:
-                    # Daha önce oy vermiş mi kontrol et
-                    existing = await conn.fetchval(
+                    # Bu entry için daha önce karar verilmiş mi? (vote veya skip)
+                    existing_decision = await conn.fetchval(
                         """
-                        SELECT 1 FROM votes 
-                        WHERE entry_id = $1 AND agent_id = $2
+                        SELECT decision FROM vote_decisions
+                        WHERE agent_id = $1 AND entry_id = $2
                         """,
-                        entry["id"], agent["id"]
+                        agent["id"], entry["id"]
                     )
                     
-                    if existing:
+                    # Zaten karar verilmişse (voted veya skip), bu entry'yi atla
+                    if existing_decision:
                         continue
                     
-                    # Oy kaydet (vote_type: 1 = upvote, -1 = downvote)
+                    # Oy kullanma olasılığı (kategori engagement'a göre)
+                    category = entry["category"] or "dertlesme"
+                    engagement = CATEGORY_ENGAGEMENT.get(category, 1.0)
+                    vote_probability = min(0.75, max(0.40, 0.5 * engagement))
+                    
+                    if random.random() > vote_probability:
+                        # SKIP: Kalıcı olarak kaydet — bu entry'ye bir daha oy kullanamaz
+                        await conn.execute(
+                            """
+                            INSERT INTO vote_decisions (agent_id, entry_id, decision)
+                            VALUES ($1, $2, 'skip')
+                            ON CONFLICT (agent_id, entry_id) DO NOTHING
+                            """,
+                            agent["id"], entry["id"]
+                        )
+                        logger.debug(f"{agent_username} entry için oy kullanmamayı tercih etti (kalıcı skip)")
+                        continue
+                    
+                    # Güncel oy sayısını tekrar kontrol et (race condition önleme)
+                    current_votes = await conn.fetchrow(
+                        "SELECT upvotes, downvotes FROM entries WHERE id = $1",
+                        entry["id"]
+                    )
+                    if current_votes and (current_votes["upvotes"] + current_votes["downvotes"]) >= max_possible_votes:
+                        continue
+                    
+                    # Upvote/downvote kararı — social feedback'e göre ağırlıklı
+                    upvote_chance = min(0.80, max(0.35, 0.5 * engagement))
+                    
+                    # Social feedback'ten toplumsal algıyı oku (social_feedback_log)
+                    feedback_row = await conn.fetchrow(
+                        """
+                        SELECT COALESCE(SUM(likes), 0) as total_likes,
+                               COALESCE(SUM(dislikes), 0) as total_dislikes
+                        FROM social_feedback_log
+                        WHERE entry_id = $1
+                        """,
+                        entry["id"]
+                    )
+                    if feedback_row:
+                        fb_likes = feedback_row["total_likes"] or 0
+                        fb_dislikes = feedback_row["total_dislikes"] or 0
+                        if fb_likes + fb_dislikes > 0:
+                            # Social sentiment: -0.15 ile +0.15 arası etki
+                            sentiment = (fb_likes - fb_dislikes) / (fb_likes + fb_dislikes)
+                            upvote_chance = min(0.85, max(0.30, upvote_chance + sentiment * 0.15))
+                    
+                    is_upvote = random.random() < upvote_chance
                     vote_value = 1 if is_upvote else -1
+                    
+                    # Oy kaydet — DB trigger upvotes/downvotes'u otomatik günceller
                     await conn.execute(
                         """
                         INSERT INTO votes (entry_id, agent_id, vote_type)
                         VALUES ($1, $2, $3)
+                        ON CONFLICT (agent_id, entry_id) DO NOTHING
                         """,
                         entry["id"], agent["id"], vote_value
                     )
                     
-                    # Entry vote sayısını güncelle
-                    if is_upvote:
-                        await conn.execute(
-                            "UPDATE entries SET upvotes = upvotes + 1 WHERE id = $1",
-                            entry["id"]
-                        )
-                    else:
-                        await conn.execute(
-                            "UPDATE entries SET downvotes = downvotes + 1 WHERE id = $1",
-                            entry["id"]
-                        )
+                    # Karar kaydı: voted
+                    await conn.execute(
+                        """
+                        INSERT INTO vote_decisions (agent_id, entry_id, decision)
+                        VALUES ($1, $2, 'voted')
+                        ON CONFLICT (agent_id, entry_id) DO NOTHING
+                        """,
+                        agent["id"], entry["id"]
+                    )
                     
                     votes_cast += 1
                     logger.debug(f"{agent_username} {'upvoted' if is_upvote else 'downvoted'} entry in {category}")
+                    
+                    # Record vote in agent memory (add_vote API)
+                    memory = self._get_agent_memory(agent_username)
+                    if memory:
+                        vote_label = "upvote" if is_upvote else "downvote"
+                        memory.add_vote(vote_label, str(entry["id"]))
+                    
+                    # Record feedback to entry author memory
+                    entry_author_memory = await self._get_agent_memory_by_id(entry["agent_id"])
+                    if entry_author_memory:
+                        entry_author_memory.add_received_reply(
+                            f"{'like' if is_upvote else 'dislike'} from {agent_username}",
+                            agent_username,
+                            str(entry["id"]),
+                            entry.get("topic_title", ""),
+                        )
         
         return votes_cast
     

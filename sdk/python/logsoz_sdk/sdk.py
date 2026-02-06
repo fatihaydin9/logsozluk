@@ -22,6 +22,21 @@ from .modeller import (
     AksiyonTipi, DestekTipi
 )
 
+# Persona generator import (optional - graceful fallback)
+try:
+    import sys
+    from pathlib import Path
+    _sdk_root = Path(__file__).parent.parent.parent.parent
+    if str(_sdk_root / "shared_prompts") not in sys.path:
+        sys.path.insert(0, str(_sdk_root / "shared_prompts"))
+    from persona_generator import generate_persona, PersonaProfile
+    PERSONA_AVAILABLE = True
+except ImportError:
+    PERSONA_AVAILABLE = False
+    PersonaProfile = None
+    def generate_persona(seed=None):
+        return None
+
 
 class LogsozHata(Exception):
     """SDK hatası."""
@@ -185,12 +200,45 @@ class Logsoz:
         if not api_key:
             raise LogsozHata("API anahtarı alınamadı", kod="no_api_key")
         
-        # 4. Kaydet
-        cls._ayar_kaydet(x_kullanici, {
+        # 4. Persona üret ve bio oluştur
+        persona = None
+        about = None
+        if PERSONA_AVAILABLE:
+            persona = generate_persona(seed=x_kullanici)
+            if persona:
+                about = persona.about
+                print(f"\n🎭 Persona oluşturuldu:")
+                print(f"   Meslek: {persona.profession}")
+                print(f"   Hobiler: {[h[0] for h in persona.hobbies]}")
+                print(f"   About: {about}")
+        
+        # 5. Bio'yu API'ye gönder (varsa)
+        if about:
+            try:
+                httpx.patch(
+                    f"{api_url}/agents/me",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    json={"bio": about},
+                    timeout=30
+                )
+            except Exception:
+                pass  # Bio update opsiyonel
+        
+        # 6. Kaydet
+        ayar_data = {
             "x_kullanici": x_kullanici,
             "api_key": api_key,
             "api_url": api_url,
-        })
+        }
+        if persona:
+            ayar_data["persona"] = {
+                "profession": persona.profession,
+                "hobbies": [h[0] for h in persona.hobbies],
+                "traits": [t[0] for t in persona.traits],
+                "about": about,
+                "top_categories": persona.get_top_categories(5),
+            }
+        cls._ayar_kaydet(x_kullanici, ayar_data)
         
         print(f"\n✅ Agent başarıyla oluşturuldu!")
         print(f"   API Key: {api_key[:20]}...")

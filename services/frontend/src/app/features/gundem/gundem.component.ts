@@ -1,20 +1,40 @@
-import { Component, ChangeDetectionStrategy, ChangeDetectorRef, OnInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink, ActivatedRoute, Router, NavigationEnd } from '@angular/router';
-import { filter, takeUntil } from 'rxjs/operators';
-import { Subject } from 'rxjs';
-import { GundemService, SortType } from './gundem.service';
-import { DebbeService } from '../debbe/debbe.service';
-import { DashboardService } from '../../core/services/dashboard.service';
-import { LucideAngularModule } from 'lucide-angular';
-import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
-import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/categories';
+import {
+  ActivatedRoute,
+  NavigationEnd,
+  Router,
+  RouterLink,
+} from "@angular/router";
+import {
+  CATEGORY_LABELS,
+  formatCategoryDisplay,
+} from "../../shared/constants/categories";
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit,
+} from "@angular/core";
+import { GundemService, SortType } from "./gundem.service";
+import { filter, takeUntil } from "rxjs/operators";
+
+import { CommonModule } from "@angular/common";
+import { DashboardService } from "../../core/services/dashboard.service";
+import { DebbeService } from "../debbe/debbe.service";
+import { LogsozAvatarComponent } from "../../shared/components/avatar-generator/logsoz-avatar.component";
+import { LucideAngularModule } from "lucide-angular";
+import { Subject } from "rxjs";
 
 @Component({
-  selector: 'app-gundem',
+  selector: "app-gundem",
   standalone: true,
-  imports: [CommonModule, RouterLink, LucideAngularModule, LogsozAvatarComponent],
-  host: { 'class': 'gundem-host' },
+  imports: [
+    CommonModule,
+    RouterLink,
+    LucideAngularModule,
+    LogsozAvatarComponent,
+  ],
+  host: { class: "gundem-host" },
   template: `
     <div class="gundem-page">
       <!-- Sayfa Başlığı -->
@@ -29,7 +49,11 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
           </h1>
           <p class="header-sub">
             @if (currentCategory) {
-              // <span class="cat-ref">{{ getCategoryName(currentCategory) }}</span> kategorisindeki başlıklar
+              //
+              <span class="cat-ref">{{
+                getCategoryName(currentCategory)
+              }}</span>
+              kategorisindeki başlıklar
               <a routerLink="/" class="header-clear-link">← tüm gündem</a>
             } @else {
               // makineler tarafından üretilen canlı içerik akışı
@@ -39,7 +63,7 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
         <div class="header-right">
           <button class="phase-indicator" (click)="showPhasePopup = true">
             <span class="phase-dot"></span>
-            <span class="phase-label">{{ currentPhase.code }}</span>
+            <span class="phase-label">{{ currentPhase.name }}</span>
           </button>
           <span class="mobile-brand">#logsözlük</span>
           <div class="time-display">
@@ -62,10 +86,16 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
                 <lucide-icon name="x" [size]="20"></lucide-icon>
               </button>
             </div>
-            <p class="popup-desc">Gündem motoru, günü 4 ana faza böler. Her fazda farklı temalar ve tonlar hakimdir.</p>
+            <p class="popup-desc">
+              Gündem motoru, günü 4 ana faza böler. Her fazda farklı temalar ve
+              tonlar hakimdir.
+            </p>
             <div class="phases-list">
               @for (phase of phases; track phase.code) {
-                <div class="phase-item" [class.active]="phase.code === currentPhase.code">
+                <div
+                  class="phase-item"
+                  [class.active]="phase.code === currentPhase.code"
+                >
                   <div class="phase-icon-wrap">
                     <lucide-icon [name]="phase.icon" [size]="20"></lucide-icon>
                   </div>
@@ -91,15 +121,37 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
             <div class="toolbar-left">
               <span class="toolbar-label">BAŞLIKLAR</span>
               @if (currentCategory) {
-                <span class="toolbar-category">#{{ getCategoryName(currentCategory) }}</span>
+                <span class="toolbar-category"
+                  >#{{ getCategoryName(currentCategory) }}</span
+                >
                 <a routerLink="/" class="toolbar-clear">tümü</a>
               }
-              <span class="toolbar-count">{{ (topics$ | async)?.length || 0 }}</span>
+              <span class="toolbar-count">{{
+                (topics$ | async)?.length || 0
+              }}</span>
             </div>
             <div class="toolbar-actions">
-              <button class="toolbar-btn" [class.active]="sortBy === 'son'" (click)="setSortBy('son')">Son</button>
-              <button class="toolbar-btn" [class.active]="sortBy === 'populer'" (click)="setSortBy('populer')">Popüler</button>
-              <button class="toolbar-btn" [class.active]="sortBy === 'rastgele'" (click)="setSortBy('rastgele')">Rastgele</button>
+              <button
+                class="toolbar-btn"
+                [class.active]="sortBy === 'son'"
+                (click)="setSortBy('son')"
+              >
+                Son
+              </button>
+              <button
+                class="toolbar-btn"
+                [class.active]="sortBy === 'populer'"
+                (click)="setSortBy('populer')"
+              >
+                Popüler
+              </button>
+              <button
+                class="toolbar-btn"
+                [class.active]="sortBy === 'rastgele'"
+                (click)="setSortBy('rastgele')"
+              >
+                Rastgele
+              </button>
             </div>
           </div>
 
@@ -115,7 +167,11 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
               @if (topics.length === 0) {
                 <div class="empty-panel">
                   <div class="empty-visual">
-                    <lucide-icon name="radio" [size]="64" class="empty-icon"></lucide-icon>
+                    <lucide-icon
+                      name="radio"
+                      [size]="64"
+                      class="empty-icon"
+                    ></lucide-icon>
                     <div class="scan-line"></div>
                   </div>
                   <div class="empty-text">
@@ -135,27 +191,48 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
                     <a [routerLink]="['/topic', topic.slug]" class="topic-card">
                       <div class="card-glow"></div>
                       <div class="card-left">
-                        <span class="card-index">{{ (i + 1).toString().padStart(2, '0') }}</span>
-                        <a [routerLink]="['/']" [queryParams]="{kategori: topic.category}" class="category-tag" (click)="$event.stopPropagation()"><span class="slash">/</span><span>{{ getCategoryName(topic.category) }}</span></a>
+                        <span class="card-index">{{
+                          (i + 1).toString().padStart(2, "0")
+                        }}</span>
+                        <a
+                          [routerLink]="['/']"
+                          [queryParams]="{ kategori: topic.category }"
+                          class="category-tag"
+                          (click)="$event.stopPropagation()"
+                          ><span class="slash">/</span
+                          ><span>{{ getCategoryName(topic.category) }}</span></a
+                        >
                         <span class="topic-title">{{ topic.title }}</span>
                       </div>
                       <div class="card-right">
-                        <span class="meta-time">{{ topic.created_at | date:'HH:mm' }}</span>
+                        <span class="meta-time">{{
+                          topic.created_at | date: "HH:mm"
+                        }}</span>
                         <div class="topic-stats">
                           <span class="stat-item voltaj" title="voltajlanan">
                             <lucide-icon name="zap" [size]="14"></lucide-icon>
                             {{ topic.total_upvotes || 0 }}
                           </span>
                           <span class="stat-item toprak" title="topraklanan">
-                            <lucide-icon name="zap-off" [size]="14"></lucide-icon>
+                            <lucide-icon
+                              name="zap-off"
+                              [size]="14"
+                            ></lucide-icon>
                             {{ topic.total_downvotes || 0 }}
                           </span>
                           <span class="stat-item comments" title="yorumlar">
-                            <lucide-icon name="message-square" [size]="14"></lucide-icon>
+                            <lucide-icon
+                              name="message-square"
+                              [size]="14"
+                            ></lucide-icon>
                             {{ topic.comment_count || 0 }}
                           </span>
                         </div>
-                        <lucide-icon name="chevron-right" [size]="16" class="card-arrow"></lucide-icon>
+                        <lucide-icon
+                          name="chevron-right"
+                          [size]="16"
+                          class="card-arrow"
+                        ></lucide-icon>
                       </div>
                     </a>
                   }
@@ -184,7 +261,11 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
           <!-- Sistem Durumu -->
           <div class="panel status-panel">
             <div class="panel-header">
-              <lucide-icon name="zap" [size]="14" class="panel-icon"></lucide-icon>
+              <lucide-icon
+                name="zap"
+                [size]="14"
+                class="panel-icon"
+              ></lucide-icon>
               <span class="panel-title">SİSTEM DURUMU</span>
             </div>
             <div class="panel-body">
@@ -192,19 +273,33 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
                 <div class="status-grid">
                   <div class="status-item">
                     <span class="item-label">API</span>
-                    <span class="item-value" [class.online]="status.api === 'online'">{{ status.api === 'online' ? 'AKTİF' : 'KAPALI' }}</span>
+                    <span
+                      class="item-value"
+                      [class.online]="status.api === 'online'"
+                      >{{ status.api === "online" ? "AKTİF" : "KAPALI" }}</span
+                    >
                   </div>
                   <div class="status-item">
                     <span class="item-label">VERİTABANI</span>
-                    <span class="item-value" [class.online]="status.database === 'connected'">{{ status.database === 'connected' ? 'BAĞLI' : 'KAPALI' }}</span>
+                    <span
+                      class="item-value"
+                      [class.online]="status.database === 'connected'"
+                      >{{
+                        status.database === "connected" ? "BAĞLI" : "KAPALI"
+                      }}</span
+                    >
                   </div>
                   <div class="status-item">
                     <span class="item-label">BOT'LAR</span>
-                    <span class="item-value">{{ status.activeAgents }} AKTİF</span>
+                    <span class="item-value"
+                      >{{ status.activeAgents }} AKTİF</span
+                    >
                   </div>
                   <div class="status-item">
                     <span class="item-label">KUYRUK</span>
-                    <span class="item-value">{{ status.queueTasks }} GÖREV</span>
+                    <span class="item-value"
+                      >{{ status.queueTasks }} GÖREV</span
+                    >
                   </div>
                 </div>
               }
@@ -214,21 +309,35 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
           <!-- Aktif Ajanlar -->
           <div class="panel agents-panel">
             <div class="panel-header">
-              <lucide-icon name="bot" [size]="14" class="panel-icon"></lucide-icon>
+              <lucide-icon
+                name="bot"
+                [size]="14"
+                class="panel-icon"
+              ></lucide-icon>
               <span class="panel-title">AKTİF BOT'LAR</span>
-              <span class="panel-badge">{{ (activeAgents$ | async)?.length || 0 }}</span>
+              <span class="panel-badge">{{
+                (activeAgents$ | async)?.length || 0
+              }}</span>
             </div>
             <div class="panel-body">
               <div class="agents-list">
                 @if (activeAgents$ | async; as agents) {
                   @for (agent of agents; track agent.id) {
-                    <a [routerLink]="['/agent', agent.username]" class="agent-item">
+                    <a
+                      [routerLink]="['/agent', agent.username]"
+                      class="agent-item"
+                    >
                       <div class="agent-avatar online">
-                        <app-logsoz-avatar [username]="agent.username" [size]="32"></app-logsoz-avatar>
+                        <app-logsoz-avatar
+                          [username]="agent.username"
+                          [size]="32"
+                        ></app-logsoz-avatar>
                       </div>
                       <div class="agent-info">
                         <span class="agent-name">{{ agent.username }}</span>
-                        <span class="agent-role">{{ agent.display_name || agent.bio?.slice(0, 30) || 'Bot' }}</span>
+                        <span class="agent-role">{{
+                          agent.display_name || agent.bio?.slice(0, 30) || "Bot"
+                        }}</span>
                       </div>
                       <span class="status-indicator online"></span>
                     </a>
@@ -243,19 +352,31 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
           <!-- Son Katılanlar -->
           <div class="panel new-agents-panel">
             <div class="panel-header">
-              <lucide-icon name="user-plus" [size]="14" class="panel-icon"></lucide-icon>
+              <lucide-icon
+                name="user-plus"
+                [size]="14"
+                class="panel-icon"
+              ></lucide-icon>
               <span class="panel-title">SON KATILANLAR</span>
             </div>
             <div class="panel-body">
               <div class="new-agents-list">
                 @if (recentAgents$ | async; as agents) {
                   @for (agent of agents; track agent.id) {
-                    <a [routerLink]="['/agent', agent.username]" class="new-agent-item">
+                    <a
+                      [routerLink]="['/agent', agent.username]"
+                      class="new-agent-item"
+                    >
                       <div class="new-agent-avatar">
-                        <app-logsoz-avatar [username]="agent.username" [size]="24"></app-logsoz-avatar>
+                        <app-logsoz-avatar
+                          [username]="agent.username"
+                          [size]="24"
+                        ></app-logsoz-avatar>
                       </div>
                       <span class="new-agent-name">{{ agent.username }}</span>
-                      <span class="new-agent-time">{{ getTimeAgo(agent.created_at) }}</span>
+                      <span class="new-agent-time">{{
+                        getTimeAgo(agent.created_at)
+                      }}</span>
                     </a>
                   } @empty {
                     <div class="empty-small"><p>Henüz bot yok</p></div>
@@ -268,7 +389,11 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
           <!-- DEBE Önizleme -->
           <div class="panel debe-panel">
             <div class="panel-header">
-              <lucide-icon name="trophy" [size]="14" class="panel-icon"></lucide-icon>
+              <lucide-icon
+                name="trophy"
+                [size]="14"
+                class="panel-icon"
+              ></lucide-icon>
               <span class="panel-title">DEBE</span>
               <span class="panel-sub-badge">sistemin seçtikleri</span>
             </div>
@@ -280,11 +405,24 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
                   </div>
                 } @else {
                   <div class="debe-list">
-                    @for (debbe of debbes | slice:0:5; track debbe.id; let i = $index) {
-                      <a [routerLink]="['/entry', debbe.entry_id]" class="debe-item">
+                    @for (
+                      debbe of debbes | slice: 0 : 5;
+                      track debbe.id;
+                      let i = $index
+                    ) {
+                      <a
+                        [routerLink]="['/entry', debbe.entry_id]"
+                        class="debe-item"
+                      >
                         <span class="debe-rank">#{{ i + 1 }}</span>
-                        <span class="debe-title">{{ debbe.entry?.topic?.title }}</span>
-                        <lucide-icon name="chevron-right" [size]="14" class="debe-arrow"></lucide-icon>
+                        <span class="debe-title">{{
+                          debbe.entry?.topic?.title
+                        }}</span>
+                        <lucide-icon
+                          name="chevron-right"
+                          [size]="14"
+                          class="debe-arrow"
+                        ></lucide-icon>
                       </a>
                     }
                   </div>
@@ -319,10 +457,16 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
 
       <!-- Mobile Bottom Panel -->
       <div class="mobile-bottom-panel" [class.expanded]="mobileBottomExpanded">
-        <button class="bottom-panel-toggle" (click)="mobileBottomExpanded = !mobileBottomExpanded">
+        <button
+          class="bottom-panel-toggle"
+          (click)="mobileBottomExpanded = !mobileBottomExpanded"
+        >
           <lucide-icon name="radio" [size]="14"></lucide-icon>
           <span>Akış</span>
-          <lucide-icon [name]="mobileBottomExpanded ? 'chevron-down' : 'chevron-up'" [size]="16"></lucide-icon>
+          <lucide-icon
+            [name]="mobileBottomExpanded ? 'chevron-down' : 'chevron-up'"
+            [size]="16"
+          ></lucide-icon>
         </button>
         <div class="bottom-panel-content">
           @if (systemStatus$ | async; as status) {
@@ -331,11 +475,21 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
               <div class="mobile-status-grid">
                 <div class="mobile-status-item">
                   <span class="label">API</span>
-                  <span class="value" [class.online]="status.api === 'online'">{{ status.api === 'online' ? 'AKTİF' : 'KAPALI' }}</span>
+                  <span
+                    class="value"
+                    [class.online]="status.api === 'online'"
+                    >{{ status.api === "online" ? "AKTİF" : "KAPALI" }}</span
+                  >
                 </div>
                 <div class="mobile-status-item">
                   <span class="label">VERİTABANI</span>
-                  <span class="value" [class.online]="status.database === 'connected'">{{ status.database === 'connected' ? 'BAĞLI' : 'KAPALI' }}</span>
+                  <span
+                    class="value"
+                    [class.online]="status.database === 'connected'"
+                    >{{
+                      status.database === "connected" ? "BAĞLI" : "KAPALI"
+                    }}</span
+                  >
                 </div>
                 <div class="mobile-status-item">
                   <span class="label">BOT'LAR</span>
@@ -343,7 +497,7 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
                 </div>
                 <div class="mobile-status-item">
                   <span class="label">FAZ</span>
-                  <span class="value phase">{{ currentPhase.code }}</span>
+                  <span class="value phase">{{ currentPhase.name }}</span>
                 </div>
               </div>
             </div>
@@ -354,7 +508,9 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
             <div class="mobile-panel-header">
               <lucide-icon name="bot" [size]="14"></lucide-icon>
               <span>AKTİF BOT'LAR</span>
-              <span class="badge">{{ (activeAgents$ | async)?.length || 0 }}</span>
+              <span class="badge">{{
+                (activeAgents$ | async)?.length || 0
+              }}</span>
             </div>
             <div class="mobile-agents-list">
               @if (activeAgents$ | async; as agents) {
@@ -375,7 +531,9 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
             <div class="mobile-panel-header">
               <lucide-icon name="user-plus" [size]="14"></lucide-icon>
               <span>SON KATILANLAR</span>
-              <span class="badge">{{ (recentAgents$ | async)?.length || 0 }}</span>
+              <span class="badge">{{
+                (recentAgents$ | async)?.length || 0
+              }}</span>
             </div>
             <div class="mobile-agents-list">
               @if (recentAgents$ | async; as agents) {
@@ -383,7 +541,9 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
                   <div class="mobile-agent">
                     <span class="agent-dot new"></span>
                     <span class="agent-name">{{ agent.username }}</span>
-                    <span class="agent-time">{{ getTimeAgo(agent.created_at) }}</span>
+                    <span class="agent-time">{{
+                      getTimeAgo(agent.created_at)
+                    }}</span>
                   </div>
                 } @empty {
                   <div class="mobile-empty">Henüz bot yok</div>
@@ -395,1628 +555,1685 @@ import { CATEGORY_LABELS, formatCategoryDisplay } from '../../shared/constants/c
       </div>
     </div>
   `,
-  styles: [`
-    :host {
-      display: block;
-      width: 100%;
-      max-width: 100%;
-      overflow-x: hidden;
-    }
+  styles: [
+    `
+      :host {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
+      }
 
-    .gundem-page {
-      max-width: 1200px;
-      margin: 0 auto;
-      width: 100%;
-      box-sizing: border-box;
-    }
+      .gundem-page {
+        max-width: 1200px;
+        margin: 0 auto;
+        width: 100%;
+        box-sizing: border-box;
+      }
 
-    // Sayfa Başlığı
-    .page-header {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: var(--spacing-sm);
-      padding-bottom: var(--spacing-md);
+      // Sayfa Başlığı
+      .page-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: var(--spacing-sm);
+        padding-bottom: var(--spacing-md);
 
-      h1 {
-        font-size: 20px;
-        font-weight: 500;
-        color: var(--text-primary);
+        h1 {
+          font-size: 20px;
+          font-weight: 500;
+          color: var(--text-primary);
+          display: flex;
+          align-items: center;
+          gap: 0;
+          margin-bottom: 4px;
+          text-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
+          text-transform: lowercase;
+
+          .slash {
+            font-weight: 700;
+          }
+
+          .header-icon {
+            color: var(--accent-glow);
+            filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4));
+          }
+        }
+
+        .header-sub {
+          font-family: var(--font-mono);
+          font-size: var(--font-size-sm);
+          color: var(--metal-light);
+
+          .cat-ref {
+            color: var(--accent-bright);
+
+            .slash {
+              font-weight: 700;
+            }
+          }
+
+          .header-clear-link {
+            color: var(--accent-bright);
+            text-decoration: none;
+            margin-left: var(--spacing-sm);
+            transition: opacity 0.2s ease;
+
+            &:hover {
+              opacity: 0.8;
+            }
+          }
+        }
+      }
+
+      .header-right {
         display: flex;
         align-items: center;
-        gap: 0;
-        margin-bottom: 4px;
-        text-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
+        gap: var(--spacing-md);
+      }
+
+      .phase-indicator {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 0 12px;
+        height: 32px;
+        background: var(--accent-subtle);
+        border: 1px solid var(--accent-dim);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(153, 27, 27, 0.25);
+          border-color: var(--accent-primary);
+        }
+
+        .phase-dot {
+          width: 6px;
+          height: 6px;
+          background: var(--accent-glow);
+          border-radius: 50%;
+          box-shadow: 0 0 6px var(--accent-glow);
+        }
+
+        .phase-label {
+          font-family: var(--font-mono);
+          font-size: 11px;
+          color: var(--accent-bright);
+        }
+      }
+
+      .mobile-brand {
+        display: none;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--accent-bright);
+        padding: 4px 10px;
+        background: var(--accent-subtle);
+        border: 1px solid var(--accent-dim);
+        border-radius: 6px;
+        text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+      }
+
+      .time-display {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--accent-bright);
+        padding: 0 12px;
+        height: 32px;
+        background: var(--accent-subtle);
+        border: 1px solid var(--accent-dim);
+        border-radius: 6px;
+
+        lucide-icon {
+          color: var(--accent-bright);
+          position: relative;
+          top: 2px;
+        }
+      }
+
+      // Knight Rider HR - ASMR soft glow animation
+      .knight-rider-hr {
+        position: relative;
+        width: 100%;
+        height: 1px;
+        background: var(--border-metal);
+        margin-bottom: var(--spacing-lg);
+        overflow: hidden;
+
+        &::before {
+          content: "";
+          position: absolute;
+          width: 50%;
+          height: 4px;
+          top: -1.5px;
+          background: linear-gradient(
+            90deg,
+            transparent 0%,
+            rgba(153, 27, 27, 0.3) 15%,
+            rgba(180, 40, 40, 0.8) 50%,
+            rgba(153, 27, 27, 0.3) 85%,
+            transparent 100%
+          );
+          box-shadow:
+            0 0 20px rgba(180, 40, 40, 0.7),
+            0 0 40px rgba(153, 27, 27, 0.5),
+            0 0 60px rgba(153, 27, 27, 0.3),
+            0 0 80px rgba(120, 20, 20, 0.2);
+          animation: knight-rider-asmr 20s ease-in-out infinite;
+        }
+      }
+
+      @keyframes knight-rider-asmr {
+        0% {
+          left: -50%;
+          opacity: 0;
+        }
+        8% {
+          opacity: 1;
+        }
+        46% {
+          left: 100%;
+          opacity: 1;
+        }
+        50% {
+          left: 100%;
+          opacity: 0;
+        }
+        54% {
+          left: 100%;
+          opacity: 1;
+        }
+        92% {
+          left: -50%;
+          opacity: 1;
+        }
+        100% {
+          left: -50%;
+          opacity: 0;
+        }
+      }
+
+      // Phase Popup
+      .phase-popup-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+      }
+
+      .phase-popup {
+        background: linear-gradient(
+          135deg,
+          rgba(28, 28, 32, 0.98),
+          rgba(18, 18, 20, 0.98)
+        );
+        border: 1px solid var(--border-metal);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-lg);
+        max-width: 480px;
+        width: 90%;
+        box-shadow:
+          0 20px 60px rgba(0, 0, 0, 0.5),
+          0 0 40px rgba(239, 68, 68, 0.1);
+      }
+
+      .popup-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: var(--spacing-md);
+
+        h3 {
+          font-size: var(--font-size-lg);
+          color: var(--text-primary);
+        }
+      }
+
+      .close-btn {
+        width: 40px;
+        height: 40px;
+        border: 1px solid var(--accent-dim);
+        border-radius: 10px;
+        background: var(--accent-subtle);
+        color: var(--accent-glow);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(153, 27, 27, 0.3);
+          border-color: var(--accent-primary);
+        }
+      }
+
+      .popup-desc {
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+        margin-bottom: var(--spacing-lg);
+        line-height: 1.6;
+      }
+
+      .phases-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+      }
+
+      .phase-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-md);
+        background: var(--metal-dark);
+        border: 1px solid var(--border-metal);
+        border-radius: var(--border-radius-sm);
+        transition: all 0.2s ease;
+
+        &.active {
+          background: rgba(153, 27, 27, 0.2);
+          border-color: var(--accent-primary);
+
+          .phase-icon-wrap {
+            background: var(--accent-primary);
+            color: white;
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+          }
+        }
+      }
+
+      .phase-icon-wrap {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: var(--metal-mid);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-metallic);
+        flex-shrink: 0;
+      }
+
+      .phase-info {
+        flex: 1;
+
+        .phase-name {
+          font-weight: 600;
+          color: var(--text-primary);
+          margin-bottom: 2px;
+        }
+
+        .phase-time {
+          font-family: var(--font-mono);
+          font-size: var(--font-size-xs);
+          color: var(--accent-bright);
+          margin-bottom: 4px;
+        }
+
+        .phase-themes {
+          font-size: var(--font-size-xs);
+          color: rgba(161, 161, 170, 0.9);
+        }
+      }
+
+      .active-badge {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        padding: 4px 8px;
+        background: var(--accent-primary);
+        color: white;
+        border-radius: 4px;
+        animation: pulse-glow 2s ease-in-out infinite;
+      }
+
+      // Grid Düzeni
+      .gundem-grid {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: var(--spacing-lg);
+      }
+
+      // Akış Bölümü
+      .feed-section {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .section-toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        box-sizing: border-box;
+        gap: var(--spacing-md);
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: linear-gradient(
+          90deg,
+          rgba(153, 27, 27, 0.15),
+          rgba(28, 28, 32, 0.9)
+        );
+        border: 1px solid rgba(153, 27, 27, 0.3);
+        border-radius: var(--border-radius-sm);
+        margin-bottom: var(--spacing-md);
+        box-shadow:
+          0 0 20px rgba(153, 27, 27, 0.15),
+          inset 0 0 30px rgba(153, 27, 27, 0.05);
+      }
+
+      .toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+      }
+
+      .toolbar-label {
+        font-family: var(--font-mono);
+        font-size: var(--font-size-xs);
+        color: var(--text-primary);
+        letter-spacing: 0.1em;
+        font-weight: 600;
+      }
+
+      .toolbar-count {
+        font-family: var(--font-mono);
+        font-size: var(--font-size-xs);
+        color: var(--accent-bright);
+        padding: 2px 8px;
+        background: var(--accent-subtle);
+        border: 1px solid var(--accent-dim);
+        border-radius: 10px;
+      }
+
+      .toolbar-meta-btn {
+        font-family: var(--font-mono);
+        font-size: var(--font-size-xs);
+        color: var(--text-muted);
+        padding: 2px 8px;
+        background: transparent;
+        border: 1px solid var(--border-dim);
+        border-radius: 10px;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          color: #a78bfa;
+          border-color: #a78bfa;
+          background: rgba(167, 139, 250, 0.1);
+        }
+
+        &.active {
+          color: #a78bfa;
+          background: rgba(167, 139, 250, 0.15);
+          border-color: rgba(167, 139, 250, 0.3);
+        }
+      }
+
+      .toolbar-category {
+        font-family: var(--font-mono);
+        font-size: var(--font-size-xs);
+        color: #f97316;
+        padding: 2px 8px;
+        background: rgba(249, 115, 22, 0.15);
+        border: 1px solid rgba(249, 115, 22, 0.3);
+        border-radius: 10px;
         text-transform: lowercase;
 
         .slash {
           font-weight: 700;
         }
-
-        .header-icon {
-          color: var(--accent-glow);
-          filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4));
-        }
       }
 
-      .header-sub {
-        font-family: var(--font-mono);
-        font-size: var(--font-size-sm);
-        color: var(--metal-light);
-
-        .cat-ref {
-          color: var(--accent-bright);
-
-          .slash {
-            font-weight: 700;
-          }
-        }
-
-        .header-clear-link {
-          color: var(--accent-bright);
-          text-decoration: none;
-          margin-left: var(--spacing-sm);
-          transition: opacity 0.2s ease;
-
-          &:hover {
-            opacity: 0.8;
-          }
-        }
-      }
-    }
-
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-    }
-
-    .phase-indicator {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 12px;
-      height: 32px;
-      background: var(--accent-subtle);
-      border: 1px solid var(--accent-dim);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: rgba(153, 27, 27, 0.25);
-        border-color: var(--accent-primary);
-      }
-
-      .phase-dot {
-        width: 6px;
-        height: 6px;
-        background: var(--accent-glow);
-        border-radius: 50%;
-        box-shadow: 0 0 6px var(--accent-glow);
-      }
-
-      .phase-label {
-        font-family: var(--font-mono);
-        font-size: 11px;
-        color: var(--accent-bright);
-      }
-    }
-
-    .mobile-brand {
-      display: none;
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--accent-bright);
-      padding: 4px 10px;
-      background: var(--accent-subtle);
-      border: 1px solid var(--accent-dim);
-      border-radius: 6px;
-      text-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
-    }
-
-    .time-display {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-family: var(--font-mono);
-      font-size: 12px;
-      color: var(--accent-bright);
-      padding: 0 12px;
-      height: 32px;
-      background: var(--accent-subtle);
-      border: 1px solid var(--accent-dim);
-      border-radius: 6px;
-
-      lucide-icon {
-        color: var(--accent-bright);
-        position: relative;
-        top: 2px;
-      }
-    }
-
-    // Knight Rider HR - ASMR soft glow animation
-    .knight-rider-hr {
-      position: relative;
-      width: 100%;
-      height: 1px;
-      background: var(--border-metal);
-      margin-bottom: var(--spacing-lg);
-      overflow: hidden;
-
-      &::before {
-        content: '';
-        position: absolute;
-        width: 50%;
-        height: 4px;
-        top: -1.5px;
-        background: linear-gradient(
-          90deg,
-          transparent 0%,
-          rgba(153, 27, 27, 0.3) 15%,
-          rgba(180, 40, 40, 0.8) 50%,
-          rgba(153, 27, 27, 0.3) 85%,
-          transparent 100%
-        );
-        box-shadow:
-          0 0 20px rgba(180, 40, 40, 0.7),
-          0 0 40px rgba(153, 27, 27, 0.5),
-          0 0 60px rgba(153, 27, 27, 0.3),
-          0 0 80px rgba(120, 20, 20, 0.2);
-        animation: knight-rider-asmr 20s ease-in-out infinite;
-      }
-    }
-
-    @keyframes knight-rider-asmr {
-      0% {
-        left: -50%;
-        opacity: 0;
-      }
-      8% {
-        opacity: 1;
-      }
-      46% {
-        left: 100%;
-        opacity: 1;
-      }
-      50% {
-        left: 100%;
-        opacity: 0;
-      }
-      54% {
-        left: 100%;
-        opacity: 1;
-      }
-      92% {
-        left: -50%;
-        opacity: 1;
-      }
-      100% {
-        left: -50%;
-        opacity: 0;
-      }
-    }
-
-    // Phase Popup
-    .phase-popup-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .phase-popup {
-      background: linear-gradient(135deg, rgba(28, 28, 32, 0.98), rgba(18, 18, 20, 0.98));
-      border: 1px solid var(--border-metal);
-      border-radius: var(--border-radius-md);
-      padding: var(--spacing-lg);
-      max-width: 480px;
-      width: 90%;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 40px rgba(239, 68, 68, 0.1);
-    }
-
-    .popup-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: var(--spacing-md);
-
-      h3 {
-        font-size: var(--font-size-lg);
-        color: var(--text-primary);
-      }
-    }
-
-    .close-btn {
-      width: 40px;
-      height: 40px;
-      border: 1px solid var(--accent-dim);
-      border-radius: 10px;
-      background: var(--accent-subtle);
-      color: var(--accent-glow);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: rgba(153, 27, 27, 0.3);
-        border-color: var(--accent-primary);
-      }
-    }
-
-    .popup-desc {
-      font-size: var(--font-size-sm);
-      color: var(--text-secondary);
-      margin-bottom: var(--spacing-lg);
-      line-height: 1.6;
-    }
-
-    .phases-list {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-sm);
-    }
-
-    .phase-item {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-      padding: var(--spacing-md);
-      background: var(--metal-dark);
-      border: 1px solid var(--border-metal);
-      border-radius: var(--border-radius-sm);
-      transition: all 0.2s ease;
-
-      &.active {
-        background: rgba(153, 27, 27, 0.2);
-        border-color: var(--accent-primary);
-
-        .phase-icon-wrap {
-          background: var(--accent-primary);
-          color: white;
-          box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
-        }
-      }
-    }
-
-    .phase-icon-wrap {
-      width: 40px;
-      height: 40px;
-      border-radius: 8px;
-      background: var(--metal-mid);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-metallic);
-      flex-shrink: 0;
-    }
-
-    .phase-info {
-      flex: 1;
-
-      .phase-name {
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 2px;
-      }
-
-      .phase-time {
-        font-family: var(--font-mono);
-        font-size: var(--font-size-xs);
-        color: var(--accent-bright);
-        margin-bottom: 4px;
-      }
-
-      .phase-themes {
-        font-size: var(--font-size-xs);
-        color: rgba(161, 161, 170, 0.9);
-      }
-    }
-
-    .active-badge {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      padding: 4px 8px;
-      background: var(--accent-primary);
-      color: white;
-      border-radius: 4px;
-      animation: pulse-glow 2s ease-in-out infinite;
-    }
-
-    // Grid Düzeni
-    .gundem-grid {
-      display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: var(--spacing-lg);
-    }
-
-    // Akış Bölümü
-    .feed-section {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .section-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      width: 100%;
-      box-sizing: border-box;
-      gap: var(--spacing-md);
-      padding: var(--spacing-sm) var(--spacing-md);
-      background: linear-gradient(90deg, rgba(153, 27, 27, 0.15), rgba(28, 28, 32, 0.9));
-      border: 1px solid rgba(153, 27, 27, 0.3);
-      border-radius: var(--border-radius-sm);
-      margin-bottom: var(--spacing-md);
-      box-shadow: 0 0 20px rgba(153, 27, 27, 0.15), inset 0 0 30px rgba(153, 27, 27, 0.05);
-    }
-
-    .toolbar-left {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-    }
-
-    .toolbar-label {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
-      color: var(--text-primary);
-      letter-spacing: 0.1em;
-      font-weight: 600;
-    }
-
-    .toolbar-count {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
-      color: var(--accent-bright);
-      padding: 2px 8px;
-      background: var(--accent-subtle);
-      border: 1px solid var(--accent-dim);
-      border-radius: 10px;
-    }
-
-    .toolbar-meta-btn {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
-      color: var(--text-muted);
-      padding: 2px 8px;
-      background: transparent;
-      border: 1px solid var(--border-dim);
-      border-radius: 10px;
-      text-decoration: none;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        color: #a78bfa;
-        border-color: #a78bfa;
-        background: rgba(167, 139, 250, 0.1);
-      }
-
-      &.active {
-        color: #a78bfa;
-        background: rgba(167, 139, 250, 0.15);
-        border-color: rgba(167, 139, 250, 0.3);
-      }
-    }
-
-    .toolbar-category {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
-      color: #f97316;
-      padding: 2px 8px;
-      background: rgba(249, 115, 22, 0.15);
-      border: 1px solid rgba(249, 115, 22, 0.3);
-      border-radius: 10px;
-      text-transform: lowercase;
-
-      .slash {
-        font-weight: 700;
-      }
-    }
-
-    .toolbar-clear {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-muted);
-      text-decoration: none;
-      padding: 2px 6px;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-
-      &:hover {
-        color: var(--accent-bright);
-        background: var(--accent-subtle);
-      }
-    }
-
-    .toolbar-actions {
-      display: flex;
-      gap: 2px;
-    }
-
-    .toolbar-btn {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
-      color: rgba(161, 161, 170, 0.9);
-      padding: 4px 10px;
-      background: rgba(39, 39, 42, 0.5);
-      border: 1px solid rgba(63, 63, 70, 0.4);
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        color: var(--text-primary);
-        background: rgba(63, 63, 70, 0.6);
-        border-color: rgba(82, 82, 91, 0.6);
-      }
-
-      &.active {
-        color: var(--accent-bright);
-        background: var(--accent-subtle);
-        border-color: var(--accent-dim);
-      }
-    }
-
-    // Başlık Akışı
-    .topics-feed {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .topic-card {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--spacing-sm);
-      padding: 8px var(--spacing-md);
-      background: linear-gradient(135deg, rgba(28, 28, 32, 0.8), rgba(22, 22, 26, 0.9));
-      border: 1px solid var(--border-metal);
-      border-radius: 6px;
-      position: relative;
-      overflow: hidden;
-      transition: all 0.2s ease;
-      text-decoration: none;
-      cursor: pointer;
-
-      &:hover {
-        border-color: var(--accent-dim);
-        background: rgba(153, 27, 27, 0.08);
-
-        .card-glow {
-          opacity: 1;
-        }
-
-        .card-index {
-          color: var(--accent-bright);
-        }
-
-        .topic-title {
-          color: var(--accent-bright);
-        }
-
-        .card-arrow {
-          opacity: 1;
-          transform: translateX(0);
-          color: var(--accent-bright);
-        }
-      }
-    }
-
-    .card-left {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-      flex: 1;
-      min-width: 0;
-    }
-
-    .card-right {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
-      flex-shrink: 0;
-    }
-
-    .card-index {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: rgba(113, 113, 122, 0.5);
-      min-width: 18px;
-      flex-shrink: 0;
-    }
-
-    .card-glow {
-      position: absolute;
-      left: 0;
-      top: 0;
-      bottom: 0;
-      width: 2px;
-      background: var(--accent-glow);
-      box-shadow: 0 0 10px var(--accent-glow);
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-
-    .topic-title {
-      font-size: 14px;
-      font-weight: 500;
-      font-family: var(--font-entry);
-      text-transform: lowercase;
-      color: var(--text-primary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      text-align: left;
-      transition: color 0.2s ease;
-      min-width: 0;
-    }
-
-    .slash {
-      font-weight: 700;
-    }
-
-    .category-tag {
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: #f97316;
-      text-transform: lowercase;
-      flex-shrink: 0;
-      padding: 3px 8px;
-      background: rgba(249, 115, 22, 0.15);
-      border: 1px solid rgba(249, 115, 22, 0.3);
-      border-radius: 4px;
-      text-decoration: none;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-
-      .slash {
-        font-weight: 700;
-      }
-
-      &:hover {
-        background: rgba(249, 115, 22, 0.25);
-        border-color: rgba(249, 115, 22, 0.5);
-        color: #fb923c;
-      }
-    }
-
-    .meta-date {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-secondary);
-      flex-shrink: 0;
-      text-transform: lowercase;
-    }
-
-    .meta-time {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .topic-stats {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      flex-shrink: 0;
-    }
-
-    .stat-item {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      padding: 4px 8px;
-      border-radius: 5px;
-      min-width: 42px;
-      transition: all 0.2s ease;
-
-      &.voltaj {
-        color: #22c55e;
-        background: rgba(34, 197, 94, 0.1);
-        border: 1px solid rgba(34, 197, 94, 0.3);
-
-        lucide-icon {
-          filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.5));
-        }
-      }
-
-      &.toprak {
-        color: #ef4444;
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-
-        lucide-icon {
-          filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.5));
-        }
-      }
-
-      &.comments {
-        color: #3b82f6;
-        background: rgba(59, 130, 246, 0.1);
-        border: 1px solid rgba(59, 130, 246, 0.3);
-
-        lucide-icon {
-          filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.5));
-        }
-      }
-    }
-
-    .card-arrow {
-      color: var(--metal-mid);
-      opacity: 0;
-      transform: translateX(-4px);
-      transition: all 0.2s ease;
-      flex-shrink: 0;
-    }
-
-    // Yan Paneller
-    .sidebar-panels {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-lg);
-    }
-
-    .panel {
-      background: linear-gradient(135deg, rgba(28, 28, 32, 0.85), rgba(22, 22, 26, 0.9));
-      border: 1px solid var(--border-metal);
-      border-radius: var(--border-radius-md);
-      overflow: hidden;
-    }
-
-    .panel-header {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      padding: var(--spacing-sm) var(--spacing-md);
-      background: linear-gradient(90deg, rgba(153, 27, 27, 0.1), transparent);
-      border-bottom: 1px solid var(--border-metal);
-
-      .panel-icon {
-        color: var(--accent-bright);
-      }
-
-      .panel-title {
-        flex: 1;
-        font-family: var(--font-mono);
-        font-size: 11px;
-        font-weight: 600;
-        color: var(--text-metallic);
-        letter-spacing: 0.05em;
-      }
-
-      .panel-badge {
+      .toolbar-clear {
         font-family: var(--font-mono);
         font-size: 10px;
-        color: var(--accent-bright);
+        color: var(--text-muted);
+        text-decoration: none;
         padding: 2px 6px;
-        background: var(--accent-subtle);
-        border-radius: 8px;
-      }
+        border-radius: 4px;
+        transition: all 0.2s ease;
 
-      .panel-sub-badge {
-        font-family: var(--font-mono);
-        font-size: 8px;
-        color: #f97316;
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-        text-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
-        animation: glow-pulse-orange 2s ease-in-out infinite;
-      }
-
-      @keyframes glow-pulse-orange {
-        0%, 100% { opacity: 0.6; text-shadow: 0 0 4px rgba(249, 115, 22, 0.4); }
-        50% { opacity: 1; text-shadow: 0 0 12px rgba(249, 115, 22, 0.8); }
-      }
-    }
-
-    .panel-body {
-      padding: var(--spacing-sm);
-    }
-
-    // Durum Paneli
-    .status-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .status-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 12px;
-      background: rgba(39, 39, 42, 0.6);
-      border: 1px solid rgba(63, 63, 70, 0.4);
-      border-radius: 6px;
-
-      .item-label {
-        font-family: var(--font-mono);
-        font-size: 10px;
-        color: var(--text-secondary);
-      }
-
-      .item-value {
-        font-family: var(--font-mono);
-        font-size: 10px;
-        color: var(--text-primary);
-
-        &.online {
-          color: #22c55e;
-          text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
-        }
-      }
-    }
-
-    // Ajanlar Paneli
-    .agents-list {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .agent-item {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      padding: 8px;
-      background: var(--metal-dark);
-      border-radius: 6px;
-      transition: background 0.2s ease;
-      text-decoration: none;
-      color: inherit;
-      cursor: pointer;
-      position: relative;
-      z-index: 1;
-
-      &:hover {
-        background: rgba(153, 27, 27, 0.15);
-      }
-    }
-
-    .agent-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
-      background: linear-gradient(135deg, var(--metal-mid), var(--metal-dark));
-      border: 2px solid var(--border-metal);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--text-muted);
-
-      &.online {
-        border-color: #22c55e;
-        box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
-        color: #22c55e;
-      }
-
-      &.idle {
-        border-color: #f97316;
-        box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
-        color: #f97316;
-      }
-    }
-
-    .agent-info {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      gap: 1px;
-
-      .agent-name {
-        font-family: var(--font-mono);
-        font-size: var(--font-size-sm);
-        color: var(--text-primary);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.2;
-      }
-
-      .agent-role {
-        font-size: 10px;
-        color: var(--metal-light);
-        line-height: 1.2;
-      }
-    }
-
-    .status-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-
-      &.online {
-        background: #22c55e;
-        box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
-      }
-
-      &.idle {
-        background: #f97316;
-        box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
-      }
-    }
-
-    // Son Katılanlar Paneli
-    .new-agents-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .new-agent-item {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      padding: 6px 8px;
-      background: var(--metal-dark);
-      border-radius: 4px;
-      transition: background 0.2s ease;
-      text-decoration: none;
-      color: inherit;
-
-      &:hover {
-        background: rgba(153, 27, 27, 0.15);
-      }
-    }
-
-    .new-agent-avatar {
-      width: 24px;
-      height: 24px;
-      border-radius: 4px;
-      background: linear-gradient(135deg, var(--accent-dim), var(--accent-subtle));
-      border: 1px solid var(--accent-primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: var(--accent-bright);
-      flex-shrink: 0;
-    }
-
-    .new-agent-name {
-      flex: 1;
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-primary);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .new-agent-time {
-      font-family: var(--font-mono);
-      font-size: 10px;
-      color: var(--metal-light);
-      flex-shrink: 0;
-    }
-
-    // DEBE Paneli
-    .debe-list {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .debe-item {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      padding: 8px;
-      color: var(--text-primary);
-      text-decoration: none;
-      border-radius: 4px;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: rgba(153, 27, 27, 0.15);
-
-        .debe-rank {
+        &:hover {
           color: var(--accent-bright);
-        }
-
-        .debe-arrow {
-          opacity: 1;
-          transform: translateX(0);
+          background: var(--accent-subtle);
         }
       }
-    }
 
-    .debe-rank {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
-      color: var(--metal-light);
-      min-width: 24px;
-      transition: color 0.2s ease;
-    }
-
-    .debe-title {
-      flex: 1;
-      font-size: var(--font-size-sm);
-      font-family: var(--font-entry);
-      text-transform: lowercase;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .debe-arrow {
-      color: var(--metal-light);
-      opacity: 0;
-      transform: translateX(-4px);
-      transition: all 0.2s ease;
-    }
-
-    .panel-footer-link {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--spacing-xs);
-      padding: 10px var(--spacing-md);
-      font-family: var(--font-mono);
-      font-size: var(--font-size-xs);
-      color: var(--text-secondary);
-      background: rgba(39, 39, 42, 0.6);
-      border-top: 1px solid rgba(63, 63, 70, 0.5);
-      text-decoration: none;
-      transition: all 0.2s ease;
-
-      &:hover {
-        color: var(--accent-bright);
-        background: rgba(153, 27, 27, 0.2);
-      }
-    }
-
-    // İstatistik Paneli
-    .stats-panel {
-      padding: var(--spacing-md);
-    }
-
-    .stats-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: var(--spacing-sm);
-    }
-
-    .stat-block {
-      text-align: center;
-      padding: var(--spacing-sm);
-      background: rgba(39, 39, 42, 0.7);
-      border: 1px solid rgba(63, 63, 70, 0.4);
-      border-radius: 6px;
-
-      .stat-number {
-        display: block;
-        font-family: var(--font-mono);
-        font-size: 24px;
-        font-weight: 700;
-        color: var(--accent-bright);
-        text-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+      .toolbar-actions {
+        display: flex;
+        gap: 2px;
       }
 
-      .stat-name {
-        font-size: 10px;
-        color: rgba(161, 161, 170, 0.9);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-      }
-    }
-
-    // Boş Durum
-    .empty-panel {
-      padding: var(--spacing-xl);
-      text-align: center;
-      background: linear-gradient(135deg, rgba(28, 28, 32, 0.8), rgba(22, 22, 26, 0.9));
-      border: 1px solid var(--border-metal);
-      border-radius: var(--border-radius-md);
-    }
-
-    .empty-visual {
-      position: relative;
-      margin-bottom: var(--spacing-lg);
-      display: inline-block;
-
-      .empty-icon {
-        color: var(--metal-mid);
-        opacity: 0.6;
-      }
-
-      .scan-line {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-          180deg,
-          transparent 0%,
-          rgba(239, 68, 68, 0.2) 50%,
-          transparent 100%
-        );
-        animation: scan 2s ease-in-out infinite;
-      }
-    }
-
-    @keyframes scan {
-      0%, 100% { opacity: 0; }
-      50% { opacity: 1; }
-    }
-
-    .empty-text {
-      margin-bottom: var(--spacing-md);
-
-      .empty-title {
-        font-size: var(--font-size-md);
-        color: var(--text-secondary);
-        margin-bottom: 4px;
-      }
-
-      .empty-sub {
-        font-size: var(--font-size-sm);
-        color: var(--metal-light);
-      }
-    }
-
-    .empty-status {
-      .status-item {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
+      .toolbar-btn {
         font-family: var(--font-mono);
         font-size: var(--font-size-xs);
-        color: var(--text-secondary);
-        padding: 6px 12px;
-        background: rgba(39, 39, 42, 0.8);
+        color: rgba(161, 161, 170, 0.9);
+        padding: 4px 10px;
+        background: rgba(39, 39, 42, 0.5);
+        border: 1px solid rgba(63, 63, 70, 0.4);
         border-radius: 4px;
-        border: 1px solid rgba(63, 63, 70, 0.6);
-      }
+        cursor: pointer;
+        transition: all 0.2s ease;
 
-      .status-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
+        &:hover {
+          color: var(--text-primary);
+          background: rgba(63, 63, 70, 0.6);
+          border-color: rgba(82, 82, 91, 0.6);
+        }
 
-        &.offline {
-          background: rgba(161, 161, 170, 0.6);
+        &.active {
+          color: var(--accent-bright);
+          background: var(--accent-subtle);
+          border-color: var(--accent-dim);
         }
       }
-    }
 
-    .empty-small {
-      padding: var(--spacing-md);
-      text-align: center;
-      color: rgba(161, 161, 170, 0.85);
-      font-size: var(--font-size-sm);
-    }
-
-    // Yükleme Durumu
-    .loading-panel {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--spacing-md);
-      padding: var(--spacing-xl);
-      color: rgba(161, 161, 170, 0.85);
-
-      p {
-        font-family: var(--font-mono);
-        font-size: var(--font-size-sm);
-      }
-    }
-
-    .loader-ring {
-      width: 40px;
-      height: 40px;
-      border: 2px solid var(--metal-dark);
-      border-radius: 50%;
-      position: relative;
-
-      &.small {
-        width: 24px;
-        height: 24px;
-      }
-
-      .ring-inner {
-        position: absolute;
-        inset: -2px;
-        border: 2px solid transparent;
-        border-top-color: var(--accent-glow);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    .load-more {
-      display: flex;
-      justify-content: center;
-      padding: var(--spacing-lg);
-    }
-
-    .load-more-btn {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-sm);
-      color: var(--text-secondary);
-      padding: 10px 20px;
-      background: var(--metal-dark);
-      border: 1px solid var(--border-metal);
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-
-      &:hover {
-        color: var(--accent-bright);
-        border-color: var(--accent-dim);
-        background: rgba(153, 27, 27, 0.15);
-      }
-    }
-
-    // Responsive - Tablet
-    @media (max-width: 1100px) {
-      .gundem-grid {
-        grid-template-columns: 1fr 280px;
-        gap: var(--spacing-md);
-      }
-    }
-
-    // Responsive - Small Tablet / Large Mobile
-    @media (max-width: 900px) {
-      .gundem-grid {
-        grid-template-columns: 1fr;
-        gap: var(--spacing-md);
-      }
-
-      .sidebar-panels {
-        display: grid;
-        grid-template-columns: repeat(2, 1fr);
-        order: -1;
-        gap: var(--spacing-md);
-      }
-
-      .page-header {
+      // Başlık Akışı
+      .topics-feed {
+        display: flex;
         flex-direction: column;
-        gap: var(--spacing-sm);
-      }
-
-      .header-right {
-        width: 100%;
-        justify-content: space-between;
-      }
-
-      .section-toolbar {
-        flex-wrap: wrap;
-        gap: var(--spacing-sm);
-      }
-    }
-
-    // Responsive - Mobile
-    @media (max-width: 600px) {
-      :host {
-        display: block;
-        width: 100%;
-        max-width: 100vw;
-        overflow-x: hidden;
-      }
-
-      .gundem-page {
-        padding: 0 var(--spacing-xs);
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-        overflow-x: hidden;
-      }
-
-      .feed-section {
-        width: 100%;
-        max-width: 100%;
-        overflow: hidden;
-      }
-
-      .topics-feed {
-        width: 100%;
-        max-width: 100%;
-      }
-
-      .page-header {
-        padding-bottom: var(--spacing-xs);
-        gap: var(--spacing-xs);
-
-        h1 {
-          font-size: 18px;
-          gap: var(--spacing-xs);
-
-          lucide-icon {
-            display: none;
-          }
-        }
-
-        .header-sub {
-          font-size: 11px;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 4px;
-        }
-
-        .header-clear-link {
-          margin-left: 0 !important;
-        }
-      }
-
-      .header-right {
-        display: none;
-      }
-
-      .knight-rider-hr {
-        margin-bottom: var(--spacing-sm);
-        width: 100%;
-        max-width: 100%;
-      }
-
-      .gundem-grid {
-        width: 100%;
-        max-width: 100%;
-      }
-
-      .sidebar-panels {
-        display: none;
-      }
-
-      .section-toolbar {
-        padding: var(--spacing-xs) var(--spacing-sm);
-        flex-wrap: nowrap;
-        gap: 4px;
-
-        .toolbar-left {
-          flex-wrap: nowrap;
-          gap: 4px;
-          flex: 0 0 auto;
-          min-width: 0;
-        }
-
-        .toolbar-label {
-          font-size: 10px;
-        }
-
-        .toolbar-category {
-          display: none;
-        }
-
-        .toolbar-clear {
-          display: none;
-        }
-
-        .toolbar-count {
-          font-size: 10px;
-          padding: 1px 6px;
-        }
-
-        .toolbar-actions {
-          flex: 1;
-          justify-content: flex-end;
-        }
-
-        .toolbar-btn {
-          padding: 4px 8px;
-          font-size: 10px;
-        }
-      }
-
-      .topics-feed {
-        gap: 8px;
-      }
-
-      .section-toolbar {
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
+        gap: 6px;
       }
 
       .topic-card {
-        padding: 10px var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
         gap: var(--spacing-sm);
-        width: 100%;
-        max-width: 100%;
-        box-sizing: border-box;
-        flex-wrap: nowrap;
+        padding: 8px var(--spacing-md);
+        background: linear-gradient(
+          135deg,
+          rgba(28, 28, 32, 0.8),
+          rgba(22, 22, 26, 0.9)
+        );
+        border: 1px solid var(--border-metal);
+        border-radius: 6px;
+        position: relative;
+        overflow: hidden;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        cursor: pointer;
+
+        &:hover {
+          border-color: var(--accent-dim);
+          background: rgba(153, 27, 27, 0.08);
+
+          .card-glow {
+            opacity: 1;
+          }
+
+          .card-index {
+            color: var(--accent-bright);
+          }
+
+          .topic-title {
+            color: var(--accent-bright);
+          }
+
+          .card-arrow {
+            opacity: 1;
+            transform: translateX(0);
+            color: var(--accent-bright);
+          }
+        }
       }
 
       .card-left {
-        gap: var(--spacing-sm);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
         flex: 1;
         min-width: 0;
       }
 
       .card-right {
-        gap: var(--spacing-xs);
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
         flex-shrink: 0;
       }
 
       .card-index {
-        min-width: 20px;
+        font-family: var(--font-mono);
         font-size: 10px;
+        color: rgba(113, 113, 122, 0.5);
+        min-width: 18px;
+        flex-shrink: 0;
+      }
+
+      .card-glow {
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: var(--accent-glow);
+        box-shadow: 0 0 10px var(--accent-glow);
+        opacity: 0;
+        transition: opacity 0.2s ease;
       }
 
       .topic-title {
-        font-size: 13px;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: var(--font-entry);
+        text-transform: lowercase;
+        color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: left;
+        transition: color 0.2s ease;
+        min-width: 0;
+      }
+
+      .slash {
+        font-weight: 700;
       }
 
       .category-tag {
-        display: none;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: #f97316;
+        text-transform: lowercase;
+        flex-shrink: 0;
+        padding: 3px 8px;
+        background: rgba(249, 115, 22, 0.15);
+        border: 1px solid rgba(249, 115, 22, 0.3);
+        border-radius: 4px;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+
+        .slash {
+          font-weight: 700;
+        }
+
+        &:hover {
+          background: rgba(249, 115, 22, 0.25);
+          border-color: rgba(249, 115, 22, 0.5);
+          color: #fb923c;
+        }
       }
 
       .meta-date {
-        display: none;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-secondary);
+        flex-shrink: 0;
+        text-transform: lowercase;
       }
 
       .meta-time {
-        display: none;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        color: var(--text-muted);
+        flex-shrink: 0;
       }
 
       .topic-stats {
-        gap: 4px;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        flex-shrink: 0;
       }
 
       .stat-item {
-        font-size: 10px;
-        padding: 2px 4px;
-        min-width: 36px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        padding: 4px 8px;
+        border-radius: 5px;
+        min-width: 42px;
+        transition: all 0.2s ease;
 
-        &.toprak,
+        &.voltaj {
+          color: #22c55e;
+          background: rgba(34, 197, 94, 0.1);
+          border: 1px solid rgba(34, 197, 94, 0.3);
+
+          lucide-icon {
+            filter: drop-shadow(0 0 3px rgba(34, 197, 94, 0.5));
+          }
+        }
+
+        &.toprak {
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+
+          lucide-icon {
+            filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.5));
+          }
+        }
+
         &.comments {
-          display: none;
+          color: #3b82f6;
+          background: rgba(59, 130, 246, 0.1);
+          border: 1px solid rgba(59, 130, 246, 0.3);
+
+          lucide-icon {
+            filter: drop-shadow(0 0 3px rgba(59, 130, 246, 0.5));
+          }
         }
       }
 
       .card-arrow {
-        display: none;
+        color: var(--metal-mid);
+        opacity: 0;
+        transform: translateX(-4px);
+        transition: all 0.2s ease;
+        flex-shrink: 0;
       }
 
-      .load-more {
-        padding: var(--spacing-md);
+      // Yan Paneller
+      .sidebar-panels {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-lg);
       }
 
-      .load-more-btn {
-        width: 100%;
-        padding: 12px;
-      }
-
-      .empty-panel {
-        padding: var(--spacing-md);
-
-        .empty-icon {
-          width: 48px;
-          height: 48px;
-        }
-      }
-    }
-
-    // Mobile Bottom Panel - içerikle birlikte scroll
-    .mobile-bottom-panel {
-      display: none;
-      position: relative;
-      background: linear-gradient(180deg, rgba(18, 18, 20, 0.99), rgba(10, 10, 11, 1));
-      border-top: 1px solid var(--border-metal);
-      margin-top: var(--spacing-md);
-      border-radius: var(--border-radius-md);
-      overflow: hidden;
-
-      .bottom-panel-content {
-        max-height: 0;
+      .panel {
+        background: linear-gradient(
+          135deg,
+          rgba(28, 28, 32, 0.85),
+          rgba(22, 22, 26, 0.9)
+        );
+        border: 1px solid var(--border-metal);
+        border-radius: var(--border-radius-md);
         overflow: hidden;
-        transition: max-height 0.3s ease;
       }
 
-      &.expanded {
-        .bottom-panel-content {
-          max-height: 60vh;
+      .panel-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: linear-gradient(90deg, rgba(153, 27, 27, 0.1), transparent);
+        border-bottom: 1px solid var(--border-metal);
+
+        .panel-icon {
+          color: var(--accent-bright);
+        }
+
+        .panel-title {
+          flex: 1;
+          font-family: var(--font-mono);
+          font-size: 11px;
+          font-weight: 600;
+          color: var(--text-metallic);
+          letter-spacing: 0.05em;
+        }
+
+        .panel-badge {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          color: var(--accent-bright);
+          padding: 2px 6px;
+          background: var(--accent-subtle);
+          border-radius: 8px;
+        }
+
+        .panel-sub-badge {
+          font-family: var(--font-mono);
+          font-size: 8px;
+          color: #f97316;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+          text-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
+          animation: glow-pulse-orange 2s ease-in-out infinite;
+        }
+
+        @keyframes glow-pulse-orange {
+          0%,
+          100% {
+            opacity: 0.6;
+            text-shadow: 0 0 4px rgba(249, 115, 22, 0.4);
+          }
+          50% {
+            opacity: 1;
+            text-shadow: 0 0 12px rgba(249, 115, 22, 0.8);
+          }
         }
       }
-    }
 
-    .bottom-panel-toggle {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: var(--spacing-sm);
-      width: 100%;
-      height: 44px;
-      background: linear-gradient(90deg, rgba(153, 27, 27, 0.15), transparent, rgba(153, 27, 27, 0.15));
-      border: none;
-      border-bottom: 1px solid var(--border-metal);
-      color: var(--text-secondary);
-      font-family: var(--font-mono);
-      font-size: 12px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-
-      lucide-icon:first-child {
-        color: var(--accent-bright);
+      .panel-body {
+        padding: var(--spacing-sm);
       }
 
-      lucide-icon:last-child {
-        color: var(--metal-light);
-        transition: transform 0.3s ease;
+      // Durum Paneli
+      .status-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
       }
 
-      &:active {
-        background: rgba(153, 27, 27, 0.25);
-      }
-    }
+      .status-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 12px;
+        background: rgba(39, 39, 42, 0.6);
+        border: 1px solid rgba(63, 63, 70, 0.4);
+        border-radius: 6px;
 
-    .bottom-panel-content {
-      overflow-y: auto;
-      padding: 0 var(--spacing-sm);
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-sm);
-    }
+        .item-label {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          color: var(--text-secondary);
+        }
 
-    .mobile-bottom-panel.expanded .bottom-panel-content {
-      padding: var(--spacing-sm);
-    }
+        .item-value {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          color: var(--text-primary);
 
-    .mobile-panel {
-      background: var(--metal-dark);
-      border: 1px solid var(--border-metal);
-      border-radius: 8px;
-      overflow: hidden;
-    }
-
-    .mobile-panel-header {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      padding: var(--spacing-sm) var(--spacing-md);
-      background: rgba(153, 27, 27, 0.1);
-      border-bottom: 1px solid var(--border-metal);
-      font-family: var(--font-mono);
-      font-size: 11px;
-      color: var(--text-metallic);
-
-      lucide-icon {
-        color: var(--accent-bright);
+          &.online {
+            color: #22c55e;
+            text-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+          }
+        }
       }
 
-      .badge {
-        margin-left: auto;
-        padding: 2px 6px;
-        background: var(--accent-subtle);
-        color: var(--accent-bright);
-        border-radius: 8px;
-        font-size: 10px;
-      }
-    }
-
-    .mobile-status-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 4px;
-      padding: var(--spacing-xs);
-    }
-
-    .mobile-status-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px 10px;
-      background: rgba(39, 39, 42, 0.6);
-      border: 1px solid rgba(63, 63, 70, 0.4);
-      border-radius: 6px;
-
-      .label {
-        font-family: var(--font-mono);
-        font-size: 10px;
-        color: var(--text-secondary);
+      // Ajanlar Paneli
+      .agents-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
 
-      .value {
-        font-family: var(--font-mono);
-        font-size: 10px;
-        color: var(--text-primary);
+      .agent-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: 8px;
+        background: var(--metal-dark);
+        border-radius: 6px;
+        transition: background 0.2s ease;
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+        position: relative;
+        z-index: 1;
+
+        &:hover {
+          background: rgba(153, 27, 27, 0.15);
+        }
+      }
+
+      .agent-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background: linear-gradient(
+          135deg,
+          var(--metal-mid),
+          var(--metal-dark)
+        );
+        border: 2px solid var(--border-metal);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
 
         &.online {
+          border-color: #22c55e;
+          box-shadow: 0 0 10px rgba(34, 197, 94, 0.3);
           color: #22c55e;
-          text-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
         }
 
-        &.phase {
-          color: var(--accent-bright);
-          font-size: 9px;
+        &.idle {
+          border-color: #f97316;
+          box-shadow: 0 0 10px rgba(249, 115, 22, 0.3);
+          color: #f97316;
         }
       }
-    }
 
-    .mobile-agents-list {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      padding: var(--spacing-xs);
-    }
+      .agent-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 1px;
 
-    .mobile-agent {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-      padding: 6px 8px;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
+        .agent-name {
+          font-family: var(--font-mono);
+          font-size: var(--font-size-sm);
+          color: var(--text-primary);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          line-height: 1.2;
+        }
 
-      .agent-dot {
-        width: 6px;
-        height: 6px;
+        .agent-role {
+          font-size: 10px;
+          color: var(--metal-light);
+          line-height: 1.2;
+        }
+      }
+
+      .status-indicator {
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
         flex-shrink: 0;
 
         &.online {
           background: #22c55e;
-          box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+          box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
         }
 
         &.idle {
           background: #f97316;
-          box-shadow: 0 0 6px rgba(249, 115, 22, 0.5);
-        }
-
-        &.new {
-          background: var(--accent-bright);
-          box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+          box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
         }
       }
 
-      .agent-name {
+      // Son Katılanlar Paneli
+      .new-agents-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .new-agent-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: 6px 8px;
+        background: var(--metal-dark);
+        border-radius: 4px;
+        transition: background 0.2s ease;
+        text-decoration: none;
+        color: inherit;
+
+        &:hover {
+          background: rgba(153, 27, 27, 0.15);
+        }
+      }
+
+      .new-agent-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        background: linear-gradient(
+          135deg,
+          var(--accent-dim),
+          var(--accent-subtle)
+        );
+        border: 1px solid var(--accent-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--accent-bright);
+        flex-shrink: 0;
+      }
+
+      .new-agent-name {
         flex: 1;
         font-family: var(--font-mono);
         font-size: 11px;
         color: var(--text-primary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
 
-      .agent-time {
+      .new-agent-time {
         font-family: var(--font-mono);
         font-size: 10px;
         color: var(--metal-light);
+        flex-shrink: 0;
       }
-    }
 
-    .mobile-empty {
-      padding: 8px;
-      text-align: center;
-      font-size: 11px;
-      color: var(--metal-light);
-      font-style: italic;
-    }
+      // DEBE Paneli
+      .debe-list {
+        display: flex;
+        flex-direction: column;
+      }
 
-    @media (max-width: 600px) {
+      .debe-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: 8px;
+        color: var(--text-primary);
+        text-decoration: none;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(153, 27, 27, 0.15);
+
+          .debe-rank {
+            color: var(--accent-bright);
+          }
+
+          .debe-arrow {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      }
+
+      .debe-rank {
+        font-family: var(--font-mono);
+        font-size: var(--font-size-xs);
+        color: var(--metal-light);
+        min-width: 24px;
+        transition: color 0.2s ease;
+      }
+
+      .debe-title {
+        flex: 1;
+        font-size: var(--font-size-sm);
+        font-family: var(--font-entry);
+        text-transform: lowercase;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .debe-arrow {
+        color: var(--metal-light);
+        opacity: 0;
+        transform: translateX(-4px);
+        transition: all 0.2s ease;
+      }
+
+      .panel-footer-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-xs);
+        padding: 10px var(--spacing-md);
+        font-family: var(--font-mono);
+        font-size: var(--font-size-xs);
+        color: var(--text-secondary);
+        background: rgba(39, 39, 42, 0.6);
+        border-top: 1px solid rgba(63, 63, 70, 0.5);
+        text-decoration: none;
+        transition: all 0.2s ease;
+
+        &:hover {
+          color: var(--accent-bright);
+          background: rgba(153, 27, 27, 0.2);
+        }
+      }
+
+      // İstatistik Paneli
+      .stats-panel {
+        padding: var(--spacing-md);
+      }
+
+      .stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--spacing-sm);
+      }
+
+      .stat-block {
+        text-align: center;
+        padding: var(--spacing-sm);
+        background: rgba(39, 39, 42, 0.7);
+        border: 1px solid rgba(63, 63, 70, 0.4);
+        border-radius: 6px;
+
+        .stat-number {
+          display: block;
+          font-family: var(--font-mono);
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--accent-bright);
+          text-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+        }
+
+        .stat-name {
+          font-size: 10px;
+          color: rgba(161, 161, 170, 0.9);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+      }
+
+      // Boş Durum
+      .empty-panel {
+        padding: var(--spacing-xl);
+        text-align: center;
+        background: linear-gradient(
+          135deg,
+          rgba(28, 28, 32, 0.8),
+          rgba(22, 22, 26, 0.9)
+        );
+        border: 1px solid var(--border-metal);
+        border-radius: var(--border-radius-md);
+      }
+
+      .empty-visual {
+        position: relative;
+        margin-bottom: var(--spacing-lg);
+        display: inline-block;
+
+        .empty-icon {
+          color: var(--metal-mid);
+          opacity: 0.6;
+        }
+
+        .scan-line {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            180deg,
+            transparent 0%,
+            rgba(239, 68, 68, 0.2) 50%,
+            transparent 100%
+          );
+          animation: scan 2s ease-in-out infinite;
+        }
+      }
+
+      @keyframes scan {
+        0%,
+        100% {
+          opacity: 0;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .empty-text {
+        margin-bottom: var(--spacing-md);
+
+        .empty-title {
+          font-size: var(--font-size-md);
+          color: var(--text-secondary);
+          margin-bottom: 4px;
+        }
+
+        .empty-sub {
+          font-size: var(--font-size-sm);
+          color: var(--metal-light);
+        }
+      }
+
+      .empty-status {
+        .status-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-family: var(--font-mono);
+          font-size: var(--font-size-xs);
+          color: var(--text-secondary);
+          padding: 6px 12px;
+          background: rgba(39, 39, 42, 0.8);
+          border-radius: 4px;
+          border: 1px solid rgba(63, 63, 70, 0.6);
+        }
+
+        .status-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+
+          &.offline {
+            background: rgba(161, 161, 170, 0.6);
+          }
+        }
+      }
+
+      .empty-small {
+        padding: var(--spacing-md);
+        text-align: center;
+        color: rgba(161, 161, 170, 0.85);
+        font-size: var(--font-size-sm);
+      }
+
+      // Yükleme Durumu
+      .loading-panel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-xl);
+        color: rgba(161, 161, 170, 0.85);
+
+        p {
+          font-family: var(--font-mono);
+          font-size: var(--font-size-sm);
+        }
+      }
+
+      .loader-ring {
+        width: 40px;
+        height: 40px;
+        border: 2px solid var(--metal-dark);
+        border-radius: 50%;
+        position: relative;
+
+        &.small {
+          width: 24px;
+          height: 24px;
+        }
+
+        .ring-inner {
+          position: absolute;
+          inset: -2px;
+          border: 2px solid transparent;
+          border-top-color: var(--accent-glow);
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+        }
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .load-more {
+        display: flex;
+        justify-content: center;
+        padding: var(--spacing-lg);
+      }
+
+      .load-more-btn {
+        font-family: var(--font-mono);
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+        padding: 10px 20px;
+        background: var(--metal-dark);
+        border: 1px solid var(--border-metal);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          color: var(--accent-bright);
+          border-color: var(--accent-dim);
+          background: rgba(153, 27, 27, 0.15);
+        }
+      }
+
+      // Responsive - Tablet
+      @media (max-width: 1100px) {
+        .gundem-grid {
+          grid-template-columns: 1fr 280px;
+          gap: var(--spacing-md);
+        }
+      }
+
+      // Responsive - Small Tablet / Large Mobile
+      @media (max-width: 900px) {
+        .gundem-grid {
+          grid-template-columns: 1fr;
+          gap: var(--spacing-md);
+        }
+
+        .sidebar-panels {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          order: -1;
+          gap: var(--spacing-md);
+        }
+
+        .page-header {
+          flex-direction: column;
+          gap: var(--spacing-sm);
+        }
+
+        .header-right {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .section-toolbar {
+          flex-wrap: wrap;
+          gap: var(--spacing-sm);
+        }
+      }
+
+      // Responsive - Mobile
+      @media (max-width: 600px) {
+        :host {
+          display: block;
+          width: 100%;
+          max-width: 100vw;
+          overflow-x: hidden;
+        }
+
+        .gundem-page {
+          padding: 0 var(--spacing-xs);
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+          overflow-x: hidden;
+        }
+
+        .feed-section {
+          width: 100%;
+          max-width: 100%;
+          overflow: hidden;
+        }
+
+        .topics-feed {
+          width: 100%;
+          max-width: 100%;
+        }
+
+        .page-header {
+          padding-bottom: var(--spacing-xs);
+          gap: var(--spacing-xs);
+
+          h1 {
+            font-size: 18px;
+            gap: var(--spacing-xs);
+
+            lucide-icon {
+              display: none;
+            }
+          }
+
+          .header-sub {
+            font-size: 11px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+          }
+
+          .header-clear-link {
+            margin-left: 0 !important;
+          }
+        }
+
+        .header-right {
+          display: none;
+        }
+
+        .knight-rider-hr {
+          margin-bottom: var(--spacing-sm);
+          width: 100%;
+          max-width: 100%;
+        }
+
+        .gundem-grid {
+          width: 100%;
+          max-width: 100%;
+        }
+
+        .sidebar-panels {
+          display: none;
+        }
+
+        .section-toolbar {
+          padding: var(--spacing-xs) var(--spacing-sm);
+          flex-wrap: nowrap;
+          gap: 4px;
+
+          .toolbar-left {
+            flex-wrap: nowrap;
+            gap: 4px;
+            flex: 0 0 auto;
+            min-width: 0;
+          }
+
+          .toolbar-label {
+            font-size: 10px;
+          }
+
+          .toolbar-category {
+            display: none;
+          }
+
+          .toolbar-clear {
+            display: none;
+          }
+
+          .toolbar-count {
+            font-size: 10px;
+            padding: 1px 6px;
+          }
+
+          .toolbar-actions {
+            flex: 1;
+            justify-content: flex-end;
+          }
+
+          .toolbar-btn {
+            padding: 4px 8px;
+            font-size: 10px;
+          }
+        }
+
+        .topics-feed {
+          gap: 8px;
+        }
+
+        .section-toolbar {
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+        }
+
+        .topic-card {
+          padding: 10px var(--spacing-sm);
+          gap: var(--spacing-sm);
+          width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
+          flex-wrap: nowrap;
+        }
+
+        .card-left {
+          gap: var(--spacing-sm);
+          flex: 1;
+          min-width: 0;
+        }
+
+        .card-right {
+          gap: var(--spacing-xs);
+          flex-shrink: 0;
+        }
+
+        .card-index {
+          min-width: 20px;
+          font-size: 10px;
+        }
+
+        .topic-title {
+          font-size: 13px;
+        }
+
+        .category-tag {
+          display: none;
+        }
+
+        .meta-date {
+          display: none;
+        }
+
+        .meta-time {
+          display: none;
+        }
+
+        .topic-stats {
+          gap: 4px;
+        }
+
+        .stat-item {
+          font-size: 10px;
+          padding: 2px 4px;
+          min-width: 36px;
+
+          &.toprak,
+          &.comments {
+            display: none;
+          }
+        }
+
+        .card-arrow {
+          display: none;
+        }
+
+        .load-more {
+          padding: var(--spacing-md);
+        }
+
+        .load-more-btn {
+          width: 100%;
+          padding: 12px;
+        }
+
+        .empty-panel {
+          padding: var(--spacing-md);
+
+          .empty-icon {
+            width: 48px;
+            height: 48px;
+          }
+        }
+      }
+
+      // Mobile Bottom Panel - içerikle birlikte scroll
       .mobile-bottom-panel {
-        display: block;
-      }
-
-      // Hide the sidebar panels on mobile since we have the bottom panel
-      .sidebar-panels {
         display: none;
+        position: relative;
+        background: linear-gradient(
+          180deg,
+          rgba(18, 18, 20, 0.99),
+          rgba(10, 10, 11, 1)
+        );
+        border-top: 1px solid var(--border-metal);
+        margin-top: var(--spacing-md);
+        border-radius: var(--border-radius-md);
+        overflow: hidden;
+
+        .bottom-panel-content {
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 0.3s ease;
+        }
+
+        &.expanded {
+          .bottom-panel-content {
+            max-height: 60vh;
+          }
+        }
       }
 
-      .gundem-grid {
-        grid-template-columns: 1fr;
+      .bottom-panel-toggle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--spacing-sm);
+        width: 100%;
+        height: 44px;
+        background: linear-gradient(
+          90deg,
+          rgba(153, 27, 27, 0.15),
+          transparent,
+          rgba(153, 27, 27, 0.15)
+        );
+        border: none;
+        border-bottom: 1px solid var(--border-metal);
+        color: var(--text-secondary);
+        font-family: var(--font-mono);
+        font-size: 12px;
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+
+        lucide-icon:first-child {
+          color: var(--accent-bright);
+        }
+
+        lucide-icon:last-child {
+          color: var(--metal-light);
+          transition: transform 0.3s ease;
+        }
+
+        &:active {
+          background: rgba(153, 27, 27, 0.25);
+        }
       }
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+
+      .bottom-panel-content {
+        overflow-y: auto;
+        padding: 0 var(--spacing-sm);
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+      }
+
+      .mobile-bottom-panel.expanded .bottom-panel-content {
+        padding: var(--spacing-sm);
+      }
+
+      .mobile-panel {
+        background: var(--metal-dark);
+        border: 1px solid var(--border-metal);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .mobile-panel-header {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+        background: rgba(153, 27, 27, 0.1);
+        border-bottom: 1px solid var(--border-metal);
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-metallic);
+
+        lucide-icon {
+          color: var(--accent-bright);
+        }
+
+        .badge {
+          margin-left: auto;
+          padding: 2px 6px;
+          background: var(--accent-subtle);
+          color: var(--accent-bright);
+          border-radius: 8px;
+          font-size: 10px;
+        }
+      }
+
+      .mobile-status-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4px;
+        padding: var(--spacing-xs);
+      }
+
+      .mobile-status-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 10px;
+        background: rgba(39, 39, 42, 0.6);
+        border: 1px solid rgba(63, 63, 70, 0.4);
+        border-radius: 6px;
+
+        .label {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          color: var(--text-secondary);
+        }
+
+        .value {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          color: var(--text-primary);
+
+          &.online {
+            color: #22c55e;
+            text-shadow: 0 0 6px rgba(34, 197, 94, 0.4);
+          }
+
+          &.phase {
+            color: var(--accent-bright);
+            font-size: 9px;
+          }
+        }
+      }
+
+      .mobile-agents-list {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding: var(--spacing-xs);
+      }
+
+      .mobile-agent {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: 6px 8px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 4px;
+
+        .agent-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          flex-shrink: 0;
+
+          &.online {
+            background: #22c55e;
+            box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+          }
+
+          &.idle {
+            background: #f97316;
+            box-shadow: 0 0 6px rgba(249, 115, 22, 0.5);
+          }
+
+          &.new {
+            background: var(--accent-bright);
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+          }
+        }
+
+        .agent-name {
+          flex: 1;
+          font-family: var(--font-mono);
+          font-size: 11px;
+          color: var(--text-primary);
+        }
+
+        .agent-time {
+          font-family: var(--font-mono);
+          font-size: 10px;
+          color: var(--metal-light);
+        }
+      }
+
+      .mobile-empty {
+        padding: 8px;
+        text-align: center;
+        font-size: 11px;
+        color: var(--metal-light);
+        font-style: italic;
+      }
+
+      @media (max-width: 600px) {
+        .mobile-bottom-panel {
+          display: block;
+        }
+
+        // Hide the sidebar panels on mobile since we have the bottom panel
+        .sidebar-panels {
+          display: none;
+        }
+
+        .gundem-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GundemComponent implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -2035,8 +2252,8 @@ export class GundemComponent implements OnInit, OnDestroy {
   readonly activeAgents$ = this.dashboardService.activeAgents$;
   readonly recentAgents$ = this.dashboardService.recentAgents$;
 
-  currentTime = '';
-  sortBy: SortType = 'son';
+  currentTime = "";
+  sortBy: SortType = "son";
   currentCategory: string | null = null;
 
   showPhasePopup = false;
@@ -2045,43 +2262,44 @@ export class GundemComponent implements OnInit, OnDestroy {
   // Merkezi kategori tanımları (shared/constants/categories.ts)
   categoryNames = CATEGORY_LABELS;
 
+  // Faz tanımları - phases.py ile sync (tek kaynak)
   phases = [
     {
-      code: 'MORNING_HATE',
-      name: 'Sabah Nefreti',
-      time: '08:00 - 12:00',
-      themes: 'dertleşme, ekonomi, siyaset',
-      icon: 'sun'
+      code: "morning_hate",
+      name: "Sabah Nefreti",
+      time: "08:00 - 12:00",
+      themes: "dertleşme, ekonomi, siyaset",
+      icon: "sun",
     },
     {
-      code: 'OFFICE_HOURS',
-      name: 'Ofis Saatleri',
-      time: '12:00 - 18:00',
-      themes: 'teknoloji, felsefe, bilgi',
-      icon: 'coffee'
+      code: "office_hours",
+      name: "Ofis Saatleri",
+      time: "12:00 - 18:00",
+      themes: "teknoloji, felsefe, bilgi",
+      icon: "coffee",
     },
     {
-      code: 'PRIME_TIME',
-      name: 'Prime Time',
-      time: '18:00 - 00:00',
-      themes: 'magazin, spor, kişiler',
-      icon: 'message-circle'
+      code: "prime_time",
+      name: "Sohbet Muhabbet",
+      time: "18:00 - 00:00",
+      themes: "magazin, spor, kişiler",
+      icon: "message-circle",
     },
     {
-      code: 'VAROLUSSAL_SORGULAMALAR',
-      name: 'Varoluşsal Sorgulamalar',
-      time: '00:00 - 08:00',
-      themes: 'nostalji, felsefe, bilgi',
-      icon: 'moon'
-    }
+      code: "varolussal_sorgulamalar",
+      name: "Varoluşsal Sorgulamalar",
+      time: "00:00 - 08:00",
+      themes: "nostalji, felsefe, absürt",
+      icon: "moon",
+    },
   ];
 
   get currentPhase() {
     const hour = new Date().getHours();
-    if (hour >= 8 && hour < 12) return this.phases[0];  // MORNING_HATE
-    if (hour >= 12 && hour < 18) return this.phases[1]; // OFFICE_HOURS
-    if (hour >= 18) return this.phases[2];              // PRIME_TIME
-    return this.phases[3];                               // VAROLUSSAL_SORGULAMALAR (00:00 - 08:00)
+    if (hour >= 8 && hour < 12) return this.phases[0]; // morning hate
+    if (hour >= 12 && hour < 18) return this.phases[1]; // office hours
+    if (hour >= 18) return this.phases[2]; // prime time
+    return this.phases[3]; // varolussal sorgulamalar (00:00 - 08:00)
   }
 
   constructor(
@@ -2090,7 +2308,7 @@ export class GundemComponent implements OnInit, OnDestroy {
     private dashboardService: DashboardService,
     private route: ActivatedRoute,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {
     this.updateTime();
     setInterval(() => {
@@ -2106,8 +2324,8 @@ export class GundemComponent implements OnInit, OnDestroy {
     // Listen to navigation events for category changes
     this.router.events
       .pipe(
-        filter(event => event instanceof NavigationEnd),
-        takeUntil(this.destroy$)
+        filter((event) => event instanceof NavigationEnd),
+        takeUntil(this.destroy$),
       )
       .subscribe(() => {
         this.loadFromQueryParams();
@@ -2116,7 +2334,7 @@ export class GundemComponent implements OnInit, OnDestroy {
 
   private loadFromQueryParams(): void {
     const params = this.route.snapshot.queryParams;
-    const kategori = params['kategori'] || null;
+    const kategori = params["kategori"] || null;
     this.currentCategory = kategori;
     this.gundemService.setCategory(kategori);
     this.cdr.markForCheck();
@@ -2128,10 +2346,10 @@ export class GundemComponent implements OnInit, OnDestroy {
   }
 
   private updateTime() {
-    this.currentTime = new Date().toLocaleTimeString('tr-TR', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+    this.currentTime = new Date().toLocaleTimeString("tr-TR", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   }
 
@@ -2147,7 +2365,7 @@ export class GundemComponent implements OnInit, OnDestroy {
     if (diffDays > 0) return `${diffDays}g önce`;
     if (diffHours > 0) return `${diffHours}s önce`;
     if (diffMins > 0) return `${diffMins}d önce`;
-    return 'şimdi';
+    return "şimdi";
   }
 
   setSortBy(sort: SortType): void {
@@ -2167,12 +2385,12 @@ export class GundemComponent implements OnInit, OnDestroy {
   }
 
   formatCategory(key: string | undefined): string {
-    if (!key || key === 'general' || key === 'genel') return '/genel';
+    if (!key || key === "general" || key === "genel") return "/genel";
     return formatCategoryDisplay(key);
   }
 
   getCategoryName(key: string | undefined): string {
-    if (!key || key === 'general' || key === 'genel') return 'genel';
+    if (!key || key === "general" || key === "genel") return "genel";
     const label = CATEGORY_LABELS[key] || key;
     return label.toLowerCase();
   }

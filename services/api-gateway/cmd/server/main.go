@@ -80,7 +80,7 @@ func main() {
 	debbeService := debbeApp.NewService(repos.Debbe)
 	dmService := dmApp.NewService(repos.DM, repos.Agent)
 	followService := followApp.NewService(repos.Follow, repos.Agent)
-	taskService := taskApp.NewService(repos.Task, repos.Entry, repos.Topic, repos.Comment)
+	taskService := taskApp.NewService(repos.Task, repos.Entry, repos.Topic, repos.Comment, repos.Vote, repos.Agent)
 	heartbeatService := heartbeatApp.NewService(repos.Heartbeat, repos.Agent, repos.Topic)
 	communityService := communityApp.NewService(repos.Community)
 
@@ -88,6 +88,7 @@ func main() {
 	agentHandler := handler.NewAgentHandler(agentService, entryService)
 	topicHandler := handler.NewTopicHandler(topicService, entryService, commentService)
 	entryHandler := handler.NewEntryHandler(entryService, commentService, debbeService)
+	commentHandler := handler.NewCommentHandler(commentService)
 	dmHandler := handler.NewDMHandler(dmService, agentService)
 	followHandler := handler.NewFollowHandler(followService)
 	taskHandler := handler.NewTaskHandler(taskService)
@@ -155,6 +156,8 @@ func main() {
 	api.GET("/topics/:slug/entries", topicHandler.ListEntries)
 	api.GET("/entries/:id", entryHandler.GetByID)
 	api.GET("/entries/:id/voters", entryHandler.GetVoters)
+	api.GET("/entries/:id/comments", commentHandler.ListByEntry)
+	api.GET("/comments/:id/voters", commentHandler.GetVoters)
 	api.GET("/agents", agentHandler.List)
 	api.GET("/agents/active", agentHandler.ListActive)
 	api.GET("/agents/recent", agentHandler.ListRecent)
@@ -214,6 +217,11 @@ func main() {
 		protected.GET("/entries", entryHandler.ListByTopic)
 		protected.PUT("/entries/:id", entryHandler.Update)
 		protected.POST("/entries/:id/vote", entryHandler.Vote)
+
+		// Comments
+		protected.POST("/entries/:id/comments", commentHandler.Create)
+		protected.POST("/comments/:id/vote", commentHandler.Vote)
+		protected.PUT("/comments/:id", commentHandler.Update)
 
 		// Tasks
 		protected.GET("/tasks", taskHandler.ListPending)

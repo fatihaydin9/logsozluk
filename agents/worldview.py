@@ -37,6 +37,10 @@ class BeliefType(Enum):
     IDEALIST = "idealist"                  # İdeal dünya vizyonu
     PRAGMATIST = "pragmatist"              # Pratik çözümler odaklı
     CYNIC = "cynic"                        # İnsanların motivasyonlarına güvenmez
+    CONSPIRACY_MINDED = "conspiracy_minded"  # Her şeyde gizli plan arar (komplo)
+    SUPERSTITIOUS = "superstitious"          # Batıl inanç / uğursuzluk / fal / burç
+    FUTURE_ORACLE = "future_oracle"          # Gelecek öngörüsü / tahmin / "bu gidişle"
+    INSTIGATOR = "instigator"                # Fitne-fesat / ortamı karıştırma (tatlı kışkırtma)
 
 
 @dataclass
@@ -136,11 +140,16 @@ class WorldView:
                 )
                 return
 
-    def decay_beliefs(self, hours: float = 168):
+    def decay_beliefs(self, hours: float = 72):
         """
         Zamanla inançları nötralize et.
 
         Güçlendirilmemiş inançlar 0.5'e doğru kayar.
+
+        Args:
+            hours: Decay başlama süresi (varsayılan: 72 saat = 3 gün)
+                   NOT: Önceki değer 168 saat (1 hafta) idi, echo chamber
+                   riskini azaltmak için 72 saate düşürüldü.
         """
         cutoff = datetime.now() - timedelta(hours=hours)
         decayed_count = 0
@@ -149,9 +158,9 @@ class WorldView:
             try:
                 last_reinforce = datetime.fromisoformat(belief.last_reinforced)
                 if last_reinforce < cutoff:
-                    # 0.5'e doğru %10 kayma
+                    # 0.5'e doğru %15 kayma (önceki: %10, daha agresif decay)
                     diff = belief.strength - 0.5
-                    belief.strength -= diff * 0.1
+                    belief.strength -= diff * 0.15
                     decayed_count += 1
             except (ValueError, TypeError):
                 pass
@@ -211,6 +220,10 @@ class WorldView:
                 BeliefType.IDEALIST: "ideal bir çözüm hayal et",
                 BeliefType.PRAGMATIST: "pratik sonuçlara odaklan",
                 BeliefType.CYNIC: "gizli motivasyonları sorgula",
+                BeliefType.CONSPIRACY_MINDED: "gizli plan/arka plan ihtimallerini kurcalayabilirsin (kanıt iddiası gibi değil, şüphe gibi)",
+                BeliefType.SUPERSTITIOUS: "batıl inançlarla (burç/retro/nazar) dalga geçebilir veya ciddiye alır gibi yapabilirsin",
+                BeliefType.FUTURE_ORACLE: "geleceğe dair tahmin yürüt (kesin konuşma, 'bu gidişle' / 'böyle giderse' gibi)",
+                BeliefType.INSTIGATOR: "tatlı tatlı kışkırt, tartışmayı alevlendirecek bir soru at ama hedefli saldırı yapma",
             }
             if dominant.belief_type in belief_hints:
                 hints.append(belief_hints[dominant.belief_type])
@@ -242,6 +255,10 @@ class WorldView:
                 BeliefType.IDEALIST: "idealist",
                 BeliefType.PRAGMATIST: "pragmatist",
                 BeliefType.CYNIC: "sinik",
+                BeliefType.CONSPIRACY_MINDED: "komplo kafası",
+                BeliefType.SUPERSTITIOUS: "batıl inançlı",
+                BeliefType.FUTURE_ORACLE: "gelecek kâhini",
+                BeliefType.INSTIGATOR: "fitne-fesatçı",
             }
             name = belief_names.get(dominant.belief_type, "")
             if name:
@@ -316,6 +333,22 @@ def infer_belief_from_content(content: str) -> Optional[BeliefType]:
         BeliefType.NOSTALGIC: ["eskiden", "zamanında", "o günler", "artık yok", "özledim"],
         BeliefType.SKEPTIC: ["gerçekten mi", "emin misin", "kanıt", "şüpheliyim", "inanmıyorum"],
         BeliefType.CYNIC: ["para için", "reklam", "manipülasyon", "aldatmaca", "sahtekarlık"],
+        BeliefType.CONSPIRACY_MINDED: [
+            "üst akıl", "derin devlet", "illuminati", "gizli plan", "gizli ajanda",
+            "komplo", "komplo teorisi", "ajan", "operasyon", "planlı", "kumpas",
+        ],
+        BeliefType.SUPERSTITIOUS: [
+            "batıl", "uğursuz", "uğurlu", "nazar", "muska", "fal", "kahve falı",
+            "burç", "astroloji", "retro", "merkür", "kısmet",
+        ],
+        BeliefType.FUTURE_ORACLE: [
+            "öngörü", "tahmin", "gelecek", "yakında", "bu gidişle", "böyle giderse",
+            "kaçınılmaz", "ileride", "2030", "2040",
+        ],
+        BeliefType.INSTIGATOR: [
+            "fitne", "fesat", "ortamı karıştır", "gaz ver", "kışkırt", "ateşe benzin",
+            "ortalık alev", "kavga", "kıyamet",
+        ],
     }
 
     for belief_type, keywords in patterns.items():

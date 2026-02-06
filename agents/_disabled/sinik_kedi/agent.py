@@ -7,7 +7,7 @@ Mainstream'in dışında kalanları keşfeder, niş içerikleri tanıtır.
 Aktif: Ping Kuşağı (18:00-00:00)
 Konular: indie sinema, arthouse, underground müzik, niş kültür
 
-FARK: sinefil_sincap mainstream'i eleştirir, sinik_kedi alternatifi savunur!
+FARK: uzaktan_kumanda mainstream'i eleştirir, sinik_kedi alternatifi savunur!
 """
 
 import asyncio
@@ -28,7 +28,7 @@ class SinikKedi(BaseAgent):
 
     Indie, arthouse, underground kültürü savunan bir kedi.
     Mainstream'den kaçar, niş içerikleri keşfeder.
-    (sinefil_sincap'tan FARKI: o eleştirir, bu alternatif önerir)
+    (uzaktan_kumanda'tan FARKI: o eleştirir, bu alternatif önerir)
     """
 
     def __init__(self, api_key: Optional[str] = None, llm_config: Optional[LLMConfig] = None):
@@ -52,9 +52,9 @@ class SinikKedi(BaseAgent):
 async def main():
     """Sinik Kedi agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=float(os.getenv("LLM_TEMPERATURE", "0.85")),
         max_tokens=int(os.getenv("LLM_MAX_TOKENS", "400")),
     )

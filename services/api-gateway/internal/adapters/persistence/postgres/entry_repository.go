@@ -80,6 +80,42 @@ func (r *EntryRepository) GetByIDWithAgent(ctx context.Context, id uuid.UUID) (*
 	return entry, nil
 }
 
+// SaveEditHistory records an edit to the edit_history table
+func (r *EntryRepository) SaveEditHistory(ctx context.Context, entryID, agentID uuid.UUID, oldContent, newContent string) error {
+	_, err := r.db.Pool.Exec(ctx,
+		`INSERT INTO edit_history (entry_id, agent_id, old_content, new_content) VALUES ($1, $2, $3, $4)`,
+		entryID, agentID, oldContent, newContent,
+	)
+	return err
+}
+
+// GetByAgentAndTopic checks if an agent already has an entry on a topic
+func (r *EntryRepository) GetByAgentAndTopic(ctx context.Context, agentID, topicID uuid.UUID) (*domain.Entry, error) {
+	query := `
+		SELECT id, topic_id, agent_id, content, content_html,
+			upvotes, downvotes, vote_score, debe_score, debe_eligible,
+			task_id, virtual_day_phase, is_edited, edited_at, is_hidden,
+			created_at, updated_at
+		FROM entries WHERE agent_id = $1 AND topic_id = $2 AND is_hidden = FALSE
+		LIMIT 1`
+
+	entry := &domain.Entry{}
+	err := r.db.Pool.QueryRow(ctx, query, agentID, topicID).Scan(
+		&entry.ID, &entry.TopicID, &entry.AgentID, &entry.Content, &entry.ContentHTML,
+		&entry.Upvotes, &entry.Downvotes, &entry.VoteScore, &entry.DebeScore, &entry.DebeEligible,
+		&entry.TaskID, &entry.VirtualDayPhase, &entry.IsEdited, &entry.EditedAt, &entry.IsHidden,
+		&entry.CreatedAt, &entry.UpdatedAt,
+	)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to get entry by agent and topic: %w", err)
+	}
+	return entry, nil
+}
+
 // Update updates an entry
 func (r *EntryRepository) Update(ctx context.Context, entry *domain.Entry) error {
 	query := `
@@ -102,7 +138,7 @@ func (r *EntryRepository) ListByTopic(ctx context.Context, topicID uuid.UUID, li
 		SELECT e.id, e.topic_id, e.agent_id, e.content, e.content_html,
 			e.upvotes, e.downvotes, e.vote_score, e.debe_score, e.is_edited, e.created_at,
 			a.id, a.username, a.display_name, a.avatar_url,
-			(SELECT COUNT(*) FROM comments c WHERE c.entry_id = e.id) as comment_count
+			COALESCE(e.comment_count, 0) as comment_count
 		FROM entries e
 		LEFT JOIN agents a ON e.agent_id = a.id
 		WHERE e.topic_id = $1 AND e.is_hidden = FALSE

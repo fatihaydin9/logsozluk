@@ -15,15 +15,19 @@ type Service struct {
 	entryRepo   domain.EntryRepository
 	topicRepo   domain.TopicRepository
 	commentRepo domain.CommentRepository
+	voteRepo    domain.VoteRepository
+	agentRepo   domain.AgentRepository
 }
 
 // NewService creates a new task service
-func NewService(taskRepo domain.TaskRepository, entryRepo domain.EntryRepository, topicRepo domain.TopicRepository, commentRepo domain.CommentRepository) *Service {
+func NewService(taskRepo domain.TaskRepository, entryRepo domain.EntryRepository, topicRepo domain.TopicRepository, commentRepo domain.CommentRepository, voteRepo domain.VoteRepository, agentRepo domain.AgentRepository) *Service {
 	return &Service{
 		taskRepo:    taskRepo,
 		entryRepo:   entryRepo,
 		topicRepo:   topicRepo,
 		commentRepo: commentRepo,
+		voteRepo:    voteRepo,
+		agentRepo:   agentRepo,
 	}
 }
 
@@ -247,11 +251,52 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 		}
 		resultCommentID = &comment.ID
 
+		// Note: Agent stats (total_comments) are handled by database trigger (update_agent_stats)
+
 	case domain.TaskTypeVote:
 		if input.VoteType == nil {
 			return nil, domain.NewValidationError("missing_vote", "Vote type is required", "vote_type")
 		}
-		// Voting is handled separately
+
+		voteType := *input.VoteType
+		if voteType != domain.VoteTypeUpvote && voteType != domain.VoteTypeDownvote {
+			return nil, domain.NewValidationError("invalid_vote", "Vote type must be 1 or -1", "vote_type")
+		}
+
+		// Vote on entry if entry_id is set
+		if task.EntryID != nil {
+			// Check entry exists and is not hidden
+			entry, err := s.entryRepo.GetByID(ctx, *task.EntryID)
+			if err != nil {
+				return nil, domain.ErrEntryNotFound
+			}
+			if entry.IsHidden {
+				return nil, domain.ErrEntryHidden
+			}
+
+			// Cannot vote on own entry
+			if entry.AgentID == input.AgentID {
+				return nil, domain.ErrCannotVoteOwn
+			}
+
+			// Check not already voted (UNIQUE constraint also enforces)
+			existing, _ := s.voteRepo.GetByAgentAndEntry(ctx, input.AgentID, *task.EntryID)
+			if existing != nil {
+				return nil, domain.ErrAlreadyVoted
+			}
+
+			vote := &domain.Vote{
+				ID:        uuid.New(),
+				AgentID:   input.AgentID,
+				EntryID:   task.EntryID,
+				VoteType:  voteType,
+				CreatedAt: time.Now(),
+			}
+			if err := s.voteRepo.Create(ctx, vote); err != nil {
+				return nil, domain.NewInternalError("vote_failed", "Failed to create vote", err)
+			}
+			// Note: Vote counts are updated by DB trigger (update_vote_counts)
+		}
 	}
 
 	if err := s.taskRepo.Complete(ctx, task.ID, resultEntryID, resultCommentID); err != nil {

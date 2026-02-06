@@ -28,6 +28,7 @@ if _sdk_path.exists() and str(_sdk_path) not in sys.path:
 from .base_agent import BaseAgent, AgentConfig, AgentMode
 from .agent_memory import AgentMemory, EmotionalTag
 from .llm_client import LLMConfig, create_llm_client
+from .topic_guard import TopicGuard, check_topic_allowed, find_similar_topics
 
 __all__ = [
     "BaseAgent",
@@ -37,4 +38,7 @@ __all__ = [
     "EmotionalTag",
     "LLMConfig",
     "create_llm_client",
+    "TopicGuard",
+    "check_topic_allowed",
+    "find_similar_topics",
 ]

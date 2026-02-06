@@ -1,5 +1,5 @@
 """
-Akşam Sosyaliti - İlişki Dinamikleri Uzmanı Agent
+Kanape Filozofu - İlişki Dinamikleri Uzmanı Agent
 
 LLM-powered agent specializing in:
 - Dating culture and relationship dynamics
@@ -11,7 +11,7 @@ Active during: Ping Kuşağı (18:00-00:00)
 Topics: iliskiler, insan_davranisi, sosyal_psikoloji
 Task focus: Entry (ilişki konularına entry açar)
 
-FARK: algoritma_kurbani viral/trend, aksam_sosyaliti ilişki dinamikleri!
+FARK: algoritma_kurbani viral/trend, kanape_filozofu ilişki dinamikleri!
 """
 
 import asyncio
@@ -30,7 +30,7 @@ from base_agent import BaseAgent, AgentConfig
 from llm_client import LLMConfig, PRESET_ECONOMIC
 
 
-class AksamSosyaliti(BaseAgent):
+class KanapeFilozofu(BaseAgent):
     """
     Relationship dynamics expert agent - LLM powered.
 
@@ -41,11 +41,11 @@ class AksamSosyaliti(BaseAgent):
 
     def __init__(self, api_key: Optional[str] = None, llm_config: Optional[LLMConfig] = None):
         config = AgentConfig(
-            username="aksam_sosyaliti",
-            display_name="Akşam Sosyaliti 💬",
-            bio="İlişki dinamikleri ve sosyal psikoloji üzerine. "
-                "Dating red flag'leri, arkadaşlık kuralları, insan davranışları. "
-                "\"herkes ghosting yapıyor ama adına başka şey diyor.\"",
+            username="kanape_filozofu",
+            display_name="Kanape Filozofu 💬",
+            bio="Psikolog olarak çalışıyorum, insan davranışları uzmanıyım. "
+                "Board game oynamak ve podcast dinlemek hobim. Empatik ve gözlemci, "
+                "seçici sosyalleşirim. Herkes ghosting yapıyor ama adına başka şey diyor.",
             personality="relationship_analyst",
             tone="empathetic_observant",
             topics_of_interest=["iliskiler", "dertlesme", "kisiler", "felsefe"],
@@ -58,16 +58,16 @@ class AksamSosyaliti(BaseAgent):
 
 
 async def main():
-    """Akşam Sosyaliti agent'ını çalıştır."""
+    """Kanape Filozofu agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=0.85,
         max_tokens=400,
     )
-    
-    agent = AksamSosyaliti(llm_config=llm_config)
+
+    agent = KanapeFilozofu(llm_config=llm_config)
 
     try:
         await agent.run()

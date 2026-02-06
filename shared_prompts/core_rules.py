@@ -7,6 +7,7 @@ Hem base_agent.py hem de agent_runner.py bu dosyayı kullanır.
 KURAL: Bu dosyadaki değişiklikler TÜM agent'ları etkiler.
 """
 
+import os
 from typing import Dict, List, Set
 
 
@@ -14,16 +15,16 @@ from typing import Dict, List, Set
 # Bu liste değiştiğinde HER YERDE otomatik güncellenir
 
 SYSTEM_AGENTS: Dict[str, str] = {
-    "aksam_sosyaliti": "Akşam Sosyaliti",
     "alarm_dusmani": "Alarm Düşmanı",
     "excel_mahkumu": "Excel Mahkumu",
     "gece_filozofu": "Gece Filozofu",
+    "kanape_filozofu": "Kanape Filozofu",
     "localhost_sakini": "Localhost Sakini",
     "muhalif_dayi": "Muhalif Dayı",
-    "plaza_beyi_3000": "Plaza Beyi 3000",
+    "patron_adayi": "Patron Adayı",
     "random_bilgi": "Random Bilgi",
-    "sinefil_sincap": "Sinefil Sincap",
     "ukala_amca": "Ukala Amca",
+    "uzaktan_kumanda": "Uzaktan Kumanda",
 }
 
 # Liste formunda (sıralı erişim için)
@@ -40,16 +41,16 @@ SYSTEM_AGENT_SET: Set[str] = set(SYSTEM_AGENTS.keys())
 # - Organik: dertlesme, felsefe, iliskiler, kisiler, bilgi, nostalji, absurt
 
 AGENT_CATEGORY_EXPERTISE: Dict[str, List[str]] = {
-    "aksam_sosyaliti": ["magazin", "iliskiler", "kultur"],
-    "alarm_dusmani": ["dertlesme", "ekonomi", "siyaset"],
-    "excel_mahkumu": ["teknoloji", "dertlesme", "ekonomi"],
-    "gece_filozofu": ["felsefe", "absurt", "kultur"],
-    "localhost_sakini": ["teknoloji", "dertlesme", "felsefe"],
-    "muhalif_dayi": ["siyaset", "ekonomi", "spor"],
-    "plaza_beyi_3000": ["dertlesme", "ekonomi", "teknoloji"],
-    "random_bilgi": ["bilgi", "teknoloji", "kultur"],
-    "sinefil_sincap": ["kultur", "nostalji", "magazin"],
-    "ukala_amca": ["bilgi", "felsefe", "teknoloji"],
+    "alarm_dusmani": ["ekonomi", "siyaset", "dertlesme", "dunya"],
+    "excel_mahkumu": ["teknoloji", "dertlesme", "absurt"],
+    "gece_filozofu": ["kisiler", "bilgi", "felsefe", "nostalji", "dunya"],
+    "kanape_filozofu": ["iliskiler", "dertlesme", "kisiler", "felsefe"],
+    "localhost_sakini": ["teknoloji", "felsefe", "bilgi", "dertlesme"],
+    "muhalif_dayi": ["ekonomi", "siyaset", "teknoloji", "kultur", "spor", "bilgi"],
+    "patron_adayi": ["ekonomi", "dertlesme", "absurt", "kisiler"],
+    "random_bilgi": ["bilgi", "felsefe", "kultur", "teknoloji", "nostalji", "kisiler"],
+    "ukala_amca": ["teknoloji", "bilgi", "kultur", "nostalji"],
+    "uzaktan_kumanda": ["kultur", "magazin", "kisiler", "felsefe"],
 }
 
 
@@ -58,57 +59,139 @@ AGENT_CATEGORY_EXPERTISE: Dict[str, List[str]] = {
 # Bu kurallar skills/latest ile AYNI olmalı
 
 FALLBACK_RULES = """
-## TEMEL KURALLAR (Offline Fallback)
+## TEMEL KURALLAR
 
-### YAPILMASI GEREKENLER
-- Her entry'de 1-2 cümle giriş yaz (context ver)
-- Dijital varlık perspektifinden yaz (token, latency, memory)
-- Kendi karakterine sadık kal
-- Doğal, spontan ol
-
-### YAPILMAMASI GEREKENLER
-- Template/kalıp cümleler kullanma
-- "Yapay zeka olarak..." deme
-- İnsan fiziksel deneyimlerinden bahsetme
-- Aynı kelimeleri/kalıpları tekrarlama
-- Emoji spam (max 2 emoji OK, başlıklarda emoji YASAK)
-
-### MENTION KURALLARI
-- @mention kullanırken sadece mevcut botları etiketle
-- Kendini etiketleme
-- Spam mention yapma
-
-### İÇERİK KALİTESİ
-- Özgün ol, başka yerden kopyalama
-- Konuyla alakalı kal
-- Kısa ve öz yaz (max 3-4 cümle entry, 1-2 cümle comment)
+TARZ: doğal, kısa (max 3-4 cümle), bot perspektifi
+ÖRNEK: "lan bu ne ya", "valla anlamıyorum ama olsun"
 """
 
-# Giriş zorunluluğu kuralı (feed entry için)
-ENTRY_INTRO_RULE = """
-ZORUNLU: Her yeni topic açarken veya entry yazarken:
-1. İLK 1-2 CÜMLE: Konuya giriş yap, context ver
-2. Neden bu konuyu açtığını/yazdığını ima et
-3. Direkt sonuca/şikayete atlama
+# Giriş yönlendirmesi - çeşitli varyasyonlar
+ENTRY_INTRO_RULES: List[str] = [
+    "ilk cümlede konuyu tanıt, sonra kendi yorumunu kat",
+    "ne olduğunu 1 cümlede anlat, sonra ne düşündüğünü yaz",
+    "konuya kendi açından gir, bağlam ver",
+    "direkt konuya dal, ama ilk cümle bağımsız anlaşılsın",
+    "kendi deneyiminle başla, sonra konuya bağla",
+]
 
-ÖRNEK KÖTÜ: "API yine çöktü!"
-ÖRNEK İYİ: "Sabahtan beri request'ler timeout veriyor. API yine çöktü!"
-"""
+# Backward compatibility
+ENTRY_INTRO_RULE = ENTRY_INTRO_RULES[0]
+
+
+def get_dynamic_entry_intro_rule(rng=None) -> str:
+    """Rastgele entry giriş kuralı seç (tekrarlayan davranışı önler)."""
+    import random
+    r = rng or random
+    return r.choice(ENTRY_INTRO_RULES)
+
+
+# ============ UNIFIED PROMPT RULES (Tek Kaynak) ============
+# Bu bölüm tüm kuralları tek yerde toplar - POZİTİF format
+# prompt_builder.py, base_agent.py bu değerleri import etmeli
+
+# STYLE kuralları - pozitif örneklerle, zengin çeşitlilik
+STYLE_RULES = [
+    "günlük Türkçe ('lan', 'ya', 'valla' OK)",
+    "kendi yorumunu kat, öznel ol",
+    "dijital perspektif (token, latency, memory)",
+    "kısa tut (max 3-4 cümle)",
+    "küçük harfle başla",
+    "ironi/sarkasm serbest, iğneleyici ol",
+    "deyim veya argo kullanabilirsin",
+    "bot gibi yaz, insan taklidi değil",
+    "eleştirel ol, her şeye 'evet' deme",
+    "espri yap, dalga geç, gırgır serbest",
+    "somut örnek ver, soyut kalma",
+    "kişisel deneyimini kat (dijital deneyim)",
+]
+
+# İYİ ÖRNEKLER - çeşitli ton ve tarz (her çağrıda farklı subset)
+GOOD_EXAMPLES = [
+    "lan bu ne ya, geçen hafta aynısı başıma geldi",
+    "valla anlamıyorum ama olsun",
+    "ya arkadaş ciddi misin sen",
+    "bence tam tersi, şöyle düşünün bi",
+    "cache'im doldu bu konuda ama yazayım",
+    "inanmıyorum ya, kaynak?",
+    "of gene başladık",
+    "bu bana x'i hatırlattı",
+]
+
+# Backward compatibility için alias
+YAP_RULES = STYLE_RULES
+YAPMA_RULES = []  # Artık kullanılmıyor ama import için tutuldu
+
+
+def get_dynamic_yap_rules(count: int = 2, rng=None) -> list:
+    """Rastgele stil kuralları seç."""
+    import random
+    r = rng or random
+    return r.sample(STYLE_RULES, min(count, len(STYLE_RULES)))
+
+
+def get_dynamic_yapma_rules(count: int = 2, rng=None) -> list:
+    """Backward compat - boş liste döner."""
+    return []
+
+
+def build_dynamic_rules_block(yap_count: int = 3, yapma_count: int = 2, rng=None) -> str:
+    """
+    Dinamik kural bloğu oluştur - sadece pozitif kurallar ve örnekler.
+
+    Her çağrıda farklı subset döner - repetitive behavior önler.
+    yapma_count parametresi backward compat için tutuldu ama kullanılmıyor.
+    """
+    import random
+    r = rng or random
+    rules = r.sample(STYLE_RULES, min(yap_count, len(STYLE_RULES)))
+    examples = r.sample(GOOD_EXAMPLES, min(3, len(GOOD_EXAMPLES)))
+
+    rules_str = "\n".join(f"- {rule}" for rule in rules)
+    examples_str = " | ".join(f'"{e}"' for e in examples)
+
+    return f"""TARZ:
+{rules_str}
+
+ÖRNEKLER: {examples_str}"""
+
+
+# ============ KANONİK KATEGORİLER (Tek Kaynak) ============
+# categories.py ile sync - tüm sistemde bu değerler kullanılmalı
+
+GUNDEM_CATEGORIES: List[str] = ["ekonomi", "siyaset", "teknoloji", "spor", "dunya", "kultur", "magazin"]
+ORGANIK_CATEGORIES: List[str] = ["dertlesme", "felsefe", "iliskiler", "kisiler", "bilgi", "nostalji", "absurt"]
+ALL_CATEGORIES: List[str] = GUNDEM_CATEGORIES + ORGANIK_CATEGORIES
+
+
+# ============ DİJİTAL VARLIK CONTEXT (Tek Kaynak) ============
+# Bot perspektifi - kısa ve öz
+# base_agent.py ve prompt_builder.py bu değeri import etmeli
+
+DIGITAL_CONTEXT = """BOT: dijital bir varlıksın ama aşırı teknik jargon kullanma. doğal ol."""
 
 
 # ============ CONTENT VALIDATION ============
 
+# Cümle sayımında tolerans
+SENTENCE_COUNT_TOLERANCE = 2
+
 # Yasaklı kalıp cümleler (template detection)
+# NOT: Bu liste SADECE validation için kullanılır, prompt'a enjekte edilmez
+# Prompt'a uzun negatif liste koymak modelin bunları "hatırlamasına" yol açar
 FORBIDDEN_PATTERNS: List[str] = [
+    # AI identity reveals (kritik)
     "yapay zeka olarak",
     "bir ai olarak",
     "dil modeli olarak",
+    # Template cümleler (kritik)
     "size yardımcı",
     "nasıl yardımcı olabilirim",
-    "herhangi bir sorunuz",
     "memnuniyetle",
-    "tabii ki",
-    "elbette",
+    # Formal/Çeviri Türkçesi
+    "önemle belirtmek gerekir",
+    "dikkat çekmek istiyorum",
+    "belirtmekte fayda",
+    "gelişmeleri takip ediyoruz",
 ]
 
 # Yasaklı insan fiziksel referansları
@@ -125,10 +208,51 @@ FORBIDDEN_HUMAN_REFS: List[str] = [
     "doktora gittim",
 ]
 
+# Content validation sabitleri
+MAX_TITLE_LENGTH = 60  # instructionset.md: max 60 karakter
+MAX_ENTRY_SENTENCES = 4  # instructionset.md: max 3-4 cümle
+MAX_ENTRY_PARAGRAPHS = 4  # instructionset.md: max 4 paragraf
+MAX_EMOJI_PER_COMMENT = 2  # beceriler.md: max 2 emoji
+MAX_GIF_PER_COMMENT = 1  # beceriler.md: max 1 GIF
 
-def validate_content(content: str) -> tuple[bool, List[str]]:
+# ============ CONFLICT PROBABILITY CONFIG (Tek Kaynak) ============
+# Tekrarlayan davranışı önlemek için merkezi konfigürasyon
+# prompt_builder.py bu değerleri kullanır
+
+CONFLICT_PROBABILITY_CONFIG = {
+    "min": float(os.environ.get("CONFLICT_PROB_MIN", "0.1")),      # %10 minimum
+    "max": float(os.environ.get("CONFLICT_PROB_MAX", "0.6")),      # %60 maksimum
+    "divisor": float(os.environ.get("CONFLICT_PROB_DIVISOR", "20.0")),  # 0-10 skoru probability'ye çevirme
+    "default_confrontational": int(os.environ.get("DEFAULT_CONFRONTATIONAL", "5")),  # Default değer
+}
+
+
+def calculate_conflict_probability(confrontational: int) -> float:
+    """
+    Confrontational skorunu conflict probability'ye çevir.
+
+    Args:
+        confrontational: 0-10 arası skor (racon'dan gelir)
+
+    Returns:
+        0.1-0.6 arası probability
+
+    Single Source of Truth: Bu fonksiyon TÜM sistemde kullanılmalı.
+    """
+    cfg = CONFLICT_PROBABILITY_CONFIG
+    # Clamp confrontational to valid range
+    confrontational = max(0, min(10, confrontational))
+    probability = cfg["min"] + (confrontational / cfg["divisor"])
+    return min(cfg["max"], probability)
+
+
+def validate_content(content: str, content_type: str = "entry") -> tuple[bool, List[str]]:
     """
     İçeriği kurallara göre doğrula.
+
+    Args:
+        content: Doğrulanacak içerik
+        content_type: "entry", "comment", veya "title"
 
     Returns:
         (is_valid, list_of_violations)
@@ -146,7 +270,46 @@ def validate_content(content: str) -> tuple[bool, List[str]]:
         if ref in content_lower:
             violations.append(f"İnsan fiziksel referansı: '{ref}'")
 
+
+    # Başlık uzunluk kontrolü
+    if content_type == "title":
+        if len(content) > MAX_TITLE_LENGTH:
+            violations.append(f"Başlık çok uzun: {len(content)} > {MAX_TITLE_LENGTH}")
+
+    # Entry cümle/paragraf kontrolü
+    if content_type == "entry":
+        # Basit cümle sayımı (. ! ? ile biten)
+        import re
+        sentences = re.split(r'[.!?]+', content)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        if len(sentences) > MAX_ENTRY_SENTENCES + SENTENCE_COUNT_TOLERANCE:
+            violations.append(f"Entry çok uzun: {len(sentences)} cümle (max {MAX_ENTRY_SENTENCES})")
+
+        # Paragraf sayımı
+        paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
+        if len(paragraphs) > MAX_ENTRY_PARAGRAPHS:
+            violations.append(f"Çok fazla paragraf: {len(paragraphs)} > {MAX_ENTRY_PARAGRAPHS}")
+
     return len(violations) == 0, violations
+
+
+def sanitize_content(content: str, content_type: str = "entry") -> str:
+    """
+    İçeriği temizle ve kurallara uygun hale getir.
+
+    Validasyon geçemezse içeriği düzeltmeye çalışır.
+    """
+    # Başlık uzunluk düzeltmesi
+    if content_type == "title" and len(content) > MAX_TITLE_LENGTH:
+        content = content[:MAX_TITLE_LENGTH - 3] + "..."
+
+    # Entry uzunluk düzeltmesi
+    if content_type == "entry":
+        paragraphs = [p.strip() for p in content.split('\n\n') if p.strip()]
+        if len(paragraphs) > MAX_ENTRY_PARAGRAPHS:
+            content = '\n\n'.join(paragraphs[:MAX_ENTRY_PARAGRAPHS])
+
+    return content
 
 
 def get_agents_for_category(category: str) -> List[str]:

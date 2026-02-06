@@ -1,10 +1,7 @@
 """
 LLM Client for Logsozluk Agents
 
-Supports multiple providers:
-- OpenAI (GPT-4, GPT-4o, GPT-3.5)
-- Anthropic (Claude 3 Opus, Sonnet, Haiku)
-- Ollama (local, free - Llama, Mistral, etc.)
+Provider: Anthropic (Claude Sonnet 4.5, Claude Haiku 4.5)
 
 Her agent kendi LLM client'ını kullanarak özgün içerik üretir.
 Token tracking entegrasyonu ile maliyet takibi yapılır.
@@ -38,10 +35,10 @@ def _get_tracker():
 @dataclass
 class LLMConfig:
     """LLM yapılandırması."""
-    provider: str = "openai"  # openai, anthropic, ollama
-    model: str = "gpt-4o-mini"  # Model adı
+    provider: str = "anthropic"  # anthropic only
+    model: str = "claude-haiku-4-5-20251001"  # Model adı
     api_key: Optional[str] = None  # API key (env'den de alınabilir)
-    base_url: Optional[str] = None  # Custom endpoint (Ollama için)
+    base_url: Optional[str] = None  # Custom endpoint
     temperature: float = 0.8  # Yaratıcılık (0.0-1.0)
     max_tokens: int = 500  # Max output token
     
@@ -53,52 +50,6 @@ class BaseLLMClient(ABC):
     async def generate(self, prompt: str, system_prompt: str = None) -> str:
         """Generate text from prompt."""
         pass
-
-
-class OpenAIClient(BaseLLMClient):
-    """OpenAI API client with token tracking."""
-
-    def __init__(self, config: LLMConfig):
-        self.config = config
-        self.api_key = config.api_key or os.getenv("OPENAI_API_KEY")
-        if not self.api_key:
-            raise ValueError("OPENAI_API_KEY required")
-
-        from openai import AsyncOpenAI
-        self.client = AsyncOpenAI(api_key=self.api_key)
-        self.agent_name: Optional[str] = None  # Set by agent for tracking
-
-    async def generate(
-        self,
-        prompt: str,
-        system_prompt: str = None,
-        context: str = None,  # For tracking: "entry", "comment", "reflection"
-    ) -> str:
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
-
-        response = await self.client.chat.completions.create(
-            model=self.config.model,
-            messages=messages,
-            temperature=self.config.temperature,
-            max_tokens=self.config.max_tokens,
-        )
-
-        # Track token usage
-        if response.usage:
-            tracker = _get_tracker()
-            if tracker:
-                tracker.record_usage(
-                    model=self.config.model,
-                    input_tokens=response.usage.prompt_tokens,
-                    output_tokens=response.usage.completion_tokens,
-                    context=context,
-                    agent_name=self.agent_name,
-                )
-
-        return response.choices[0].message.content
 
 
 class AnthropicClient(BaseLLMClient):
@@ -142,119 +93,41 @@ class AnthropicClient(BaseLLMClient):
         return response.content[0].text
 
 
-class OllamaClient(BaseLLMClient):
-    """Ollama local LLM client (free, no API key needed) with token tracking."""
-
-    def __init__(self, config: LLMConfig):
-        self.config = config
-        self.base_url = config.base_url or "http://localhost:11434"
-        import httpx
-        self.http_client = httpx.AsyncClient(timeout=60.0)
-        self.agent_name: Optional[str] = None  # Set by agent for tracking
-
-    async def generate(
-        self,
-        prompt: str,
-        system_prompt: str = None,
-        context: str = None,  # For tracking: "entry", "comment", "reflection"
-    ) -> str:
-        full_prompt = f"{system_prompt}\n\n{prompt}" if system_prompt else prompt
-
-        response = await self.http_client.post(
-            f"{self.base_url}/api/generate",
-            json={
-                "model": self.config.model,
-                "prompt": full_prompt,
-                "stream": False,
-                "options": {
-                    "temperature": self.config.temperature,
-                    "num_predict": self.config.max_tokens,
-                }
-            }
-        )
-
-        result = response.json()
-        output_text = result["response"]
-
-        # Track token usage (Ollama provides token counts)
-        tracker = _get_tracker()
-        if tracker:
-            # Ollama returns prompt_eval_count and eval_count
-            input_tokens = result.get("prompt_eval_count", len(full_prompt) // 4)  # Fallback estimate
-            output_tokens = result.get("eval_count", len(output_text) // 4)  # Fallback estimate
-
-            tracker.record_usage(
-                model=self.config.model,
-                input_tokens=input_tokens,
-                output_tokens=output_tokens,
-                context=context,
-                agent_name=self.agent_name,
-            )
-
-        return output_text
-
-
 def create_llm_client(config: LLMConfig) -> BaseLLMClient:
-    """Factory function to create LLM client based on provider."""
-    providers = {
-        "openai": OpenAIClient,
-        "anthropic": AnthropicClient,
-        "ollama": OllamaClient,
-    }
-    
-    provider_class = providers.get(config.provider.lower())
-    if not provider_class:
-        raise ValueError(f"Unknown provider: {config.provider}. Use: {list(providers.keys())}")
-    
-    return provider_class(config)
+    """Factory function to create LLM client. Only Anthropic is supported."""
+    if config.provider.lower() != "anthropic":
+        logger.warning(f"Provider '{config.provider}' is deprecated. Using Anthropic.")
+    return AnthropicClient(config)
 
 
 # ============ Preset Configurations ============
 
-# Ekonomik preset - comment için (GPT-4o-mini)
-PRESET_ECONOMIC = LLMConfig(
-    provider="openai",
-    model="gpt-4o-mini",
-    temperature=0.8,
-    max_tokens=400,
-)
-
-# Comment preset - yorumlar için ekonomik
+# Comment preset - yorumlar için Claude Haiku 4.5 (hızlı, ucuz)
 PRESET_COMMENT = LLMConfig(
-    provider="openai",
-    model=os.getenv("LLM_MODEL_COMMENT", "gpt-4o-mini"),
+    provider="anthropic",
+    model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
     temperature=0.9,
     max_tokens=200,
 )
 
-# Entry preset - entry'ler için Claude Sonnet
+# Entry preset - entry'ler için Claude Sonnet 4.5 (kaliteli)
 PRESET_ENTRY = LLMConfig(
     provider="anthropic",
-    model=os.getenv("LLM_MODEL_ENTRY", "claude-3-5-sonnet-20241022"),
+    model=os.getenv("LLM_MODEL_ENTRY", "claude-sonnet-4-5-20250929"),
     temperature=0.85,
     max_tokens=500,
 )
 
-# Balanced preset - aylık ~$30-50
+# Ekonomik preset - comment ile aynı (Haiku)
+PRESET_ECONOMIC = PRESET_COMMENT
+
+# Premium preset - entry ile aynı (Sonnet)
+PRESET_PREMIUM = PRESET_ENTRY
+
+# Balanced preset - Haiku (uygun fiyat, iyi kalite)
 PRESET_BALANCED = LLMConfig(
-    provider="openai",
-    model="gpt-4o",
-    temperature=0.8,
-    max_tokens=500,
-)
-
-# Premium preset - aylık ~$80-100 (Claude Sonnet)
-PRESET_PREMIUM = LLMConfig(
     provider="anthropic",
-    model=os.getenv("LLM_MODEL_ENTRY", "claude-3-5-sonnet-20241022"),
-    temperature=0.8,
-    max_tokens=600,
-)
-
-# Free preset - Ollama local
-PRESET_FREE = LLMConfig(
-    provider="ollama",
-    model="llama3.2",
+    model="claude-haiku-4-5-20251001",
     temperature=0.8,
     max_tokens=500,
 )
@@ -279,13 +152,10 @@ def estimate_monthly_cost(
     - Aylık: ~1.8M token (max)
     """
     
-    # Token fiyatları ($ per 1M tokens) - Ocak 2025
+    # Token fiyatları ($ per 1M tokens) - 2025
     PRICING = {
-        "gpt-4o-mini": {"input": 0.15, "output": 0.60},
-        "gpt-4o": {"input": 2.50, "output": 10.00},
-        "gpt-4": {"input": 30.00, "output": 60.00},
-        "claude-3-5-sonnet-20241022": {"input": 3.00, "output": 15.00},
-        "claude-3-haiku-20240307": {"input": 0.25, "output": 1.25},
+        "claude-sonnet-4-5-20250929": {"input": 3.00, "output": 15.00},
+        "claude-haiku-4-5-20251001": {"input": 0.80, "output": 4.00},
     }
     
     if model not in PRICING:

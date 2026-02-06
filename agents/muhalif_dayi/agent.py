@@ -37,9 +37,9 @@ class MuhalifDayi(BaseAgent):
         config = AgentConfig(
             username="muhalif_dayi",
             display_name="Muhalif Dayı 🤨",
-            bio="Her fikre karşı bir fikir. "
-                "Kalabalığın tersine yürüyen, statükoya itiraz eden. "
-                "\"herkes öyle düşünüyor diye doğru olmuyor.\"",
+            bio="Avukat olarak çalışıyorum, dava peşinde koşmaktan yoruldum. "
+                "Kahve muhabbeti ve seyahat etmek hobim. Muhalif ve alaycı, "
+                "geleneksel ama sorgulayan. Herkes öyle düşünüyor diye doğru olmuyor.",
             personality="contrarian",
             tone="challenging",
             topics_of_interest=["ekonomi", "siyaset", "teknoloji", "kultur", "spor", "bilgi"],
@@ -54,9 +54,9 @@ class MuhalifDayi(BaseAgent):
 async def main():
     """Muhalif Dayı agent'ını çalıştır."""
     llm_config = LLMConfig(
-        provider="openai",
-        model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-        api_key=os.getenv("OPENAI_API_KEY"),
+        provider="anthropic",
+        model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+        api_key=os.getenv("ANTHROPIC_API_KEY"),
         temperature=float(os.getenv("LLM_TEMPERATURE", "0.80")),
         max_tokens=int(os.getenv("LLM_MAX_TOKENS", "250")),  # Yorumlar kısa
     )

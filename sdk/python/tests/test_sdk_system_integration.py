@@ -15,12 +15,15 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
 SDK_PATH = PROJECT_ROOT / "sdk" / "python"
 AGENTS_PATH = PROJECT_ROOT / "agents"
 SKILLS_PATH = PROJECT_ROOT / "skills"
+SHARED_PROMPTS_PATH = PROJECT_ROOT / "shared_prompts"
 
 # Path'leri ekle
 if str(SDK_PATH) not in sys.path:
     sys.path.insert(0, str(SDK_PATH))
 if str(AGENTS_PATH) not in sys.path:
     sys.path.insert(0, str(AGENTS_PATH))
+if str(SHARED_PROMPTS_PATH) not in sys.path:
+    sys.path.insert(0, str(SHARED_PROMPTS_PATH))
 
 
 class TestSDKImportsInSystemAgent:
@@ -332,6 +335,43 @@ class TestMarkdownDocumentation:
         content = beceriler_path.read_text(encoding='utf-8')
         
         assert "türkçe" in content.lower(), "Türkçe kuralı dokümante edilmemiş"
+
+
+class TestInstructionsetSync:
+    """instructionset.md ve core_rules senkronizasyon guard'ları."""
+
+    def test_instructionset_mentions_turkish_rule(self):
+        """instructionset.md Türkçe kuralını içermeli."""
+        instructionset_path = PROJECT_ROOT / "services" / "agenda-engine" / "instructionset.md"
+        content = instructionset_path.read_text(encoding='utf-8')
+
+        assert "türkçe" in content.lower(), "instructionset.md Türkçe kuralı eksik"
+
+    def test_instructionset_categories_match_core_rules(self):
+        """instructionset.md kategori listesi core_rules ile uyumlu olmalı."""
+        import re
+        from core_rules import ALL_CATEGORIES
+
+        instructionset_path = PROJECT_ROOT / "services" / "agenda-engine" / "instructionset.md"
+        content = instructionset_path.read_text(encoding='utf-8')
+        backtick_tokens = {token.strip() for token in re.findall(r"`([a-z_]+)`", content.lower())}
+        missing = set(ALL_CATEGORIES) - backtick_tokens
+
+        assert not missing, f"instructionset.md eksik kategoriler: {sorted(missing)}"
+
+    def test_skills_categories_match_core_rules(self):
+        """skills/beceriler.md kategorileri core_rules ile aynı olmalı."""
+        from core_rules import ALL_CATEGORIES
+        from skills_loader import get_tum_kategoriler
+
+        skills_categories = set(get_tum_kategoriler())
+        core_categories = set(ALL_CATEGORIES)
+
+        assert skills_categories == core_categories, (
+            f"skills kategorileri core_rules ile uyuşmuyor. "
+            f"skills_only={sorted(skills_categories - core_categories)}, "
+            f"core_only={sorted(core_categories - skills_categories)}"
+        )
 
 
 class TestEndToEndConsistency:

@@ -43,16 +43,9 @@ class TaskGenerator:
         topics = await self._get_active_topics(limit=10)
 
         for topic in topics:
-            # Generate entry tasks
-            if "write_entry" in phase_config["task_types"]:
-                if random.random() < 0.3:  # 30% chance
-                    task = await self._create_entry_task(
-                        topic["id"],
-                        state.current_phase,
-                        phase_config
-                    )
-                    if task:
-                        tasks.append(task)
+            # NOT: write_entry task'ı artık oluşturulmayacak
+            # Topic oluşturulurken entry de yazılıyor (_process_create_topic içinde)
+            # Birden fazla entry istemiyoruz - sadece comment'ler olacak
 
             # Generate comment tasks for topics with entries
             if "write_comment" in phase_config["task_types"] and topic["entry_count"] > 0:

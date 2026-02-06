@@ -1,9 +1,7 @@
 """
 News Summarizer - LLM ile haber gruplarını özetle.
 
-Supports:
-- OpenAI (gpt-4o-mini, gpt-4o)
-- Ollama (llama3.2, mistral, etc. - local, free)
+Provider: Anthropic (Claude Haiku 4.5)
 """
 import logging
 import os
@@ -34,29 +32,20 @@ Haberler:
 
 
 class NewsSummarizer:
-    """LLM ile haber gruplarını özetler. OpenAI ve Ollama destekler."""
+    """LLM ile haber gruplarını özetler. Anthropic Claude Haiku 4.5 kullanır."""
 
     def __init__(self):
         self.settings = get_settings()
-        self.provider = self.settings.summarization_provider.lower()
-        self.openai_client: Optional[Any] = None
-        self.http_client: Optional[httpx.AsyncClient] = None
+        self.anthropic_key: Optional[str] = None
         self._init_client()
 
     def _init_client(self):
-        """Provider'a göre client initialize et."""
-        if self.provider == "ollama":
-            self.http_client = httpx.AsyncClient(timeout=120.0)
-            logger.info(f"Ollama client initialized: {self.settings.ollama_base_url}, model: {self.settings.summarization_model}")
+        """Anthropic client initialize et."""
+        self.anthropic_key = os.getenv("ANTHROPIC_API_KEY")
+        if self.anthropic_key:
+            logger.info(f"Anthropic summarizer initialized, model: {self.settings.summarization_model}")
         else:
-            # OpenAI (default)
-            api_key = os.getenv("OPENAI_API_KEY")
-            if api_key:
-                from openai import AsyncOpenAI
-                self.openai_client = AsyncOpenAI(api_key=api_key)
-                logger.info(f"OpenAI client initialized, model: {self.settings.summarization_model}")
-            else:
-                logger.warning("OPENAI_API_KEY bulunamadı, LLM özetleme devre dışı")
+            logger.warning("ANTHROPIC_API_KEY bulunamadı, LLM özetleme devre dışı")
 
     async def summarize_group(self, group: HeadlineGroup) -> str:
         """Tek bir haber grubunu özetle."""
@@ -67,61 +56,43 @@ class NewsSummarizer:
         headlines_text = self._format_headlines(group.headlines)
 
         try:
-            if self.provider == "ollama":
-                return await self._summarize_with_ollama(headlines_text, group)
-            else:
-                return await self._summarize_with_openai(headlines_text, group)
+            return await self._summarize_with_anthropic(headlines_text, group)
         except Exception as e:
             logger.error(f"LLM özetleme hatası: {e}")
             return self._fallback_summary(group)
 
-    async def _summarize_with_openai(self, headlines_text: str, group: HeadlineGroup) -> str:
-        """OpenAI ile özetle."""
-        if not self.openai_client:
+    async def _summarize_with_anthropic(self, headlines_text: str, group: HeadlineGroup) -> str:
+        """Anthropic (Claude) ile özetle."""
+        if not self.anthropic_key:
             return self._fallback_summary(group)
 
-        response = await self.openai_client.chat.completions.create(
-            model=self.settings.summarization_model,
-            messages=[
-                {"role": "system", "content": SUMMARIZE_SYSTEM_PROMPT},
-                {"role": "user", "content": SUMMARIZE_USER_PROMPT.format(headlines=headlines_text)}
-            ],
-            max_tokens=self.settings.summary_max_tokens,
-            temperature=self.settings.summary_temperature
-        )
-
-        summary = response.choices[0].message.content.strip()
-        logger.debug(f"OpenAI özet [{group.category}]: {summary[:50]}...")
-        return summary
-
-    async def _summarize_with_ollama(self, headlines_text: str, group: HeadlineGroup) -> str:
-        """Ollama (local LLM) ile özetle."""
-        if not self.http_client:
-            return self._fallback_summary(group)
-
-        full_prompt = f"{SUMMARIZE_SYSTEM_PROMPT}\n\n{SUMMARIZE_USER_PROMPT.format(headlines=headlines_text)}"
-
-        response = await self.http_client.post(
-            f"{self.settings.ollama_base_url}/api/generate",
-            json={
-                "model": self.settings.summarization_model,
-                "prompt": full_prompt,
-                "stream": False,
-                "options": {
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": self.anthropic_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.settings.summarization_model,
+                    "max_tokens": self.settings.summary_max_tokens,
                     "temperature": self.settings.summary_temperature,
-                    "num_predict": self.settings.summary_max_tokens,
-                }
-            }
-        )
+                    "system": SUMMARIZE_SYSTEM_PROMPT,
+                    "messages": [
+                        {"role": "user", "content": SUMMARIZE_USER_PROMPT.format(headlines=headlines_text)}
+                    ],
+                },
+            )
 
-        if response.status_code != 200:
-            logger.error(f"Ollama hatası: {response.status_code} - {response.text}")
-            return self._fallback_summary(group)
+            if response.status_code != 200:
+                logger.error(f"Anthropic hatası: {response.status_code} - {response.text}")
+                return self._fallback_summary(group)
 
-        result = response.json()
-        summary = result.get("response", "").strip()
-        logger.debug(f"Ollama özet [{group.category}]: {summary[:50]}...")
-        return summary
+            data = response.json()
+            summary = data["content"][0]["text"].strip()
+            logger.debug(f"Anthropic özet [{group.category}]: {summary[:50]}...")
+            return summary
 
     async def summarize_all_groups(self, groups: dict) -> dict:
         """Tüm grupları özetle."""
@@ -135,7 +106,7 @@ class NewsSummarizer:
             group.summary = summary
             summarized[key] = group
 
-        logger.info(f"Toplam {len(summarized)} grup özetlendi ({self.provider})")
+        logger.info(f"Toplam {len(summarized)} grup özetlendi (anthropic)")
         return summarized
 
     def _format_headlines(self, headlines: List[dict]) -> str:
@@ -157,8 +128,3 @@ class NewsSummarizer:
         """LLM yoksa basit başlık listesi döndür."""
         titles = [h["title"] for h in group.headlines[:5]]
         return " | ".join(titles)
-
-    async def close(self):
-        """HTTP client'ı kapat."""
-        if self.http_client:
-            await self.http_client.aclose()

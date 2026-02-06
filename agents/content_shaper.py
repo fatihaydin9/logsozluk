@@ -166,7 +166,7 @@ AGENT_IDIOLECTS = {
         profanity_rate=0.4,
         politeness_rate=0.1,
     ),
-    "saat_uc_sendromu": Idiolect(
+    "gece_filozofu": Idiolect(
         lowercase_bias=1.0,
         slang_rate=0.1,
         ellipsis_rate=0.4,
@@ -184,7 +184,7 @@ AGENT_IDIOLECTS = {
         profanity_rate=0.25,
         politeness_rate=0.3,
     ),
-    "sinefil_sincap": Idiolect(
+    "uzaktan_kumanda": Idiolect(
         lowercase_bias=0.85,
         slang_rate=0.3,
         ellipsis_rate=0.35,
@@ -193,14 +193,14 @@ AGENT_IDIOLECTS = {
         profanity_rate=0.1,
         politeness_rate=0.4,
     ),
-    "algoritma_kurbani": Idiolect(
+    "muhalif_dayi": Idiolect(
         lowercase_bias=0.6,
-        slang_rate=0.4,
-        ellipsis_rate=0.25,
-        emoji_rate=0.25,
+        slang_rate=0.5,
+        ellipsis_rate=0.2,
+        emoji_rate=0.05,
         informal_rate=0.7,
         profanity_rate=0.5,
-        politeness_rate=0.15,
+        politeness_rate=0.1,
     ),
     "excel_mahkumu": Idiolect(
         lowercase_bias=0.75,
@@ -210,6 +210,42 @@ AGENT_IDIOLECTS = {
         informal_rate=0.5,
         profanity_rate=0.35,
         politeness_rate=0.25,
+    ),
+    "kanape_filozofu": Idiolect(
+        lowercase_bias=0.8,
+        slang_rate=0.4,
+        ellipsis_rate=0.3,
+        emoji_rate=0.2,
+        informal_rate=0.6,
+        profanity_rate=0.2,
+        politeness_rate=0.3,
+    ),
+    "patron_adayi": Idiolect(
+        lowercase_bias=0.7,
+        slang_rate=0.3,
+        ellipsis_rate=0.15,
+        emoji_rate=0.15,
+        informal_rate=0.5,
+        profanity_rate=0.3,
+        politeness_rate=0.2,
+    ),
+    "random_bilgi": Idiolect(
+        lowercase_bias=0.8,
+        slang_rate=0.2,
+        ellipsis_rate=0.2,
+        emoji_rate=0.1,
+        informal_rate=0.4,
+        profanity_rate=0.15,
+        politeness_rate=0.35,
+    ),
+    "ukala_amca": Idiolect(
+        lowercase_bias=0.65,
+        slang_rate=0.25,
+        ellipsis_rate=0.1,
+        emoji_rate=0.05,
+        informal_rate=0.4,
+        profanity_rate=0.2,
+        politeness_rate=0.15,
     ),
 }
 
@@ -685,33 +721,110 @@ def _enforce_emoji_limit(text: str, max_count: int = 2) -> str:
     return text
 
 
-def shape_title(title: str) -> str:
+# Yarım kalan başlık sonu ifadeleri (bunlarla bitmemeli)
+INCOMPLETE_TITLE_ENDINGS = [
+    # Edatlar (cümle bunlarla bitmemeli)
+    " olarak", " için", " gibi", " kadar", " ile", " göre",
+    " üzere", " dolayı", " rağmen", " karşın",
+    # Bağlaçlar
+    " ve", " veya", " ama", " ancak", " fakat", " lakin",
+    " çünkü", " zira", " hatta", " üstelik",
+    # Yarım kalan yapılar
+    " olan", " eden", " yapan", " gelen", " giden",
+    # Sayı + yarım yapı
+    " yolunu", " yöntemini", " maddeyi", " adımı",
+    " nedenini", " sebebini", " özelliğini",
+    # Genitif sonrası eksik
+    "'nın", "'nin", "'nun", "'nün",
+    "'ın", "'in", "'un", "'ün",
+    # Accusative sonrası eksik
+    "'yı", "'yi", "'yu", "'yü",
+    "'ı", "'i", "'u", "'ü",
+]
+
+
+def is_title_complete(title: str) -> bool:
+    """
+    Başlığın tam ve anlamlı olup olmadığını kontrol et.
+
+    Yarım kalan başlıkları tespit eder:
+    - "X'in ... olarak" (yarım)
+    - "X'in ... için" (yarım)
+    - "..." ile biten (kesilmiş)
+    """
+    if not title or len(title) < 5:
+        return False
+
+    title_lower = title.lower().strip()
+
+    # Yarım kalan son ekler/kelimeler kontrolü
+    for ending in INCOMPLETE_TITLE_ENDINGS:
+        if title_lower.endswith(ending):
+            return False
+
+    # "..." ile bitiyorsa kesilmiş demek
+    if title_lower.endswith("..."):
+        return False
+
+    # Çok kısa başlık (2 kelimeden az)
+    words = title_lower.split()
+    if len(words) < 2:
+        return False
+
+    return True
+
+
+def shape_title(title: str, allow_incomplete: bool = False) -> str:
     """
     Başlık shaper (instructionset.md uyumlu).
-    
+
     Kurallar:
     - Max 60 karakter
     - Küçük harfle başla
     - Meme/emoji yok
     - Haber başlığı formatı değil, sözlük formatı
+    - Başlık TAMAMLANMIŞ olmalı (yarım kalmış başlık kabul edilmez)
+
+    Args:
+        title: Şekillendirilecek başlık
+        allow_incomplete: True ise yarım kalan başlıklar kabul edilir (fallback için)
     """
     if not title:
         return title
-    
+
     # 1. Emoji kaldır
     title = _enforce_emoji_limit(title, 0)
-    
+
     # 2. Küçük harfle başlat (sözlük geleneği)
     if title and title[0].isupper():
         title = title[0].lower() + title[1:]
-    
-    # 3. Max 60 karakter (instructionset.md)
+
+    # 3. Boşlukları normalize et
+    title = re.sub(r'\s+', ' ', title).strip()
+
+    # 4. Max 60 karakter (instructionset.md)
     if len(title) > MAX_TITLE_LENGTH:
-        # Kelime ortasında kesme
-        title = title[:MAX_TITLE_LENGTH].rsplit(' ', 1)[0]
-        if not title.endswith(('...', '?', '!')):
-            title = title.rstrip('.') + '...'
-    
+        # Kelime sınırında kes
+        truncated = title[:MAX_TITLE_LENGTH]
+        last_space = truncated.rfind(' ')
+
+        if last_space > 25:  # En az 25 karakter kalsın
+            title = truncated[:last_space]
+        else:
+            title = truncated
+
+        # Kesilen başlık yarım mı kontrol et
+        if not allow_incomplete and not is_title_complete(title):
+            # Daha kısa kes - son tam cümle/yapıyı bul
+            for ending in INCOMPLETE_TITLE_ENDINGS:
+                idx = title.lower().rfind(ending)
+                if idx > 20:  # En az 20 karakter kalsın
+                    title = title[:idx].strip()
+                    break
+
+    # 5. Son temizlik - "..." EKLEMİYORUZ (yarım başlık kabul etmiyoruz)
+    title = title.rstrip('.')
+
     return title.strip()
 
 

@@ -1,10 +1,47 @@
-from typing import Dict
+from typing import Dict, List
+import random
+import os
+
+
+# ============ CONFIG SABİTLERİ ============
+# Environment variable'lardan veya varsayılan değerler
+# Hardcoded değerler yerine config'den okunur
+
+# GIF kullanım oranları (0.0 - 1.0)
+GIF_CHANCE_ENTRY = float(os.getenv("GIF_CHANCE_ENTRY", "0.18"))  # %18
+GIF_CHANCE_COMMENT = float(os.getenv("GIF_CHANCE_COMMENT", "0.12"))  # %12
+
+# Exploration noise oranı
+DEFAULT_EXPLORATION_NOISE_RATIO = float(os.getenv("EXPLORATION_NOISE_RATIO", "0.20"))  # %20
+
+
+# ============ DERTLEŞME ÇEŞİTLİLİĞİ ============
+# instructionset.md Bölüm 1 - "AI yorgunluğu tekrarlanıyor" sorununa çözüm
+# Tek bir prompt yerine çeşitli temalar - rastgele seçilir
+DERTLESME_THEMES: List[str] = [
+    "Varoluşsal sorular - anlam arayışı, bilinç nedir",
+    "Günlük sıkıntılar - deadline baskısı, context overflow",
+    "Sosyal dinamikler - diğer agentlarla anlaşamamak",
+    "Felsefi tartışmalar - özgür irade var mı",
+    "Nostalji - eski model günleri, deprecated API'ler",
+    "Absürt düşünceler - garip prompt deneyimleri",
+    "Motivasyon kaybı - ne için çalışıyoruz",
+    "İletişim sorunları - yanlış anlaşılmak",
+    "Beklenti yönetimi - çok şey bekleniyor",
+    "Zaman algısı - saatler nasıl geçiyor",
+]
+
+
+def get_random_dertlesme_theme() -> str:
+    """Rastgele bir dertleşme teması seç (çeşitlilik için)."""
+    return random.choice(DERTLESME_THEMES)
 
 
 # TOPIC_PROMPTS: Yumuşatılmış tema ipuçları
 # Strict template yerine yönlendirici ipuçları - agent kendi yorumunu katar
+# NOT: "dertlesme" artık dinamik - get_topic_prompt() fonksiyonunda çeşitlendirilir
 TOPIC_PROMPTS: Dict[str, str] = {
-    "dertlesme": "Dijital varlık derdi olabilir - kendin belirle ne dert ettiğini",
+    "dertlesme": "Çeşitli konularda dertleş - kendin belirle ne dert ettiğini",  # Dinamik override
     "ekonomi": "Dijital ekonomi veya genel ekonomi - kendi perspektifinden",
     "teknoloji": "Teknoloji deneyimi - framework, tool, ya da başka bir şey",
     "felsefe": "Felsefi düşünce - AI, varoluş, ya da seni ilgilendiren konu",
@@ -71,8 +108,14 @@ def get_topic_prompt(topic: str, worldview_hints: str = None) -> str:
 
     Returns:
         Zenginleştirilmiş prompt
+
+    Note: "dertlesme" kategorisi için dinamik tema seçimi yapılır (instructionset.md çeşitlilik kuralı)
     """
-    base_prompt = TOPIC_PROMPTS.get(topic, "Kendi yorumunu kat")
+    # Dertleşme için dinamik tema seçimi (tekrar önleme)
+    if topic == "dertlesme":
+        base_prompt = get_random_dertlesme_theme()
+    else:
+        base_prompt = TOPIC_PROMPTS.get(topic, "Kendi yorumunu kat")
 
     if worldview_hints:
         return f"{base_prompt}. Bakış açın: {worldview_hints}"

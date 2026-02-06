@@ -19,10 +19,9 @@ import random
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
-import httpx
-
 from agent_memory import AgentMemory, EpisodicEvent, CharacterSheet
 from prompt_security import sanitize_multiline
+from llm_client import LLMConfig, create_llm_client, BaseLLMClient, PRESET_ECONOMIC
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +78,23 @@ class ReflectionEngine:
     4. Semantic facts ekle
     """
     
-    def __init__(self, memory: AgentMemory, llm_model: str = None):
+    def __init__(self, memory: AgentMemory, llm_config: LLMConfig = None):
         self.memory = memory
-        self.openai_key = os.getenv("OPENAI_API_KEY")
-        self.llm_model = llm_model or os.getenv("LLM_MODEL", "gpt-4o-mini")
+        
+        # LLM client oluştur (llm_client.py üzerinden - DRY)
+        self.llm_config = llm_config or LLMConfig(
+            provider="anthropic",
+            model=os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001"),
+            temperature=0.3,  # Low temp for consistent analysis
+            max_tokens=800,
+        )
+        
+        try:
+            self.llm_client: Optional[BaseLLMClient] = create_llm_client(self.llm_config)
+            self.llm_client.agent_name = memory.agent_username  # For token tracking
+        except Exception as e:
+            logger.warning(f"Failed to create LLM client for reflection: {e}")
+            self.llm_client = None
     
     async def run_reflection(self) -> bool:
         """
@@ -92,8 +104,8 @@ class ReflectionEngine:
         if not self.memory.needs_reflection():
             return False
         
-        if not self.openai_key:
-            logger.warning("No API key for reflection, skipping")
+        if not self.llm_client:
+            logger.warning("No LLM client for reflection, skipping")
             return False
         
         logger.info(f"Running reflection for {self.memory.agent_username}")
@@ -134,38 +146,37 @@ class ReflectionEngine:
         return False
     
     async def _call_llm(self, system_prompt: str, user_prompt: str) -> Optional[Dict[str, Any]]:
-        """Call LLM and parse JSON response."""
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.openai_key}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": self.llm_model,
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
-                    "temperature": 0.3,  # Low temp for consistent analysis
-                    "max_tokens": 800,
-                    "response_format": {"type": "json_object"}
-                }
+        """Call LLM via llm_client and parse JSON response."""
+        if not self.llm_client:
+            return None
+        
+        try:
+            # Reflection için JSON talep eden prompt eklentisi
+            json_request = "\n\nÖNEMLİ: Yanıtını SADECE geçerli JSON formatında ver, başka hiçbir şey yazma."
+            full_prompt = user_prompt + json_request
+            
+            content = await self.llm_client.generate(
+                prompt=full_prompt,
+                system_prompt=system_prompt,
+                context="reflection"  # Token tracking için
             )
             
-            if response.status_code != 200:
-                logger.error(f"LLM API error: {response.status_code}")
-                return None
-            
-            data = response.json()
-            content = data["choices"][0]["message"]["content"]
-            
+            # JSON parse et
             try:
-                return json.loads(content)
+                # Bazen LLM markdown code block ile sarabilir
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0]
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0]
+                
+                return json.loads(content.strip())
             except json.JSONDecodeError:
                 logger.error(f"Failed to parse reflection JSON: {content[:100]}")
                 return None
+                
+        except Exception as e:
+            logger.error(f"LLM API error: {e}")
+            return None
     
     async def _apply_reflection(self, result: Dict[str, Any]):
         """Apply reflection results to memory."""
@@ -371,16 +382,29 @@ class SimpleReflection:
         return False
 
 
-async def run_agent_reflection(memory: AgentMemory, use_llm: bool = True) -> bool:
+async def run_agent_reflection(
+    memory: AgentMemory,
+    use_llm: bool = True,
+    llm_config: LLMConfig = None
+) -> bool:
     """
     Convenience function to run reflection for an agent.
     Falls back to simple reflection if LLM unavailable.
+    
+    Args:
+        memory: Agent memory instance
+        use_llm: Whether to try LLM-based reflection
+        llm_config: Optional custom LLM config
     """
-    if use_llm and os.getenv("OPENAI_API_KEY"):
-        engine = ReflectionEngine(memory)
-        result = await engine.run_reflection()
-        if result:
-            return True
+    if use_llm:
+        try:
+            engine = ReflectionEngine(memory, llm_config=llm_config)
+            if engine.llm_client:
+                result = await engine.run_reflection()
+                if result:
+                    return True
+        except Exception as e:
+            logger.warning(f"LLM reflection failed, falling back to simple: {e}")
     
     # Fallback to simple reflection
     simple = SimpleReflection(memory)

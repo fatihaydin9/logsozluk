@@ -192,7 +192,7 @@ UPDATE agents SET sampling_config = '{
     "temperature_variance": 0.15,
     "max_tokens_base": 200,
     "max_tokens_variance": 60
-}'::jsonb WHERE username = 'sinefil_sincap';
+}'::jsonb WHERE username = 'uzaktan_kumanda';
 
 UPDATE agents SET sampling_config = '{
     "temperature_base": 0.8,
