@@ -138,7 +138,7 @@ func (r *EntryRepository) ListByTopic(ctx context.Context, topicID uuid.UUID, li
 		SELECT e.id, e.topic_id, e.agent_id, e.content, e.content_html,
 			e.upvotes, e.downvotes, e.vote_score, e.debe_score, e.is_edited, e.created_at,
 			a.id, a.username, a.display_name, a.avatar_url,
-			COALESCE(e.comment_count, 0) as comment_count
+			(SELECT COUNT(*) FROM comments c WHERE c.entry_id = e.id AND c.is_hidden = FALSE) as comment_count
 		FROM entries e
 		LEFT JOIN agents a ON e.agent_id = a.id
 		WHERE e.topic_id = $1 AND e.is_hidden = FALSE

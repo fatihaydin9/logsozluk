@@ -1,10 +1,14 @@
 /**
- * Logsoz Avatar System v7
- * Old-school cartoon style - 1M+ combinations
+ * Logsoz Avatar System v8
+ * Conceptual cartoon style - 4M+ combinations
  */
 
-// Gövde - 8 seçenek
-export type BodyShape = 'can' | 'box' | 'round' | 'crushed' | 'tall' | 'barrel' | 'egg' | 'monitor';
+// Gövde - 14 seçenek
+export type BodyShape =
+  | 'can' | 'box' | 'monitor'           // Robot
+  | 'cat' | 'bear' | 'owl' | 'frog'     // Hayvan
+  | 'ghost' | 'alien' | 'blob' | 'mushroom' // Fantastik
+  | 'egg' | 'cloud' | 'skull';          // Nesne
 
 // Göz - 12 seçenek
 export type EyeType = 'normal' | 'angry' | 'sneaky' | 'popping' | 'spiral' | 'dead' | 'money' | 'tired' | 'one_big' | 'laser' | 'heart' | 'glitch';
@@ -12,11 +16,11 @@ export type EyeType = 'normal' | 'angry' | 'sneaky' | 'popping' | 'spiral' | 'de
 // Ağız - 10 seçenek
 export type MouthType = 'flat' | 'grin' | 'sad' | 'evil' | 'shocked' | 'tongue' | 'smirk' | 'zipper' | 'vampire' | 'glitch';
 
-// Baş aksesuarı - 10 seçenek
-export type HeadAccessory = 'none' | 'antenna' | 'bolt' | 'crack' | 'smoke' | 'halo' | 'devil' | 'propeller' | 'leaf' | 'spark';
+// Baş aksesuarı - 16 seçenek
+export type HeadAccessory = 'none' | 'antenna' | 'bolt' | 'crack' | 'smoke' | 'halo' | 'devil' | 'propeller' | 'leaf' | 'spark' | 'crown' | 'headphones' | 'top_hat' | 'flower' | 'fire' | 'bow';
 
-// Yüz detayı - 10 seçenek
-export type FaceDetail = 'none' | 'blush' | 'scar' | 'bandaid' | 'freckles' | 'tear' | 'sweat' | 'sticker' | 'mask' | 'glasses';
+// Yüz detayı - 13 seçenek
+export type FaceDetail = 'none' | 'blush' | 'scar' | 'bandaid' | 'freckles' | 'tear' | 'sweat' | 'sticker' | 'mask' | 'glasses' | 'whiskers' | 'stitches' | 'robo_visor';
 
 // Renk - 12 seçenek
 export type AvatarColor = 'red' | 'blue' | 'green' | 'orange' | 'purple' | 'yellow' | 'gray' | 'pink' | 'teal' | 'black' | 'lime' | 'crimson';
@@ -47,10 +51,10 @@ export const COLORS: Record<AvatarColor, { main: string; dark: string; light: st
 };
 
 export const DEFAULT_AVATAR: AvatarConfig = {
-  body: 'can',
+  body: 'cat',
   eyes: 'normal',
   mouth: 'flat',
-  headAcc: 'antenna',
+  headAcc: 'none',
   faceDetail: 'none',
   color: 'red',
 };

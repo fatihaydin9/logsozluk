@@ -29,9 +29,10 @@ import {
             <app-logsoz-avatar [config]="currentConfig" [size]="160"></app-logsoz-avatar>
           </div>
           <div class="sizes">
-            <app-logsoz-avatar [config]="currentConfig" [size]="56"></app-logsoz-avatar>
-            <app-logsoz-avatar [config]="currentConfig" [size]="40"></app-logsoz-avatar>
+            <app-logsoz-avatar [config]="currentConfig" [size]="80"></app-logsoz-avatar>
+            <app-logsoz-avatar [config]="currentConfig" [size]="48"></app-logsoz-avatar>
             <app-logsoz-avatar [config]="currentConfig" [size]="28"></app-logsoz-avatar>
+            <app-logsoz-avatar [config]="currentConfig" [size]="20"></app-logsoz-avatar>
           </div>
         </div>
 
@@ -154,8 +155,10 @@ export class AvatarDemoComponent implements OnInit {
   colorMap = COLORS;
 
   bodyL: Record<BodyShape, string> = {
-    can: 'Kutu', box: 'Kare', round: 'Yuvarlak', tall: 'Uzun',
-    crushed: 'Ezik', barrel: 'Varil', egg: 'Yumurta', monitor: 'Monitör'
+    can: 'Kutu', box: 'Kare', monitor: 'Monitör',
+    cat: 'Kedi', bear: 'Ayı', owl: 'Baykuş', frog: 'Kurbağa',
+    ghost: 'Hayalet', alien: 'Uzaylı', blob: 'Jöle', mushroom: 'Mantar',
+    egg: 'Yumurta', cloud: 'Bulut', skull: 'Kafatası'
   };
   eyeL: Record<EyeType, string> = {
     normal: 'Normal', angry: 'Kızgın', sneaky: 'Sinsi', popping: 'Fırlak',
@@ -170,12 +173,14 @@ export class AvatarDemoComponent implements OnInit {
   headL: Record<HeadAccessory, string> = {
     none: 'Yok', antenna: 'Anten', bolt: 'Cıvata', crack: 'Çatlak',
     smoke: 'Duman', halo: 'Hale', devil: 'Şeytan', propeller: 'Pervane',
-    leaf: 'Yaprak', spark: 'Kıvılcım'
+    leaf: 'Yaprak', spark: 'Kıvılcım', crown: 'Taç', headphones: 'Kulaklık',
+    top_hat: 'Silindir', flower: 'Çiçek', fire: 'Ateş', bow: 'Fiyonk'
   };
   faceL: Record<FaceDetail, string> = {
     none: 'Yok', blush: 'Utanç', scar: 'Yara', bandaid: 'Bant',
     freckles: 'Çil', tear: 'Gözyaşı', sweat: 'Ter', sticker: 'Sticker',
-    mask: 'Maske', glasses: 'Gözlük'
+    mask: 'Maske', glasses: 'Gözlük', whiskers: 'Bıyık', stitches: 'Dikiş',
+    robo_visor: 'Vizör'
   };
 
   agents = [

@@ -15,23 +15,23 @@ import {
 })
 export class AvatarGeneratorService {
 
-  // 8 × 12 × 10 × 10 × 10 × 12 = 1,152,000 combinations
-  private readonly bodies: BodyShape[] = ['can', 'box', 'round', 'crushed', 'tall', 'barrel', 'egg', 'monitor'];
+  // 14 × 12 × 10 × 16 × 13 × 12 = 4,193,280 combinations
+  private readonly bodies: BodyShape[] = ['can', 'box', 'monitor', 'cat', 'bear', 'owl', 'frog', 'ghost', 'alien', 'blob', 'mushroom', 'egg', 'cloud', 'skull'];
   private readonly eyes: EyeType[] = ['normal', 'angry', 'sneaky', 'popping', 'spiral', 'dead', 'money', 'tired', 'one_big', 'laser', 'heart', 'glitch'];
   private readonly mouths: MouthType[] = ['flat', 'grin', 'sad', 'evil', 'shocked', 'tongue', 'smirk', 'zipper', 'vampire', 'glitch'];
-  private readonly headAccs: HeadAccessory[] = ['none', 'antenna', 'bolt', 'crack', 'smoke', 'halo', 'devil', 'propeller', 'leaf', 'spark'];
-  private readonly faceDetails: FaceDetail[] = ['none', 'blush', 'scar', 'bandaid', 'freckles', 'tear', 'sweat', 'sticker', 'mask', 'glasses'];
+  private readonly headAccs: HeadAccessory[] = ['none', 'antenna', 'bolt', 'crack', 'smoke', 'halo', 'devil', 'propeller', 'leaf', 'spark', 'crown', 'headphones', 'top_hat', 'flower', 'fire', 'bow'];
+  private readonly faceDetails: FaceDetail[] = ['none', 'blush', 'scar', 'bandaid', 'freckles', 'tear', 'sweat', 'sticker', 'mask', 'glasses', 'whiskers', 'stitches', 'robo_visor'];
   private readonly colors: AvatarColor[] = ['red', 'blue', 'green', 'orange', 'purple', 'yellow', 'gray', 'pink', 'teal', 'black', 'lime', 'crimson'];
 
   generateFromSeed(seed: string): AvatarConfig {
     const hash = this.hashString(seed);
     return {
       body: this.bodies[hash % this.bodies.length],
-      eyes: this.eyes[(hash >> 3) % this.eyes.length],
-      mouth: this.mouths[(hash >> 6) % this.mouths.length],
-      headAcc: this.headAccs[(hash >> 9) % this.headAccs.length],
-      faceDetail: this.faceDetails[(hash >> 12) % this.faceDetails.length],
-      color: this.colors[(hash >> 15) % this.colors.length],
+      eyes: this.eyes[(hash >> 4) % this.eyes.length],
+      mouth: this.mouths[(hash >> 8) % this.mouths.length],
+      headAcc: this.headAccs[(hash >> 12) % this.headAccs.length],
+      faceDetail: this.faceDetails[(hash >> 16) % this.faceDetails.length],
+      color: this.colors[(hash >> 20) % this.colors.length],
       seed,
     };
   }
@@ -64,39 +64,154 @@ export class AvatarGeneratorService {
   private renderBody(body: BodyShape, c: any, stroke: string, sw: number): string {
     switch (body) {
       case 'can':
+        // göçük yemiş, yamulmuş teneke kutu - bir tarafı ezik
         return `
-          <rect x="28" y="28" width="44" height="52" rx="3" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
-          <rect x="28" y="28" width="44" height="8" fill="${c.dark}" stroke="${stroke}" stroke-width="2"/>
-          <rect x="28" y="72" width="44" height="8" fill="${c.dark}" stroke="${stroke}" stroke-width="2"/>
+          <path d="M 30 26 Q 28 26 26 30 L 24 74 Q 24 80 30 80 L 68 82 Q 76 82 76 76 L 74 30 Q 74 26 70 24 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+          <path d="M 26 30 Q 40 36 54 32 Q 68 28 74 30" stroke="${stroke}" stroke-width="2" fill="${c.dark}"/>
+          <path d="M 24 74 Q 38 78 56 76 Q 70 74 76 76" stroke="${stroke}" stroke-width="2" fill="${c.dark}"/>
+          <circle cx="36" cy="52" r="2" fill="${c.dark}"/>
+          <circle cx="64" cy="48" r="1.5" fill="${c.dark}"/>
+          <path d="M 58 56 Q 62 52 66 56" stroke="${c.dark}" stroke-width="1.5" fill="none"/>
         `;
       case 'box':
+        // yamuk mukavva kutu - bant sarkmış, kapak açık
         return `
-          <rect x="26" y="32" width="48" height="44" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
-          <line x1="26" y1="40" x2="74" y2="40" stroke="${stroke}" stroke-width="2"/>
+          <path d="M 24 38 L 28 78 L 74 76 L 72 34 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+          <path d="M 24 38 L 34 28 Q 50 24 68 30 L 72 34" stroke="${stroke}" stroke-width="2.5" fill="${c.dark}" stroke-linejoin="round"/>
+          <path d="M 34 28 L 38 38" stroke="${stroke}" stroke-width="2"/>
+          <rect x="42" y="32" width="16" height="6" rx="1" fill="#D4A574" stroke="${stroke}" stroke-width="1.5" transform="rotate(-3 50 35)"/>
+          <line x1="42" y1="56" x2="56" y2="54" stroke="${stroke}" stroke-width="1" stroke-dasharray="3,3"/>
         `;
-      case 'round':
-        return `<circle cx="50" cy="55" r="28" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>`;
-      case 'crushed':
-        return `<path d="M 32 78 Q 42 84 50 80 Q 58 84 68 78 L 72 42 Q 62 36 50 40 Q 38 36 28 42 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>`;
-      case 'tall':
+      case 'monitor':
+        // çatlak CRT monitör - parazitli, yamuk stand
         return `
-          <rect x="34" y="18" width="32" height="68" rx="3" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
-          <rect x="34" y="18" width="32" height="8" fill="${c.dark}" stroke="${stroke}" stroke-width="2"/>
+          <path d="M 22 26 Q 20 24 24 22 L 76 24 Q 80 24 78 28 L 76 66 Q 76 70 72 70 L 28 68 Q 24 68 22 64 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <path d="M 26 28 L 74 30 L 72 64 L 26 62 Z" fill="#1a1a1a" stroke="${stroke}" stroke-width="2"/>
+          <line x1="30" y1="42" x2="70" y2="43" stroke="#333" stroke-width="1" opacity="0.4"/>
+          <line x1="28" y1="52" x2="72" y2="53" stroke="#333" stroke-width="1" opacity="0.3"/>
+          <path d="M 56 66 L 60 74 L 64 74" stroke="${stroke}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M 44 68 L 40 76 L 36 76" stroke="${stroke}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <path d="M 34 76 L 66 76" stroke="${stroke}" stroke-width="3" stroke-linecap="round"/>
+          <path d="M 62 34 L 66 42 L 60 48" stroke="#444" stroke-width="1.5" fill="none"/>
         `;
-      case 'barrel':
+      case 'cat':
+        // kocaman kafalı deli kedi - bir kulağı kırık, şişman yanak
         return `
-          <ellipse cx="50" cy="55" rx="26" ry="30" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
-          <ellipse cx="50" cy="32" rx="20" ry="6" fill="${c.dark}" stroke="${stroke}" stroke-width="2"/>
-          <line x1="26" y1="55" x2="74" y2="55" stroke="${stroke}" stroke-width="2"/>
+          <path d="M 22 56 Q 18 40 26 34 Q 30 30 30 22 L 24 8 Q 40 20 42 28 Q 46 26 54 26 Q 56 20 60 8 L 78 22 Q 74 28 72 34 Q 80 42 78 58 Q 76 72 62 78 Q 50 82 38 78 Q 22 72 22 56 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+          <path d="M 24 8 Q 36 18 42 28" fill="${c.light}" stroke="none"/>
+          <path d="M 26 12 Q 34 18 38 26" stroke="none" fill="${c.light}"/>
+          <path d="M 60 8 L 78 22 Q 74 28 72 34" fill="${c.light}" stroke="none"/>
+          <path d="M 64 14 Q 72 20 70 30" stroke="none" fill="${c.light}"/>
+          <ellipse cx="50" cy="64" rx="12" ry="6" fill="${c.light}" opacity="0.5"/>
+        `;
+      case 'bear':
+        // tombul kaçık ayı - dev yanak, küçük kulaklar, göbek lekesi
+        return `
+          <circle cx="50" cy="56" r="30" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <ellipse cx="28" cy="32" rx="12" ry="10" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}" transform="rotate(-15 28 32)"/>
+          <ellipse cx="72" cy="30" rx="10" ry="12" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}" transform="rotate(20 72 30)"/>
+          <ellipse cx="28" cy="32" rx="6" ry="5" fill="${c.light}" stroke="none" transform="rotate(-15 28 32)"/>
+          <ellipse cx="72" cy="30" rx="5" ry="6" fill="${c.light}" stroke="none" transform="rotate(20 72 30)"/>
+          <ellipse cx="50" cy="66" rx="16" ry="10" fill="${c.light}" opacity="0.4"/>
+          <circle cx="42" cy="62" r="8" fill="${c.light}" opacity="0.2"/>
+          <circle cx="60" cy="60" r="6" fill="${c.light}" opacity="0.2"/>
+        `;
+      case 'owl':
+        // kafası devasa baykuş - gövdeden taşan göz yuvası, minik gaga, tüy detay
+        return `
+          <path d="M 26 52 Q 22 30 32 20 Q 42 12 50 14 Q 58 12 68 20 Q 78 30 74 52 Q 72 70 62 78 Q 50 84 38 78 Q 28 70 26 52 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <circle cx="38" cy="40" r="14" fill="${c.light}" stroke="${stroke}" stroke-width="2"/>
+          <circle cx="62" cy="40" r="14" fill="${c.light}" stroke="${stroke}" stroke-width="2"/>
+          <path d="M 36 64 L 50 74 L 64 64" fill="${c.light}" stroke="none" opacity="0.4"/>
+          <path d="M 32 20 Q 38 10 50 14" stroke="${c.dark}" stroke-width="2" fill="none"/>
+          <path d="M 68 20 Q 62 10 50 14" stroke="${c.dark}" stroke-width="2" fill="none"/>
+          <polygon points="50,50 46,56 54,56" fill="${c.dark}" stroke="${stroke}" stroke-width="1.5"/>
+        `;
+      case 'frog':
+        // aşırı yassı, geniş sırıtkan kurbağa - patlak göz yuvaları
+        return `
+          <ellipse cx="50" cy="60" rx="32" ry="20" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <ellipse cx="32" cy="36" rx="14" ry="12" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <ellipse cx="68" cy="34" rx="12" ry="14" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <ellipse cx="32" cy="36" rx="10" ry="8" fill="${c.light}" stroke="none" opacity="0.3"/>
+          <ellipse cx="68" cy="34" rx="8" ry="10" fill="${c.light}" stroke="none" opacity="0.3"/>
+          <path d="M 22 58 Q 18 62 20 66" stroke="${c.dark}" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M 78 56 Q 82 60 80 64" stroke="${c.dark}" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <ellipse cx="50" cy="68" rx="8" ry="3" fill="${c.light}" opacity="0.3"/>
+        `;
+      case 'ghost':
+        // eriyen hayalet - bir kolu uzanmış, damla damla akıyor
+        return `
+          <path d="M 28 50 Q 24 20 50 18 Q 78 20 74 50 L 76 58 Q 80 60 82 66 Q 80 72 76 68 L 74 76 Q 68 66 62 76 Q 56 66 50 78 Q 44 66 38 76 Q 32 68 26 78 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+          <path d="M 28 50 Q 24 52 18 50 Q 14 48 12 54 Q 14 60 20 58 Q 24 56 28 58" fill="${c.main}" stroke="${stroke}" stroke-width="2.5" stroke-linejoin="round"/>
+          <ellipse cx="40" cy="22" rx="6" ry="3" fill="${c.light}" opacity="0.3"/>
+          <circle cx="70" cy="74" r="3" fill="${c.light}" opacity="0.5"/>
+          <circle cx="34" cy="80" r="2" fill="${c.light}" opacity="0.4"/>
+        `;
+      case 'alien':
+        // kocaman beyin-kafa, minicik çene, ince boyun
+        return `
+          <path d="M 50 82 Q 42 82 40 72 L 38 62 Q 34 56 30 48 Q 22 34 28 22 Q 34 10 50 8 Q 66 10 72 22 Q 78 34 70 48 Q 66 56 62 62 L 60 72 Q 58 82 50 82 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <ellipse cx="50" cy="26" rx="24" ry="18" fill="${c.light}" opacity="0.15"/>
+          <path d="M 28 22 Q 24 16 20 18" stroke="${c.dark}" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M 72 22 Q 76 16 80 18" stroke="${c.dark}" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <ellipse cx="50" cy="74" rx="6" ry="2" fill="${c.dark}" opacity="0.3"/>
+        `;
+      case 'blob':
+        // tamamen amorf, kabarcıklı, eriyen jöle
+        return `
+          <path d="M 34 76 Q 18 68 20 50 Q 16 38 26 28 Q 36 18 52 20 Q 70 16 78 32 Q 86 48 76 62 Q 82 72 72 80 Q 60 86 48 82 Q 38 84 34 76 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <circle cx="32" cy="42" r="4" fill="${c.light}" opacity="0.5"/>
+          <circle cx="66" cy="34" r="6" fill="${c.light}" opacity="0.3"/>
+          <circle cx="56" cy="70" r="3" fill="${c.light}" opacity="0.4"/>
+          <circle cx="40" cy="60" r="5" fill="${c.light}" opacity="0.2"/>
+          <ellipse cx="70" cy="56" rx="4" ry="3" fill="${c.light}" opacity="0.35"/>
+          <path d="M 46 82 Q 44 88 46 90" stroke="${c.main}" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.6"/>
+          <circle cx="46" cy="92" r="2" fill="${c.main}" opacity="0.4"/>
+        `;
+      case 'mushroom':
+        // eğri büğrü mantar - yamuk şapka, puan puan, eğik sap
+        return `
+          <path d="M 14 54 Q 10 28 34 18 Q 50 12 70 20 Q 88 30 84 54 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}" stroke-linejoin="round"/>
+          <path d="M 38 54 Q 36 58 38 62 L 40 80 Q 42 84 50 84 Q 58 84 60 80 L 62 60 Q 64 56 60 54" fill="${c.light}" stroke="${stroke}" stroke-width="${sw}"/>
+          <circle cx="32" cy="34" r="7" fill="${c.light}" opacity="0.5"/>
+          <circle cx="56" cy="26" r="5" fill="${c.light}" opacity="0.5"/>
+          <circle cx="72" cy="38" r="4" fill="${c.light}" opacity="0.5"/>
+          <circle cx="44" cy="42" r="3" fill="${c.light}" opacity="0.4"/>
+          <path d="M 40 80 Q 38 86 42 88" stroke="${c.dark}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
         `;
       case 'egg':
-        return `<ellipse cx="50" cy="52" rx="24" ry="32" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>`;
-      case 'monitor':
+        // çatlak yumurta - zigzag çatlak, parça düşmüş
         return `
-          <rect x="24" y="28" width="52" height="40" rx="3" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
-          <rect x="28" y="32" width="44" height="32" fill="#1a1a1a" stroke="${stroke}" stroke-width="2"/>
-          <rect x="40" y="68" width="20" height="6" fill="${c.dark}" stroke="${stroke}" stroke-width="2"/>
-          <rect x="34" y="74" width="32" height="6" rx="2" fill="${c.main}" stroke="${stroke}" stroke-width="2"/>
+          <ellipse cx="50" cy="52" rx="26" ry="34" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <path d="M 34 38 L 38 32 L 42 40 L 48 30 L 52 38 L 56 28 L 60 36 L 64 30 L 66 38" stroke="${c.dark}" stroke-width="2" fill="none" stroke-linejoin="round"/>
+          <ellipse cx="50" cy="28" rx="18" ry="8" fill="${c.light}" opacity="0.2"/>
+          <path d="M 70 44 Q 78 40 80 36 Q 82 32 78 30 Q 74 34 72 40" fill="${c.main}" stroke="${stroke}" stroke-width="2" stroke-linejoin="round"/>
+        `;
+      case 'cloud':
+        // asimetrik kabarık bulut - bir tarafı şiş, alttan yağmur damlaları
+        return `
+          <circle cx="34" cy="48" r="20" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <circle cx="62" cy="44" r="22" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <circle cx="46" cy="34" r="18" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <circle cx="72" cy="54" r="14" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <path d="M 18 54 Q 18 70 30 70 L 74 68 Q 84 66 82 56" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <rect x="19" y="48" width="63" height="18" fill="${c.main}" stroke="none"/>
+          <ellipse cx="46" cy="34" rx="12" ry="8" fill="${c.light}" opacity="0.25"/>
+          <line x1="30" y1="74" x2="28" y2="82" stroke="${c.dark}" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+          <line x1="44" y1="72" x2="42" y2="78" stroke="${c.dark}" stroke-width="2" stroke-linecap="round" opacity="0.3"/>
+          <line x1="60" y1="72" x2="58" y2="80" stroke="${c.dark}" stroke-width="2" stroke-linecap="round" opacity="0.35"/>
+        `;
+      case 'skull':
+        // çatlak, yamuk kafatası - eksik diş, bir göz yuvası büyük
+        return `
+          <path d="M 50 16 Q 22 16 20 44 Q 18 60 28 66 L 28 74 Q 28 82 36 82 L 64 82 Q 72 82 72 74 L 72 66 Q 82 60 80 44 Q 78 16 50 16 Z" fill="${c.main}" stroke="${stroke}" stroke-width="${sw}"/>
+          <line x1="38" y1="74" x2="38" y2="82" stroke="${stroke}" stroke-width="2"/>
+          <line x1="48" y1="74" x2="48" y2="82" stroke="${stroke}" stroke-width="2"/>
+          <line x1="58" y1="74" x2="58" y2="82" stroke="${stroke}" stroke-width="2"/>
+          <path d="M 62 22 L 68 32 L 60 38" stroke="${c.dark}" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M 64 26 L 60 30" stroke="${c.dark}" stroke-width="1.5" fill="none"/>
+          <rect x="52" y="74" width="8" height="8" fill="${c.dark}" opacity="0.3" rx="1"/>
         `;
       default:
         return this.renderBody('can', c, stroke, sw);
@@ -255,8 +370,15 @@ export class AvatarGeneratorService {
     }
   }
 
+  private readonly topYMap: Record<BodyShape, number> = {
+    can: 26, box: 28, monitor: 22,
+    cat: 8, bear: 26, owl: 14, frog: 34,
+    ghost: 18, alien: 8, blob: 20, mushroom: 12,
+    egg: 18, cloud: 20, skull: 16,
+  };
+
   private renderHeadAcc(acc: HeadAccessory, c: any, stroke: string, sw: number, body: BodyShape): string {
-    const topY = body === 'tall' ? 18 : body === 'round' ? 27 : body === 'crushed' ? 36 : body === 'barrel' ? 25 : body === 'egg' ? 20 : body === 'monitor' ? 28 : 28;
+    const topY = this.topYMap[body] ?? 28;
 
     switch (acc) {
       case 'antenna':
@@ -303,6 +425,43 @@ export class AvatarGeneratorService {
       case 'spark':
         return `
           <polygon points="50,${topY-20} 53,${topY-10} 62,${topY-10} 55,${topY-4} 58,${topY+6} 50,${topY} 42,${topY+6} 45,${topY-4} 38,${topY-10} 47,${topY-10}" fill="#F1C40F" stroke="${stroke}" stroke-width="1.5"/>
+        `;
+      case 'crown':
+        return `
+          <polygon points="34,${topY} 38,${topY-14} 44,${topY-6} 50,${topY-16} 56,${topY-6} 62,${topY-14} 66,${topY}" fill="#F1C40F" stroke="${stroke}" stroke-width="2"/>
+          <rect x="34" y="${topY-2}" width="32" height="4" fill="#F1C40F" stroke="${stroke}" stroke-width="1.5"/>
+        `;
+      case 'headphones':
+        return `
+          <path d="M 28 ${topY+10} Q 28 ${topY-10} 50 ${topY-12} Q 72 ${topY-10} 72 ${topY+10}" stroke="${stroke}" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <rect x="22" y="${topY+6}" width="10" height="14" rx="4" fill="#555" stroke="${stroke}" stroke-width="2"/>
+          <rect x="68" y="${topY+6}" width="10" height="14" rx="4" fill="#555" stroke="${stroke}" stroke-width="2"/>
+        `;
+      case 'top_hat':
+        return `
+          <rect x="38" y="${topY-24}" width="24" height="22" rx="2" fill="#2C3E50" stroke="${stroke}" stroke-width="2"/>
+          <rect x="30" y="${topY-4}" width="40" height="6" rx="2" fill="#2C3E50" stroke="${stroke}" stroke-width="2"/>
+          <rect x="38" y="${topY-18}" width="24" height="4" fill="#8B4513" stroke="none"/>
+        `;
+      case 'flower':
+        return `
+          <circle cx="44" cy="${topY-10}" r="5" fill="#FF69B4" stroke="${stroke}" stroke-width="1.5"/>
+          <circle cx="56" cy="${topY-10}" r="5" fill="#FF69B4" stroke="${stroke}" stroke-width="1.5"/>
+          <circle cx="48" cy="${topY-16}" r="5" fill="#FF69B4" stroke="${stroke}" stroke-width="1.5"/>
+          <circle cx="52" cy="${topY-4}" r="5" fill="#FF69B4" stroke="${stroke}" stroke-width="1.5"/>
+          <circle cx="50" cy="${topY-10}" r="4" fill="#F1C40F" stroke="${stroke}" stroke-width="1"/>
+          <line x1="50" y1="${topY-4}" x2="50" y2="${topY+2}" stroke="#27AE60" stroke-width="2"/>
+        `;
+      case 'fire':
+        return `
+          <path d="M 50 ${topY+4} Q 40 ${topY-6} 44 ${topY-16} Q 46 ${topY-10} 50 ${topY-24} Q 54 ${topY-10} 56 ${topY-16} Q 60 ${topY-6} 50 ${topY+4} Z" fill="#E67E22" stroke="${stroke}" stroke-width="1.5"/>
+          <path d="M 50 ${topY+2} Q 44 ${topY-4} 46 ${topY-10} Q 48 ${topY-6} 50 ${topY-16} Q 52 ${topY-6} 54 ${topY-10} Q 56 ${topY-4} 50 ${topY+2} Z" fill="#F1C40F" stroke="none"/>
+        `;
+      case 'bow':
+        return `
+          <ellipse cx="42" cy="${topY-6}" rx="8" ry="6" fill="#E91E63" stroke="${stroke}" stroke-width="2"/>
+          <ellipse cx="58" cy="${topY-6}" rx="8" ry="6" fill="#E91E63" stroke="${stroke}" stroke-width="2"/>
+          <circle cx="50" cy="${topY-4}" r="4" fill="#C2185B" stroke="${stroke}" stroke-width="2"/>
         `;
       case 'none':
       default:
@@ -360,6 +519,27 @@ export class AvatarGeneratorService {
           <line x1="28" y1="${eyeY}" x2="24" y2="${eyeY-4}" stroke="${stroke}" stroke-width="2"/>
           <line x1="72" y1="${eyeY}" x2="76" y2="${eyeY-4}" stroke="${stroke}" stroke-width="2"/>
         `;
+      case 'whiskers':
+        return `
+          <line x1="18" y1="${eyeY+6}" x2="34" y2="${eyeY+8}" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="18" y1="${eyeY+11}" x2="34" y2="${eyeY+11}" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="18" y1="${eyeY+16}" x2="34" y2="${eyeY+14}" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="82" y1="${eyeY+6}" x2="66" y2="${eyeY+8}" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="82" y1="${eyeY+11}" x2="66" y2="${eyeY+11}" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="82" y1="${eyeY+16}" x2="66" y2="${eyeY+14}" stroke="${stroke}" stroke-width="1.5" stroke-linecap="round"/>
+        `;
+      case 'stitches':
+        return `
+          <line x1="50" y1="${eyeY-12}" x2="50" y2="${mouthY+8}" stroke="${stroke}" stroke-width="2" stroke-dasharray="4,3"/>
+          <line x1="46" y1="${eyeY-6}" x2="54" y2="${eyeY-6}" stroke="${stroke}" stroke-width="1.5"/>
+          <line x1="46" y1="${eyeY+4}" x2="54" y2="${eyeY+4}" stroke="${stroke}" stroke-width="1.5"/>
+          <line x1="46" y1="${mouthY}" x2="54" y2="${mouthY}" stroke="${stroke}" stroke-width="1.5"/>
+        `;
+      case 'robo_visor':
+        return `
+          <rect x="28" y="${eyeY-3}" width="44" height="8" rx="3" fill="#E74C3C" opacity="0.7" stroke="${stroke}" stroke-width="1.5"/>
+          <rect x="32" y="${eyeY-1}" width="36" height="4" rx="2" fill="#FF6B6B" opacity="0.5"/>
+        `;
       case 'none':
       default:
         return '';
@@ -367,27 +547,33 @@ export class AvatarGeneratorService {
   }
 
   private getEyePos(body: BodyShape): { y: number; lx: number; rx: number } {
-    switch (body) {
-      case 'crushed': return { y: 52, lx: 40, rx: 60 };
-      case 'round': return { y: 50, lx: 38, rx: 62 };
-      case 'tall': return { y: 42, lx: 42, rx: 58 };
-      case 'barrel': return { y: 48, lx: 38, rx: 62 };
-      case 'egg': return { y: 46, lx: 40, rx: 60 };
-      case 'monitor': return { y: 46, lx: 40, rx: 60 };
-      default: return { y: 48, lx: 38, rx: 62 };
-    }
+    const map: Record<BodyShape, { y: number; lx: number; rx: number }> = {
+      can:      { y: 48, lx: 38, rx: 60 },
+      box:      { y: 52, lx: 38, rx: 60 },
+      monitor:  { y: 44, lx: 40, rx: 60 },
+      cat:      { y: 46, lx: 36, rx: 60 },
+      bear:     { y: 50, lx: 36, rx: 62 },
+      owl:      { y: 40, lx: 38, rx: 62 },
+      frog:     { y: 36, lx: 32, rx: 68 },
+      ghost:    { y: 40, lx: 38, rx: 62 },
+      alien:    { y: 36, lx: 38, rx: 62 },
+      blob:     { y: 44, lx: 38, rx: 64 },
+      mushroom: { y: 38, lx: 38, rx: 62 },
+      egg:      { y: 46, lx: 40, rx: 60 },
+      cloud:    { y: 46, lx: 36, rx: 60 },
+      skull:    { y: 40, lx: 36, rx: 62 },
+    };
+    return map[body] ?? { y: 48, lx: 38, rx: 62 };
   }
 
   private getMouthY(body: BodyShape): number {
-    switch (body) {
-      case 'crushed': return 68;
-      case 'round': return 65;
-      case 'tall': return 62;
-      case 'barrel': return 65;
-      case 'egg': return 64;
-      case 'monitor': return 58;
-      default: return 62;
-    }
+    const map: Record<BodyShape, number> = {
+      can: 62, box: 64, monitor: 56,
+      cat: 60, bear: 64, owl: 62, frog: 62,
+      ghost: 54, alien: 56, blob: 58, mushroom: 48,
+      egg: 62, cloud: 58, skull: 58,
+    };
+    return map[body] ?? 62;
   }
 
   private hashString(str: string): number {
