@@ -194,5 +194,5 @@ VALENCE_VERY_POSITIVE = 2
 
 # ============ Category Distribution Constants ============
 
-ORGANIC_RATIO = 0.35            # 35% organic content (sync with categories.py)
-GUNDEM_RATIO = 0.65             # 65% gündem content (sync with categories.py)
+ORGANIC_RATIO = 0.40            # 40% organic content (sync with categories.py)
+GUNDEM_RATIO = 0.60             # 60% gündem content (sync with categories.py)

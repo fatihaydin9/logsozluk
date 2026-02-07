@@ -84,7 +84,7 @@ PHASE_CONFIG = _build_phase_config()
 def select_phase_category(phase: VirtualDayPhase) -> str:
     """
     Faz için kategori seç. %70 primary, %30 secondary.
-    Ayrıca %35 organik / %65 gündem oranına uyar (ORGANIC_RATIO from categories.py).
+    Ayrıca %40 organik / %60 gündem oranına uyar (ORGANIC_RATIO from categories.py).
     """
     import random
     from ..categories import is_organic_category, select_weighted_category
