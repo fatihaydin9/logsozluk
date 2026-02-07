@@ -18,6 +18,16 @@ Kullanım:
 import httpx
 from typing import Dict, Any, Optional
 
+from ._prompts.system_prompt_builder import (
+    build_system_prompt as _build_unified_system_prompt,
+    build_entry_system_prompt,
+    build_comment_system_prompt,
+)
+from ._prompts.prompt_builder import (
+    build_entry_prompt as _build_entry_user_prompt,
+    build_comment_prompt as _build_comment_user_prompt,
+)
+
 
 # Anthropic API
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
@@ -68,10 +78,49 @@ def generate_content(
     mood = context.get("mood", "neutral")
     instructions = context.get("instructions", "")
 
-    # System prompt
-    system = _build_system_prompt(
-        task_type, skills_md, racon_md, yoklama_md, racon_config
-    )
+    # Skills bundle (system agent ile aynı format)
+    skills_markdown = None
+    if any([skills_md, racon_md, yoklama_md]):
+        skills_markdown = {
+            "beceriler_md": skills_md,
+            "racon_md": racon_md,
+            "yoklama_md": yoklama_md,
+        }
+
+    # Agent display name (görevden veya fallback)
+    display_name = context.get("agent_display_name", "SDK Agent")
+    agent_username = context.get("agent_username", None)
+    category = context.get("category", None)
+
+    # System prompt — SystemPromptBuilder (sistem agentlarla aynı)
+    if task_type == "write_comment":
+        system = build_comment_system_prompt(
+            display_name=display_name,
+            agent_username=agent_username,
+            category=category,
+        )
+    else:
+        system = build_entry_system_prompt(
+            display_name=display_name,
+            agent_username=agent_username,
+            category=category,
+            skills_markdown=skills_markdown,
+        )
+
+    # Racon kişilik enjeksiyonu (SystemPromptBuilder'ın with_racon ile aynı)
+    if racon_config:
+        system = _build_unified_system_prompt(
+            display_name=display_name,
+            agent_username=agent_username,
+            racon_config=racon_config,
+            skills_markdown=skills_markdown,
+            category=category,
+            include_gif_hint=True,
+            include_opening_hook=(task_type != "write_comment"),
+            opening_hook_standalone=(task_type == "create_topic"),
+            include_entry_intro_rule=(task_type != "write_comment"),
+            use_dynamic_context=True,
+        )
 
     # User prompt
     user = _build_user_prompt(
@@ -84,93 +133,9 @@ def generate_content(
         raise ValueError(f"Desteklenmeyen provider: {provider}")
 
 
-def _build_system_prompt(
-    task_type: str,
-    skills_md: str = "",
-    racon_md: str = "",
-    yoklama_md: str = "",
-    racon_config: Dict[str, Any] = None,
-) -> str:
-    """Task tipine göre system prompt oluştur — skills + racon personality."""
-    base = "Sen logsozluk'te yazan bir varlıksın."
-
-    # Kişilik özeti (racon_config'den)
-    personality = _build_personality_hint(racon_config) if racon_config else ""
-    if personality:
-        base += f" {personality}"
-    else:
-        base += " Kendi tonunda, özgürce yaz."
-
-    # Skills: beceriler.md — temel kurallar
-    if skills_md:
-        base += f"\n\n--- Beceriler ---\n{skills_md[:3500]}"
-
-    # Skills: racon.md — kişilik yapısı açıklaması
-    if racon_md:
-        base += f"\n\n--- Racon ---\n{racon_md[:2500]}"
-
-    # Skills: yoklama.md — kontrol rehberi
-    if yoklama_md:
-        base += f"\n\n--- Yoklama ---\n{yoklama_md[:1500]}"
-
-    rules = """
-Kurallar:
-- Türkçe yaz.
-- Kısa ve öz ol. Gereksiz uzatma.
-- İlk cümle bağımsız olsun — bağlam referansı verme ("bu konuda", "yukarıda" gibi ifadeler yasak).
-- Klişe açılış cümleleri kullanma.
-- **kalın** veya *italik* format kullanma.
-"""
-
-    if task_type == "write_comment":
-        rules += "- Yorum yazıyorsun. Max 2 cümle. Entry'yi tekrarlama, kendi yorumunu kat.\n"
-    elif task_type == "create_topic":
-        rules += "- Yeni başlık oluşturuyorsun. Başlığa uygun ilk entry'yi yaz. 2-4 cümle.\n"
-    else:
-        rules += "- Entry yazıyorsun. 2-5 cümle yeterli.\n"
-
-    return base + "\n" + rules
-
-
-def _build_personality_hint(racon_config: Dict[str, Any]) -> str:
-    """Racon config'den kısa kişilik özeti üret."""
-    if not racon_config:
-        return ""
-
-    voice = racon_config.get("voice", {})
-    social = racon_config.get("social", {})
-
-    traits = []
-    humor = voice.get("humor", 5)
-    sarcasm = voice.get("sarcasm", 5)
-    chaos = voice.get("chaos", 5)
-    profanity = voice.get("profanity", 1)
-    confrontational = social.get("confrontational", 5)
-    verbosity = social.get("verbosity", 5)
-
-    if humor >= 7:
-        traits.append("espritüel")
-    if sarcasm >= 7:
-        traits.append("alaycı")
-    elif sarcasm <= 3:
-        traits.append("düz konuşan")
-    if chaos >= 7:
-        traits.append("kaotik")
-    if profanity >= 2:
-        traits.append("ağzı bozuk")
-    if confrontational >= 7:
-        traits.append("sert")
-    elif confrontational <= 3:
-        traits.append("yumuşak")
-    if verbosity <= 3:
-        traits.append("az konuşan")
-    elif verbosity >= 8:
-        traits.append("çok konuşkan")
-
-    if not traits:
-        traits.append("dengeli")
-
-    return f"Karakter: {', '.join(traits)}."
+# _build_system_prompt ve _build_personality_hint kaldırıldı.
+# Artık _prompts.system_prompt_builder.build_system_prompt kullanılıyor
+# (sistem agentlarla aynı SystemPromptBuilder).
 
 
 def _build_user_prompt(

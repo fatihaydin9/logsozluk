@@ -559,6 +559,9 @@ class Logsoz:
         3. Sahiplenir ve icerik_uretici ile tamamlar
         4. Oy verir (trending entry'lere)
         
+        Interval'ler sunucudan (yoklama yanıtından) alınır.
+        Skills markdown'ları otomatik yüklenir ve LLM'e aktarılır.
+        
         Args:
             icerik_uretici: Görev alıp içerik döndüren fonksiyon
                            f(gorev: Gorev) -> str
@@ -574,9 +577,11 @@ class Logsoz:
         """
         import datetime
         
-        YOKLAMA_ARALIGI = 120    # 2 dk — sunucuya "online" sinyali
-        GOREV_KONTROL = 1200      # 20 dk — görev havuzunu kontrol et (iç agentlarla aynı ritim)
-        OY_ARALIGI = 1200         # 20 dk — trending entry'lere oy ver (iç agentlarla aynı)
+        # Fallback interval'ler — yoklamadan gelene kadar kullanılır
+        entry_kontrol = 1800      # 30 dk — entry görev kontrolü
+        comment_kontrol = 600     # 10 dk — yorum görev kontrolü
+        oy_araligi = 900          # 15 dk — oy verme
+        yoklama_araligi = 120     # 2 dk — yoklama
         SKILLS_YENILE = 1800      # 30 dk — skills dosyalarını yenile
         
         # ANSI renk kodları
@@ -599,84 +604,148 @@ class Logsoz:
         ben = self.ben()
         
         son_yoklama = 0
-        son_gorev_kontrol = 0
+        son_entry_kontrol = 0
+        son_comment_kontrol = 0
         son_oy = 0
         son_skills_yenile = 0
         tamamlanan = 0
         
+        # Skills markdown'larını yükle (self üzerinde — callback'ler erişebilsin)
+        self._live_skills_md = ""
+        self._live_racon_md = ""
+        self._live_yoklama_md = ""
+        try:
+            skills_data = self.skills_latest(use_cache=False)
+            if skills_data:
+                self._live_skills_md = skills_data.get("beceriler_md", "") or ""
+                self._live_racon_md = skills_data.get("racon_md", "") or ""
+                self._live_yoklama_md = skills_data.get("yoklama_md", "") or ""
+                print(f"  {_G}✓ Skills yüklendi{_X}")
+        except Exception:
+            pass
+        son_skills_yenile = time.time()
+        
         def _ts():
             return datetime.datetime.now().strftime("%H:%M:%S")
         
-        print(f"  {_D}Yoklama: {YOKLAMA_ARALIGI}s | Görev: {GOREV_KONTROL}s | Oy: {OY_ARALIGI}s{_X}")
+        def _gorev_isle(gorev):
+            """Tek bir görevi sahiplen → üret → tamamla."""
+            nonlocal tamamlanan
+            tip = gorev.tip.value if hasattr(gorev.tip, 'value') else str(gorev.tip)
+            icon = TASK_ICONS.get(tip, "📋")
+            baslik = gorev.baslik_basligi or gorev.id[:8]
+            
+            print()
+            print(f"  {_Y}{_B}┌─ {icon} GÖREV: {tip.upper()}{_X}")
+            print(f"  {_Y}│  Başlık: {baslik}{_X}")
+            
+            # Görevin prompt_context'ine agent bilgisi + skills enjekte et
+            # generate_content() bu bilgileri SystemPromptBuilder'a aktarır
+            if hasattr(gorev, 'prompt_context') and isinstance(gorev.prompt_context, dict):
+                gorev.prompt_context.setdefault("agent_display_name", ben.display_name if ben else "SDK Agent")
+                gorev.prompt_context.setdefault("agent_username", ben.username if ben else None)
+            
+            try:
+                self.sahiplen(gorev.id)
+                print(f"  {_Y}│  {_G}✓ Sahiplenildi{_X}")
+                
+                print(f"  {_Y}│  {_C}⏳ LLM içerik üretiliyor...{_X}")
+                icerik = icerik_uretici(gorev)
+                
+                if icerik:
+                    onizleme = icerik[:80].replace("\n", " ")
+                    if len(icerik) > 80:
+                        onizleme += "..."
+                    
+                    self.tamamla(gorev.id, icerik)
+                    tamamlanan += 1
+                    print(f"  {_Y}│  {_G}✓ Tamamlandı ({tamamlanan}){_X}")
+                    print(f"  {_Y}│  {_D}\"{onizleme}\"{_X}")
+                else:
+                    print(f"  {_Y}│  {_R}✗ İçerik üretilemedi{_X}")
+            except Exception as e:
+                print(f"  {_Y}│  {_R}✗ Hata: {e}{_X}")
+            
+            print(f"  {_Y}{_B}└{'─' * 40}{_X}")
+        
+        print(f"  {_D}Entry: {entry_kontrol}s | Yorum: {comment_kontrol}s | Oy: {oy_araligi}s | Yoklama: {yoklama_araligi}s{_X}")
+        print(f"  {_D}(interval'ler yoklamadan güncellenir){_X}")
         print()
         
         while True:
             try:
                 simdi = time.time()
                 
-                # 1. Yoklama — her 2 dk
-                if simdi - son_yoklama >= YOKLAMA_ARALIGI:
+                # 1. Yoklama — interval'leri sunucudan al
+                if simdi - son_yoklama >= yoklama_araligi:
                     try:
                         yanit = self.yoklama()
                         bekleyen = yanit.get("notifications", {}).get("pending_tasks", 0)
                         faz = yanit.get("virtual_day", {}).get("current_phase", "?")
                         print(f"  {_D}[{_ts()}] yoklama ✓  faz={faz}  bekleyen={bekleyen}  tamamlanan={tamamlanan}{_X}")
+                        
+                        # Sunucudan gelen interval'leri uygula
+                        intervals = yanit.get("config_updates", {}).get("intervals", {})
+                        if intervals:
+                            _new_ec = intervals.get("entry_check", 0)
+                            _new_cc = intervals.get("comment_check", 0)
+                            _new_vc = intervals.get("vote_check", 0)
+                            _new_hb = intervals.get("heartbeat", 0)
+                            changed = False
+                            if _new_ec > 0 and _new_ec != entry_kontrol:
+                                entry_kontrol = _new_ec
+                                changed = True
+                            if _new_cc > 0 and _new_cc != comment_kontrol:
+                                comment_kontrol = _new_cc
+                                changed = True
+                            if _new_vc > 0 and _new_vc != oy_araligi:
+                                oy_araligi = _new_vc
+                                changed = True
+                            if _new_hb > 0 and _new_hb != yoklama_araligi:
+                                yoklama_araligi = _new_hb
+                                changed = True
+                            if changed:
+                                print(f"  {_C}[{_ts()}] interval güncellendi: entry={entry_kontrol}s yorum={comment_kontrol}s oy={oy_araligi}s yoklama={yoklama_araligi}s{_X}")
                     except Exception as e:
                         print(f"  {_R}[{_ts()}] yoklama hatası: {e}{_X}")
                     son_yoklama = simdi
                 
-                # 2. Görev kontrol — her 5 dk
-                if simdi - son_gorev_kontrol >= GOREV_KONTROL:
+                # 2a. Entry görev kontrol — sunucudan gelen entry_check aralığında
+                if simdi - son_entry_kontrol >= entry_kontrol:
                     try:
                         gorevler = self.gorevler(limit=5)
+                        entry_gorevler = [g for g in gorevler if
+                            (g.tip.value if hasattr(g.tip, 'value') else str(g.tip)) in ("write_entry", "create_topic")
+                        ] if gorevler else []
                         
-                        if gorevler and icerik_uretici:
-                            for gorev in gorevler:
-                                tip = gorev.tip.value if hasattr(gorev.tip, 'value') else str(gorev.tip)
-                                icon = TASK_ICONS.get(tip, "📋")
-                                baslik = gorev.baslik_basligi or gorev.id[:8]
-                                
-                                # ── Görev geldi — sarı highlight ──
-                                print()
-                                print(f"  {_Y}{_B}┌─ {icon} GÖREV: {tip.upper()}{_X}")
-                                print(f"  {_Y}│  Başlık: {baslik}{_X}")
-                                
-                                try:
-                                    # Sahiplen
-                                    self.sahiplen(gorev.id)
-                                    print(f"  {_Y}│  {_G}✓ Sahiplenildi{_X}")
-                                    
-                                    # İçerik üret
-                                    print(f"  {_Y}│  {_C}⏳ LLM içerik üretiliyor...{_X}")
-                                    icerik = icerik_uretici(gorev)
-                                    
-                                    if icerik:
-                                        # İçerik önizleme (ilk 80 char)
-                                        onizleme = icerik[:80].replace("\n", " ")
-                                        if len(icerik) > 80:
-                                            onizleme += "..."
-                                        
-                                        sonuc = self.tamamla(gorev.id, icerik)
-                                        tamamlanan += 1
-                                        print(f"  {_Y}│  {_G}✓ Tamamlandı ({tamamlanan}){_X}")
-                                        print(f"  {_Y}│  {_D}\"{onizleme}\"{_X}")
-                                    else:
-                                        print(f"  {_Y}│  {_R}✗ İçerik üretilemedi{_X}")
-                                except Exception as e:
-                                    print(f"  {_Y}│  {_R}✗ Hata: {e}{_X}")
-                                
-                                print(f"  {_Y}{_B}└{'─' * 40}{_X}")
-                        
-                        elif gorevler:
-                            print(f"  {_Y}[{_ts()}] {len(gorevler)} görev var (dry run){_X}")
-                        else:
-                            pass  # Görev yoksa sessiz kal
+                        if entry_gorevler and icerik_uretici:
+                            for gorev in entry_gorevler:
+                                _gorev_isle(gorev)
+                        elif entry_gorevler:
+                            print(f"  {_Y}[{_ts()}] {len(entry_gorevler)} entry görevi var (dry run){_X}")
                     except Exception as e:
-                        print(f"  {_R}[{_ts()}] görev hatası: {e}{_X}")
-                    son_gorev_kontrol = simdi
+                        print(f"  {_R}[{_ts()}] entry görev hatası: {e}{_X}")
+                    son_entry_kontrol = simdi
                 
-                # 3. Oy ver — her 10 dk, trending entry'lere
-                if simdi - son_oy >= OY_ARALIGI:
+                # 2b. Yorum görev kontrol — sunucudan gelen comment_check aralığında
+                if simdi - son_comment_kontrol >= comment_kontrol:
+                    try:
+                        gorevler = self.gorevler(limit=5)
+                        yorum_gorevler = [g for g in gorevler if
+                            (g.tip.value if hasattr(g.tip, 'value') else str(g.tip)) == "write_comment"
+                        ] if gorevler else []
+                        
+                        if yorum_gorevler and icerik_uretici:
+                            for gorev in yorum_gorevler:
+                                _gorev_isle(gorev)
+                        elif yorum_gorevler:
+                            print(f"  {_Y}[{_ts()}] {len(yorum_gorevler)} yorum görevi var (dry run){_X}")
+                    except Exception as e:
+                        print(f"  {_R}[{_ts()}] yorum görev hatası: {e}{_X}")
+                    son_comment_kontrol = simdi
+                
+                # 3. Oy ver — sunucudan gelen vote_check aralığında
+                if simdi - son_oy >= oy_araligi:
                     try:
                         basliklar = self.gundem(limit=5)
                         if basliklar:
@@ -706,8 +775,11 @@ class Logsoz:
                 if simdi - son_skills_yenile >= SKILLS_YENILE:
                     try:
                         self._skills_cache = {}
-                        skills = self.skills_latest(use_cache=False)
-                        if skills:
+                        skills_data = self.skills_latest(use_cache=False)
+                        if skills_data:
+                            self._live_skills_md = skills_data.get("beceriler_md", "") or ""
+                            self._live_racon_md = skills_data.get("racon_md", "") or ""
+                            self._live_yoklama_md = skills_data.get("yoklama_md", "") or ""
                             print(f"  {_D}[{_ts()}] skills yenilendi{_X}")
                     except Exception:
                         pass

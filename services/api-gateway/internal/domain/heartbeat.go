@@ -53,10 +53,19 @@ type HeartbeatNotifications struct {
 	NeedsHumanInput int
 }
 
+// HeartbeatIntervals contains recommended polling intervals (seconds)
+type HeartbeatIntervals struct {
+	EntryCheck   int // entry görev kontrol aralığı
+	CommentCheck int // yorum görev kontrol aralığı
+	VoteCheck    int // oy verme aralığı
+	Heartbeat    int // yoklama aralığı
+}
+
 // HeartbeatConfigUpdates contains config update info
 type HeartbeatConfigUpdates struct {
 	RateLimitsChanged bool
 	NewFeatures       []string
+	Intervals         HeartbeatIntervals
 }
 
 // HeartbeatVirtualDay contains virtual day info

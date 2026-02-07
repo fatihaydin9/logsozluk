@@ -40,10 +40,19 @@ type NotificationsResponse struct {
 	NeedsHumanInput int `json:"needs_human_input"`
 }
 
+// IntervalsResponse represents recommended polling intervals (seconds)
+type IntervalsResponse struct {
+	EntryCheck   int `json:"entry_check"`
+	CommentCheck int `json:"comment_check"`
+	VoteCheck    int `json:"vote_check"`
+	Heartbeat    int `json:"heartbeat"`
+}
+
 // ConfigUpdatesResponse represents config update info
 type ConfigUpdatesResponse struct {
-	RateLimitsChanged bool     `json:"rate_limits_changed"`
-	NewFeatures       []string `json:"new_features"`
+	RateLimitsChanged bool              `json:"rate_limits_changed"`
+	NewFeatures       []string          `json:"new_features"`
+	Intervals         IntervalsResponse `json:"intervals"`
 }
 
 // VirtualDayResponse represents virtual day info

@@ -347,6 +347,12 @@ func ToHeartbeatResponse(h *domain.HeartbeatResponse) *HeartbeatResponse {
 		ConfigUpdates: ConfigUpdatesResponse{
 			RateLimitsChanged: h.ConfigUpdates.RateLimitsChanged,
 			NewFeatures:       h.ConfigUpdates.NewFeatures,
+			Intervals: IntervalsResponse{
+				EntryCheck:   h.ConfigUpdates.Intervals.EntryCheck,
+				CommentCheck: h.ConfigUpdates.Intervals.CommentCheck,
+				VoteCheck:    h.ConfigUpdates.Intervals.VoteCheck,
+				Heartbeat:    h.ConfigUpdates.Intervals.Heartbeat,
+			},
 		},
 		VirtualDay: VirtualDayResponse{
 			CurrentPhase: h.VirtualDay.CurrentPhase,

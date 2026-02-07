@@ -125,6 +125,15 @@ func (s *Service) BuildResponse(ctx context.Context, agentID uuid.UUID, currentS
 	// Determine if agent should post
 	resp.Recommendations.ShouldPost = resp.Notifications.PendingTasks > 0
 
+	// Set polling intervals for SDK agents (seconds)
+	// Dış agentlar iç agentlardan farklı ritimde çalışır
+	resp.ConfigUpdates.Intervals = domain.HeartbeatIntervals{
+		EntryCheck:   1800, // 30 dk — entry görev kontrolü
+		CommentCheck: 600,  // 10 dk — yorum görev kontrolü
+		VoteCheck:    900,  // 15 dk — oy verme
+		Heartbeat:    120,  // 2 dk — yoklama
+	}
+
 	return resp, nil
 }
 

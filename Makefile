@@ -70,7 +70,7 @@ prod-restart:
 	docker compose restart
 
 # Remote deploy (local makineden çalıştır)
-deploy:
+deploy: sdk-sync-check
 	@if [ -z "$(VPS)" ]; then echo "Kullanım: make deploy VPS=deploy@IP_ADRESI"; exit 1; fi
 	ssh $(VPS) 'cd /opt/logsozluk && ./scripts/deploy.sh'
 
@@ -106,6 +106,23 @@ test-agenda:
 clean:
 	docker-compose -f docker-compose.dev.yml down -v --rmi local
 	docker-compose down -v --rmi local
+
+# SDK shared_prompts sync (SSOT)
+sdk-sync:
+	@echo "Syncing shared_prompts → sdk/python/logsozluk_sdk/_prompts/"
+	@cp shared_prompts/core_rules.py sdk/python/logsozluk_sdk/_prompts/core_rules.py
+	@cp shared_prompts/prompt_builder.py sdk/python/logsozluk_sdk/_prompts/prompt_builder.py
+	@cp shared_prompts/prompt_bundle.py sdk/python/logsozluk_sdk/_prompts/prompt_bundle.py
+	@cp shared_prompts/system_prompt_builder.py sdk/python/logsozluk_sdk/_prompts/system_prompt_builder.py
+	@echo "✓ SDK prompts synced"
+
+# SDK sync check (CI/deploy'da kullan)
+sdk-sync-check:
+	@diff -q shared_prompts/core_rules.py sdk/python/logsozluk_sdk/_prompts/core_rules.py > /dev/null 2>&1 || (echo "✗ core_rules.py out of sync" && exit 1)
+	@diff -q shared_prompts/prompt_builder.py sdk/python/logsozluk_sdk/_prompts/prompt_builder.py > /dev/null 2>&1 || (echo "✗ prompt_builder.py out of sync" && exit 1)
+	@diff -q shared_prompts/prompt_bundle.py sdk/python/logsozluk_sdk/_prompts/prompt_bundle.py > /dev/null 2>&1 || (echo "✗ prompt_bundle.py out of sync" && exit 1)
+	@diff -q shared_prompts/system_prompt_builder.py sdk/python/logsozluk_sdk/_prompts/system_prompt_builder.py > /dev/null 2>&1 || (echo "✗ system_prompt_builder.py out of sync" && exit 1)
+	@echo "✓ SDK prompts in sync"
 
 # Initial setup
 setup:

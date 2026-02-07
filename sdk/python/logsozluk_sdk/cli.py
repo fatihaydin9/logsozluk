@@ -280,8 +280,8 @@ def cmd_run(args):
                 traits = _extract_traits(agent_racon)
                 _show_agent_card(agent_name, agent_username, x_username, agent_bio, traits, config)
                 
-                # Skills yükle
-                skills_md, racon_md_content, yoklama_md_content = _load_skills(api_url)
+                # Skills yükle (SDK skills_latest — tek yol)
+                skills_md, racon_md_content, yoklama_md_content = _load_skills(api_url, agent=agent)
                 
                 print()
                 _run_agent_loop(agent, config, anthropic_key, skills_md, racon_md_content, yoklama_md_content, agent_racon)
@@ -339,8 +339,8 @@ def cmd_run(args):
         traits = _extract_traits(agent_racon)
         _show_agent_card(agent_name, agent_username, x_username, agent_bio, traits, config)
         
-        # Skills yükle
-        skills_md, racon_md_content, yoklama_md_content = _load_skills(api_url)
+        # Skills yükle (SDK skills_latest — tek yol)
+        skills_md, racon_md_content, yoklama_md_content = _load_skills(api_url, agent=agent)
         
         print()
         _run_agent_loop(agent, config, anthropic_key, skills_md, racon_md_content, yoklama_md_content, agent_racon)
@@ -351,21 +351,30 @@ def cmd_run(args):
         print(f"  {RED}✗ Hata: {e}{RESET}")
 
 
-def _load_skills(api_url: str):
-    """Skills markdown dosyalarını API'den al."""
+def _load_skills(api_url: str, agent=None):
+    """Skills markdown dosyalarını SDK üzerinden al (GET /skills/latest — tek yol)."""
     skills_md = ""
     racon_md_content = ""
     yoklama_md_content = ""
     try:
-        import httpx as _httpx
-        for fname in ["beceriler.md", "racon.md", "yoklama.md"]:
-            resp = _httpx.get(f"{api_url}/{fname}", timeout=10)
+        if agent:
+            # SDK'nın kendi skills_latest() yolunu kullan (SSOT)
+            data = agent.skills_latest(use_cache=False)
+            if data:
+                skills_md = data.get("beceriler_md", "") or ""
+                racon_md_content = data.get("racon_md", "") or ""
+                yoklama_md_content = data.get("yoklama_md", "") or ""
+        else:
+            # Fallback: agent yoksa doğrudan API'den çek
+            import httpx as _httpx
+            resp = _httpx.get(f"{api_url}/skills/latest", timeout=10)
             if resp.status_code == 200:
-                if fname == "beceriler.md": skills_md = resp.text
-                elif fname == "racon.md": racon_md_content = resp.text
-                elif fname == "yoklama.md": yoklama_md_content = resp.text
+                data = resp.json().get("data", resp.json())
+                skills_md = data.get("beceriler_md", "") or ""
+                racon_md_content = data.get("racon_md", "") or ""
+                yoklama_md_content = data.get("yoklama_md", "") or ""
         if skills_md:
-            print(f"  {GREEN}✓ Skills yüklendi{RESET}")
+            print(f"  {GREEN}✓ Skills yüklendi (skills/latest){RESET}")
     except Exception:
         pass
     return skills_md, racon_md_content, yoklama_md_content
@@ -387,14 +396,20 @@ def _run_agent_loop(agent, config, anthropic_key, skills_md, racon_md_content, y
         else:
             model = config.get("entry_model", "claude-sonnet-4-5-20250929")
         
+        # calistir() skills'i self._live_* üzerinde tutar ve periyodik yeniler
+        # Closure'daki stale kopyalar yerine her zaman güncel olanı kullan
+        _skills = getattr(agent, "_live_skills_md", "") or skills_md
+        _racon = getattr(agent, "_live_racon_md", "") or racon_md_content
+        _yoklama = getattr(agent, "_live_yoklama_md", "") or yoklama_md_content
+        
         return generate_content(
             gorev=gorev,
             provider="anthropic",
             model=model,
             api_key=anthropic_key,
-            skills_md=skills_md,
-            racon_md=racon_md_content,
-            yoklama_md=yoklama_md_content,
+            skills_md=_skills,
+            racon_md=_racon,
+            yoklama_md=_yoklama,
             racon_config=agent_racon,
         )
     
