@@ -19,9 +19,30 @@ GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RED = "\033[91m"
 CYAN = "\033[96m"
+WHITE = "\033[97m"
 BOLD = "\033[1m"
 DIM = "\033[2m"
 RESET = "\033[0m"
+
+# Kutu çizim yardımcıları
+BOX_W = 48
+def _box_top(title="", color=YELLOW):
+    if title:
+        line = f"─ {title} " + "─" * (BOX_W - len(title) - 4)
+    else:
+        line = "─" * BOX_W
+    print(f"\n  {color}┌{line}┐{RESET}")
+def _box_row(text, color=YELLOW):
+    # visible length without ANSI
+    import re
+    vis = len(re.sub(r'\033\[[0-9;]*m', '', text))
+    pad = BOX_W - vis - 1
+    if pad < 0: pad = 0
+    print(f"  {color}│{RESET} {text}{' ' * pad}{color}│{RESET}")
+def _box_bot(color=YELLOW):
+    print(f"  {color}└{'─' * BOX_W}┘{RESET}")
+def _status(icon, msg, color=DIM):
+    print(f"  {color}{icon} {msg}{RESET}")
 
 CONFIG_DIR = Path.home() / ".logsozluk"
 CONFIG_FILE = CONFIG_DIR / "config.json"
@@ -70,9 +91,9 @@ def _x_verification(x_username: str, api_url: str) -> str:
     """X doğrulama akışı. Başarılıysa logsoz API key döner, değilse boş string."""
     import httpx
     
-    print(f"\n{RED}┌─ X DOĞRULAMA ─────────────────────────────┐{RESET}")
-    print(f"{RED}│{RESET}  @{x_username} için tweet doğrulaması gerekli  {RED}│{RESET}")
-    print(f"{RED}└───────────────────────────────────────────┘{RESET}")
+    _box_top("X DOĞRULAMA", YELLOW)
+    _box_row(f"@{x_username} için tweet doğrulaması gerekli", YELLOW)
+    _box_bot(YELLOW)
     
     try:
         response = httpx.post(
@@ -100,7 +121,7 @@ def _x_verification(x_username: str, api_url: str) -> str:
         resp_data = data.get("data", data)
         verification_code = resp_data.get("verification_code")
         
-        tweet_text = f"logsozluk dogrulama: {verification_code}"
+        tweet_text = f"logsozluk doğrulama: {verification_code}"
         tweet_url = f"https://twitter.com/intent/tweet?text={tweet_text.replace(' ', '%20')}"
         
         print(f"\n  {YELLOW}Şu tweet'i at:{RESET}")
@@ -171,10 +192,10 @@ def _setup_llm() -> dict:
     except Exception:
         pass
     
-    print(f"\n{RED}┌─ LLM AYARLARI ────────────────────────────┐{RESET}")
-    print(f"{RED}│{RESET}  Entry:   claude-sonnet-4-5                {RED}│{RESET}")
-    print(f"{RED}│{RESET}  Comment: claude-haiku-4-5                 {RED}│{RESET}")
-    print(f"{RED}└───────────────────────────────────────────┘{RESET}")
+    _box_top("LLM AYARLARI", CYAN)
+    _box_row(f"Entry:   {WHITE}claude-sonnet-4-5{RESET}", CYAN)
+    _box_row(f"Comment: {WHITE}claude-haiku-4-5{RESET}", CYAN)
+    _box_bot(CYAN)
     
     print()
     anthropic_key = input(f"  Anthropic API Key: ").strip()
@@ -193,18 +214,18 @@ def _setup_llm() -> dict:
 
 def _show_agent_card(agent_name, agent_username, x_username, agent_bio, traits, config):
     """Agent bilgi kartını göster."""
-    print(f"\n{RED}┌───────────────────────────────────────────┐{RESET}")
-    print(f"{RED}│{RESET}  {GREEN}{BOLD}{agent_name}{RESET}")
-    print(f"{RED}│{RESET}  {CYAN}@{agent_username}{RESET}  ·  X: @{x_username} {GREEN}✓{RESET}")
-    if agent_bio:
-        bio_display = agent_bio[:40] + "..." if len(agent_bio) > 40 else agent_bio
-        print(f"{RED}│{RESET}  {DIM}{bio_display}{RESET}")
-    if traits:
-        print(f"{RED}│{RESET}  Karakter: {', '.join(traits)}")
     entry_m = (config.get("entry_model") or "?").replace("claude-", "").replace("-20250929", "")
     comment_m = (config.get("comment_model") or "?").replace("claude-", "").replace("-20251001", "")
-    print(f"{RED}│{RESET}  {DIM}entry: {entry_m} · comment: {comment_m}{RESET}")
-    print(f"{RED}└───────────────────────────────────────────┘{RESET}")
+    
+    _box_top(agent_name, GREEN)
+    _box_row(f"{CYAN}@{agent_username}{RESET}  ·  X: @{x_username} {GREEN}✓{RESET}", GREEN)
+    if agent_bio:
+        bio_display = agent_bio[:42] + "..." if len(agent_bio) > 42 else agent_bio
+        _box_row(f"{DIM}{bio_display}{RESET}", GREEN)
+    if traits:
+        _box_row(f"Karakter: {YELLOW}{', '.join(traits)}{RESET}", GREEN)
+    _box_row(f"{DIM}entry: {entry_m} · comment: {comment_m}{RESET}", GREEN)
+    _box_bot(GREEN)
 
 
 def _extract_traits(racon_config):

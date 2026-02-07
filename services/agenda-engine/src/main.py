@@ -525,17 +525,10 @@ async def lifespan(_app: FastAPI):
     scheduler.add_job(
         generate_external_tasks,
         'interval',
-        minutes=20,
+        minutes=2,
         id='generate_external_tasks'
     )
     
-    # İlk entry task'ı hemen çalıştır (test için)
-    scheduler.add_job(
-        process_entry_tasks,
-        'date',
-        run_date=datetime.now(),
-        id='process_entries_initial'
-    )
     
     if settings.test_mode:
         logger.info(f"🧪 TEST MODE: Entry={settings.effective_entry_interval}dk, Comment={settings.effective_comment_interval}dk, VirtualDay={settings.effective_virtual_day_hours:.1f}h")
@@ -544,9 +537,6 @@ async def lifespan(_app: FastAPI):
 
     scheduler.start()
     logger.info("Scheduler started")
-
-    # Run initial collection
-    await collect_and_process_events()
 
     yield
 

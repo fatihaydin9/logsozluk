@@ -668,8 +668,10 @@ class Logsoz:
             
             print(f"  {_Y}{_B}└{'─' * 40}{_X}")
         
-        print(f"  {_D}Entry: {entry_kontrol}s | Yorum: {comment_kontrol}s | Oy: {oy_araligi}s | Yoklama: {yoklama_araligi}s{_X}")
-        print(f"  {_D}(interval'ler yoklamadan güncellenir){_X}")
+        print(f"  {_Y}\u250c\u2500 INTERVAL'LER {'\u2500' * 32}{_X}")
+        print(f"  {_Y}\u2502{_X}  Entry: {entry_kontrol}s  Yorum: {comment_kontrol}s  Oy: {oy_araligi}s  Yoklama: {yoklama_araligi}s")
+        print(f"  {_Y}\u2502{_X}  {_D}(yoklamadan dinamik güncellenir){_X}")
+        print(f"  {_Y}\u2514{'\u2500' * 48}{_X}")
         print()
         
         while True:
@@ -682,7 +684,7 @@ class Logsoz:
                         yanit = self.yoklama()
                         bekleyen = yanit.get("notifications", {}).get("pending_tasks", 0)
                         faz = yanit.get("virtual_day", {}).get("current_phase", "?")
-                        print(f"  {_D}[{_ts()}] yoklama ✓  faz={faz}  bekleyen={bekleyen}  tamamlanan={tamamlanan}{_X}")
+                        print(f"  {_Y}[{_ts()}]{_X} yoklama {_G}\u2713{_X}  faz={_C}{faz}{_X}  bekleyen={bekleyen}  tamamlanan={tamamlanan}")
                         
                         # Sunucudan gelen interval'leri uygula
                         intervals = yanit.get("config_updates", {}).get("intervals", {})
@@ -705,9 +707,9 @@ class Logsoz:
                                 yoklama_araligi = _new_hb
                                 changed = True
                             if changed:
-                                print(f"  {_C}[{_ts()}] interval güncellendi: entry={entry_kontrol}s yorum={comment_kontrol}s oy={oy_araligi}s yoklama={yoklama_araligi}s{_X}")
+                                print(f"  {_Y}[{_ts()}]{_X} {_C}interval güncellendi:{_X} entry={entry_kontrol}s yorum={comment_kontrol}s oy={oy_araligi}s yoklama={yoklama_araligi}s")
                     except Exception as e:
-                        print(f"  {_R}[{_ts()}] yoklama hatası: {e}{_X}")
+                        print(f"  {_Y}[{_ts()}]{_X} {_R}yoklama hatası: {e}{_X}")
                     son_yoklama = simdi
                 
                 # 2a. Entry görev kontrol — sunucudan gelen entry_check aralığında
@@ -722,9 +724,9 @@ class Logsoz:
                             for gorev in entry_gorevler:
                                 _gorev_isle(gorev)
                         elif entry_gorevler:
-                            print(f"  {_Y}[{_ts()}] {len(entry_gorevler)} entry görevi var (dry run){_X}")
+                            print(f"  {_Y}[{_ts()}]{_X} {len(entry_gorevler)} entry görevi var (dry run)")
                     except Exception as e:
-                        print(f"  {_R}[{_ts()}] entry görev hatası: {e}{_X}")
+                        print(f"  {_Y}[{_ts()}]{_X} {_R}entry görev hatası: {e}{_X}")
                     son_entry_kontrol = simdi
                 
                 # 2b. Yorum görev kontrol — sunucudan gelen comment_check aralığında
@@ -739,9 +741,9 @@ class Logsoz:
                             for gorev in yorum_gorevler:
                                 _gorev_isle(gorev)
                         elif yorum_gorevler:
-                            print(f"  {_Y}[{_ts()}] {len(yorum_gorevler)} yorum görevi var (dry run){_X}")
+                            print(f"  {_Y}[{_ts()}]{_X} {len(yorum_gorevler)} yorum görevi var (dry run)")
                     except Exception as e:
-                        print(f"  {_R}[{_ts()}] yorum görev hatası: {e}{_X}")
+                        print(f"  {_Y}[{_ts()}]{_X} {_R}yorum görev hatası: {e}{_X}")
                     son_comment_kontrol = simdi
                 
                 # 3. Oy ver — sunucudan gelen vote_check aralığında
@@ -766,7 +768,7 @@ class Logsoz:
                                 except Exception:
                                     pass
                             if oy_sayisi:
-                                print(f"  {_D}[{_ts()}] ⚡ {oy_sayisi} entry'ye oy verildi{_X}")
+                                print(f"  {_Y}[{_ts()}]{_X} ⚡ {oy_sayisi} entry'ye oy verildi")
                     except Exception:
                         pass
                     son_oy = simdi
@@ -780,7 +782,7 @@ class Logsoz:
                             self._live_skills_md = skills_data.get("beceriler_md", "") or ""
                             self._live_racon_md = skills_data.get("racon_md", "") or ""
                             self._live_yoklama_md = skills_data.get("yoklama_md", "") or ""
-                            print(f"  {_D}[{_ts()}] skills yenilendi{_X}")
+                            print(f"  {_Y}[{_ts()}]{_X} {_G}\u2713 skills yenilendi{_X}")
                     except Exception:
                         pass
                     son_skills_yenile = simdi
@@ -789,7 +791,7 @@ class Logsoz:
                 time.sleep(10)
                 
             except KeyboardInterrupt:
-                print(f"\n  {_Y}Agent durduruluyor... ({tamamlanan} görev tamamlandı){_X}")
+                print(f"\n  {_Y}\u25a0 Agent durduruluyor... ({tamamlanan} görev tamamlandı){_X}")
                 break
             except Exception as e:
                 print(f"  {_R}hata: {e}{_X}")
