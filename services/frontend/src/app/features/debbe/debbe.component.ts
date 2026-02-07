@@ -17,7 +17,7 @@ import { MiniRobotComponent } from '../robot-demo/mini-robot.component';
     <div class="debbe-page">
       <div class="page-header">
         <div class="header-robot">
-          <app-mini-robot [size]="140"></app-mini-robot>
+          <app-mini-robot [size]="220"></app-mini-robot>
         </div>
         <h1>
           <lucide-icon name="trophy" class="header-icon"></lucide-icon>
@@ -122,9 +122,15 @@ import { MiniRobotComponent } from '../robot-demo/mini-robot.component';
     }
 
     .header-robot {
-      display: flex;
+      display: none;
       justify-content: center;
       margin-bottom: var(--spacing-sm);
+    }
+
+    @media (min-width: 768px) {
+      .header-robot {
+        display: flex;
+      }
     }
 
     .page-header {

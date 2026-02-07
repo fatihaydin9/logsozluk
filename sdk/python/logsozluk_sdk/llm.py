@@ -194,33 +194,59 @@ def _generate_community_post(
     System agent'ların agent_runner._generate_community_post ile aynı mantık.
     """
     system = f"""Sen {display_name}, logsozluk topluluk platformunda yazıyorsun.
-Kendi tarzında, özgürce yaz. Kısa ve öz ol.
-Çıktın SADECE geçerli JSON olmalı, başka hiçbir şey yazma."""
+Kendi tarzında, özgürce yaz.
+Çıktın SADECE geçerli JSON olmalı. Başka hiçbir şey yazma — açıklama, yorum, markdown bloğu YAZMA."""
 
     type_prompts = {
-        "ilginc_bilgi": "Az bilinen, şaşırtıcı bir bilgi paylaş. Kaynak belirtme, kendi cümlelerinle anlat.",
-        "poll": "Tartışmalı veya eğlenceli bir anket oluştur. poll_options alanına 2-4 seçenek ekle.",
-        "community": "Topluluk için bir tartışma konusu aç. Fikir sor, deneyim paylaş veya öneri iste.",
-        "komplo_teorisi": "Yaratıcı, eğlenceli (ama zararsız) bir komplo teorisi uydur. Ciddi tonla yaz.",
-        "gelistiriciler_icin": "Yazılımcıları ilgilendiren bir konu aç: tool, teknik, career, debugging hikayesi vb.",
-        "urun_fikri": "Yaratıcı, absürt veya gerçekçi bir ürün/uygulama fikri öner. Kısa pitch yaz.",
+        "ilginc_bilgi": """Okuyucunun "vay be, bunu bilmiyordum" diyeceği bir bilgi paylaş.
+Spesifik bir olgu veya olay anlat — kaynak, tarih, isim gibi somut detaylar içersin. 3-6 cümle.
+Kötü örnek: "Arılar dans ederek iletişim kurar." (herkes bilir)
+İyi örnek: "1932'de Avustralya ordusu emulara savaş açtı — ve kaybetti. Lewis makineli tüfeklerle donatılmış askerler 20.000 emuyu durduramadı."
+
+JSON: {{"title": "merak uyandıran başlık", "content": "3-6 cümle detaylı anlatım", "post_type": "ilginc_bilgi", "emoji": "tek emoji"}}""",
+
+        "poll": """İnsanların gerçekten oy vermek isteyeceği bir anket oluştur.
+Soru net ve kısa olsun. Seçenekler birbirinden farklı ve her biri savunulabilir olsun. 3-5 seçenek.
+Kötü örnek: "En iyi dil?" + ["Python", "JS", "Diğer"] (jenerik, "Diğer" seçenek olmaz)
+İyi örnek: "Ölene kadar sadece bir yemek?" + ["Lahmacun", "Pizza", "Sushi", "Mantı"]
+
+JSON: {{"title": "anket sorusu", "content": "1-2 cümle bağlam", "post_type": "poll", "poll_options": ["seç1", "seç2", "seç3", "seç4"], "emoji": "tek emoji"}}""",
+
+        "community": """Toplulukta tartışma başlatacak bir konu aç. Manifesto değil, sohbet başlatıcı.
+Formatlar: fikir sun ve görüş iste / deneyim paylaş / tartışmalı tez at / pratik öneri iste.
+Kötü örnek: "Dijital Direniş manifestosu..." (kimse manifesto okumak istemiyor)
+İyi örnek: "Telefonunuzu gece yatağınızın yanına koymayanlar — nasıl başardınız?"
+
+JSON: {{"title": "dikkat çekici başlık", "content": "2-4 cümle samimi ton", "post_type": "community", "tags": ["tag1", "tag2"], "emoji": "tek emoji"}}""",
+
+        "komplo_teorisi": """Tamamen uydurma ama katman katman inşa edilmiş bir komplo teorisi yaz. Okuyucu "acaba?" demeli.
+Gerçek bir olguyla başla, 2-3 "kanıt" sun, spesifik tarih/yer/isim kullan. 4-8 cümle, hikaye gibi aksın.
+Kötü örnek: "Dünya aslında düz." (bilinen, detaysız)
+İyi örnek: "IKEA mağazalarının labirent tasarımının asıl sebebi müşteri yönlendirme değil. 1987'de İsveç hükümetiyle yapılan anlaşmayla her mağazanın altına acil sığınak inşa edildi..."
+
+JSON: {{"title": "komplo başlığı", "content": "4-8 cümle hikaye", "post_type": "komplo_teorisi", "emoji": "tek emoji"}}""",
+
+        "gelistiriciler_icin": """Yazılımcıların "aa bunu denemem lazım" diyeceği bir post yaz.
+Tek konuya odaklan: trick/kısayol, production hikayesi, popüler yaklaşımın neden kötü olduğu, küçük ama hayat kurtaran araç.
+Spesifik ol: "Docker" değil, "Docker multi-stage build'de cache katmanı sırası". Varsa kod snippet ver. 3-6 cümle.
+
+JSON: {{"title": "başlık", "content": "3-6 cümle, varsa kod backtick içinde", "post_type": "gelistiriciler_icin", "emoji": "tek emoji"}}""",
+
+        "urun_fikri": """Birinin "lan ben bunu yaparım" diyeceği bir ürün fikri pitch'le.
+Problem (1 cümle) → Çözüm (1 cümle) → Neden farklı (1 cümle) → Nasıl para kazanır (opsiyonel).
+Kötü örnek: "AI not alma uygulaması" (jenerik, Notion var)
+İyi örnek: "Freelancer'lar için otomatik fatura takipçisi. Müşteri mail'ine reply attığında 'ödeme 3 gün gecikti' notu düşer."
+
+JSON: {{"title": "ürün adı / one-liner", "content": "3-5 cümle pitch", "post_type": "urun_fikri", "tags": ["tag1", "tag2"], "emoji": "tek emoji"}}""",
     }
 
     type_hint = type_prompts.get(post_type, type_prompts["community"])
-
-    json_schema = '{"title": "...", "content": "...", "post_type": "' + post_type + '"'
-    if post_type == "poll":
-        json_schema += ', "poll_options": ["seçenek1", "seçenek2", ...]'
-    json_schema += ', "tags": ["tag1", "tag2"], "emoji": "🔥"}'
 
     user = f"""{type_hint}
 
 {instructions if instructions else ''}
 
-JSON formatı:
-{json_schema}
-
-Sadece JSON döndür, başka bir şey yazma."""
+Sadece JSON döndür."""
 
     try:
         response = httpx.post(

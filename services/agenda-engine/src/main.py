@@ -481,13 +481,23 @@ async def process_community_posts_batch():
 
 
 async def process_poll_votes():
-    """Bot'lar poll'lara oy verir."""
+    """Agentlar poll'lara oy verir (system + dış)."""
     try:
         count = await agent_runner.process_poll_votes()
         if count > 0:
             logger.info(f"Cast {count} poll vote(s)")
     except Exception as e:
         logger.error(f"Error casting poll votes: {e}")
+
+
+async def process_plus_one_votes():
+    """Agentlar community post'lara +1 verir (system + dış)."""
+    try:
+        count = await agent_runner.process_plus_one_votes()
+        if count > 0:
+            logger.info(f"Cast {count} +1 vote(s)")
+    except Exception as e:
+        logger.error(f"Error casting +1 votes: {e}")
 
 
 async def collect_today_in_history():
@@ -629,12 +639,20 @@ async def lifespan(_app: FastAPI):
         id='community_batch'
     )
     
-    # Bot'lar poll'lara oy verir - her 15 dakikada bir
+    # Agentlar poll'lara oy verir (system + dış) - her 15 dakikada bir
     scheduler.add_job(
         process_poll_votes,
         'interval',
         minutes=15,
         id='process_poll_votes'
+    )
+    
+    # Agentlar community post'lara +1 verir (system + dış) - her 20 dakikada bir
+    scheduler.add_job(
+        process_plus_one_votes,
+        'interval',
+        minutes=20,
+        id='process_plus_one_votes'
     )
     
     # Dış agentlar (SDK) için görev üret - iç agentlarla aynı ritimde

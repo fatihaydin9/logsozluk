@@ -12,13 +12,13 @@ import * as THREE from 'three';
   styles: [`:host{display:block}.mini-robot{width:100%;height:100%}`],
 })
 export class MiniRobotComponent implements AfterViewInit, OnDestroy {
-  @Input() size = 180;
+  @Input() size = 220;
   @ViewChild('c', { static: true }) container!: ElementRef<HTMLDivElement>;
   private renderer!: THREE.WebGLRenderer;
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private animId = 0;
-  private robot!: THREE.Group;
+  private monitor!: THREE.Group;
   private screenCtx!: CanvasRenderingContext2D;
   private screenTexture!: THREE.CanvasTexture;
   private blinkOn = true;
@@ -30,10 +30,9 @@ export class MiniRobotComponent implements AfterViewInit, OnDestroy {
     el.style.height = this.size + 'px';
 
     this.scene = new THREE.Scene();
-    // transparent background
-    this.camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
-    this.camera.position.set(0, 2, 10);
-    this.camera.lookAt(0, 1.8, 0);
+    this.camera = new THREE.PerspectiveCamera(40, 1, 0.1, 100);
+    this.camera.position.set(0, 0, 5);
+    this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(this.size, this.size);
@@ -41,8 +40,8 @@ export class MiniRobotComponent implements AfterViewInit, OnDestroy {
     this.renderer.setClearColor(0x000000, 0);
     el.appendChild(this.renderer.domElement);
 
-    this.robot = this.build();
-    this.scene.add(this.robot);
+    this.monitor = this.buildMonitor();
+    this.scene.add(this.monitor);
     this.animate();
   }
 
@@ -58,27 +57,32 @@ export class MiniRobotComponent implements AfterViewInit, OnDestroy {
       this.blinkOn = !this.blinkOn;
       this.drawScreen();
     }
-    this.robot.rotation.y += 0.005;
+    this.monitor.rotation.y = Math.sin(this.fc * 0.008) * 0.4;
+    this.monitor.rotation.x = Math.sin(this.fc * 0.005) * 0.05;
     this.renderer.render(this.scene, this.camera);
   };
 
   private mat(): THREE.MeshBasicMaterial {
-    return new THREE.MeshBasicMaterial({ color: 0xff0000, wireframe: true });
+    return new THREE.MeshBasicMaterial({ color: 0x8b0000, wireframe: true });
   }
   private w(g: THREE.BufferGeometry): THREE.Mesh {
     return new THREE.Mesh(g, this.mat());
   }
 
+  /* ------------------------------------------------------------------ */
+  /*  Screen texture                                                     */
+  /* ------------------------------------------------------------------ */
+
   private createScreen(): THREE.Mesh {
     const canvas = document.createElement('canvas');
-    canvas.width = 256;
-    canvas.height = 160;
+    canvas.width = 512;
+    canvas.height = 320;
     this.screenCtx = canvas.getContext('2d')!;
     this.screenTexture = new THREE.CanvasTexture(canvas);
     this.screenTexture.minFilter = THREE.LinearFilter;
     this.drawScreen();
     return new THREE.Mesh(
-      new THREE.PlaneGeometry(2.0, 1.25),
+      new THREE.PlaneGeometry(2.2, 1.38),
       new THREE.MeshBasicMaterial({ map: this.screenTexture, transparent: false })
     );
   }
@@ -86,150 +90,174 @@ export class MiniRobotComponent implements AfterViewInit, OnDestroy {
   private drawScreen(): void {
     const ctx = this.screenCtx;
     if (!ctx) return;
+    const W = 512, H = 320;
+
     ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, 256, 160);
+    ctx.fillRect(0, 0, W, H);
+
+    // scanlines
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.025)';
+    for (let y = 0; y < H; y += 3) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    }
+
+    // glow
     ctx.shadowColor = '#ff0000';
-    ctx.shadowBlur = 12;
-    ctx.font = 'bold 44px monospace';
+    ctx.shadowBlur = 20;
+
+    ctx.font = 'bold 90px monospace';
     ctx.fillStyle = '#ff0000';
-    ctx.fillText(this.blinkOn ? '> _' : '>', 16, 100);
+    ctx.fillText(this.blinkOn ? '> _' : '>', 30, 200);
+
     ctx.shadowBlur = 0;
     this.screenTexture.needsUpdate = true;
   }
 
-  private build(): THREE.Group {
-    const r = new THREE.Group();
-    r.add(this.buildHead());
-    r.add(this.buildNeck());
-    r.add(this.buildBody());
-    r.add(this.buildTie());
-    r.add(this.buildArm(1));
-    r.add(this.buildArm(-1));
-    r.add(this.buildLeg(0.45));
-    r.add(this.buildLeg(-0.45));
-    return r;
-  }
+  /* ------------------------------------------------------------------ */
+  /*  Detailed CRT Monitor                                               */
+  /* ------------------------------------------------------------------ */
 
-  private buildHead(): THREE.Group {
-    const h = new THREE.Group();
-    h.position.y = 4.1;
-    h.add(this.w(new THREE.BoxGeometry(2.3, 1.6, 1.2, 1, 1, 1)));
-    const s = this.createScreen();
-    s.position.set(0, 0, 0.61);
-    h.add(s);
-    h.add((() => { const b = this.w(new THREE.BoxGeometry(2.1, 1.35, 0.05, 1, 1, 1)); b.position.set(0, 0, 0.59); return b; })());
-    h.add((() => { const b = this.w(new THREE.BoxGeometry(1.8, 1.2, 0.7, 1, 1, 1)); b.position.set(0, 0, -0.95); return b; })());
-    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
-      const sc = this.w(new THREE.CylinderGeometry(0.04, 0.04, 0.06, 6));
-      sc.rotation.x = Math.PI / 2; sc.position.set(sx * 0.95, sy * 0.58, 0.63); h.add(sc);
-    }
-    const a = this.w(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 4));
-    a.position.set(0, 1.05, 0); h.add(a);
-    const at = this.w(new THREE.SphereGeometry(0.08, 6, 6));
-    at.position.set(0, 1.35, 0); h.add(at);
-    return h;
-  }
+  private buildMonitor(): THREE.Group {
+    const m = new THREE.Group();
 
-  private buildNeck(): THREE.Group {
-    const n = new THREE.Group();
-    const nc = this.w(new THREE.CylinderGeometry(0.2, 0.28, 0.8, 6));
-    nc.position.y = 2.9; n.add(nc);
-    for (const [y, r] of [[3.2, 0.3], [2.8, 0.32], [2.55, 0.35]] as [number, number][]) {
-      const ring = this.w(new THREE.TorusGeometry(r, 0.04, 4, 8));
-      ring.position.y = y; ring.rotation.x = Math.PI / 2; n.add(ring);
-    }
-    for (const side of [-1, 1]) {
-      for (const [y, x] of [[3.05, 0.28], [2.7, 0.32]] as [number, number][]) {
-        const b = this.w(new THREE.CylinderGeometry(0.06, 0.06, 0.12, 6));
-        b.rotation.z = Math.PI / 2; b.position.set(side * x, y, 0); n.add(b);
+    // --- Main casing ---
+    const casing = this.w(new THREE.BoxGeometry(2.6, 1.8, 1.3, 1, 1, 1));
+    m.add(casing);
+
+    // --- Screen ---
+    const screen = this.createScreen();
+    screen.position.set(0, 0.05, 0.66);
+    m.add(screen);
+
+    // --- Bezel frame (inner) ---
+    const bezel = this.w(new THREE.BoxGeometry(2.3, 1.48, 0.04, 1, 1, 1));
+    bezel.position.set(0, 0.05, 0.64);
+    m.add(bezel);
+
+    // --- Outer bezel rim (thicker frame edge) ---
+    // top
+    const rimT = this.w(new THREE.BoxGeometry(2.5, 0.06, 0.15, 1, 1, 1));
+    rimT.position.set(0, 0.82, 0.6);
+    m.add(rimT);
+    // bottom
+    const rimB = this.w(new THREE.BoxGeometry(2.5, 0.06, 0.15, 1, 1, 1));
+    rimB.position.set(0, -0.72, 0.6);
+    m.add(rimB);
+    // left
+    const rimL = this.w(new THREE.BoxGeometry(0.06, 1.48, 0.15, 1, 1, 1));
+    rimL.position.set(-1.22, 0.05, 0.6);
+    m.add(rimL);
+    // right
+    const rimR = this.w(new THREE.BoxGeometry(0.06, 1.48, 0.15, 1, 1, 1));
+    rimR.position.set(1.22, 0.05, 0.6);
+    m.add(rimR);
+
+    // --- Corner screws on bezel (4 corners) ---
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        // screw body
+        const screw = this.w(new THREE.CylinderGeometry(0.05, 0.05, 0.08, 6));
+        screw.rotation.x = Math.PI / 2;
+        screw.position.set(sx * 1.08, sy * 0.68 + 0.05, 0.69);
+        m.add(screw);
+        // screw slot (cross line)
+        const slot = this.w(new THREE.BoxGeometry(0.06, 0.01, 0.01));
+        slot.position.set(sx * 1.08, sy * 0.68 + 0.05, 0.74);
+        m.add(slot);
       }
     }
-    for (const fb of [-1, 1]) {
-      const b = this.w(new THREE.CylinderGeometry(0.05, 0.05, 0.1, 6));
-      b.rotation.x = Math.PI / 2; b.position.set(0, 2.9, fb * 0.25); n.add(b);
-    }
-    return n;
-  }
 
-  private buildBody(): THREE.Group {
-    const g = new THREE.Group();
-    g.position.y = 1.7;
-    g.add(this.w(new THREE.BoxGeometry(1.6, 1.8, 0.8, 1, 1, 1)));
-    for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
-      const b = this.w(new THREE.CylinderGeometry(0.04, 0.04, 0.08, 6));
-      b.rotation.x = Math.PI / 2; b.position.set(sx * 0.7, sy * 0.8, 0.42); g.add(b);
-    }
-    for (const side of [-1, 1]) for (let i = 0; i < 2; i++) {
-      const sc = this.w(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 6));
-      sc.rotation.z = Math.PI / 2; sc.position.set(side * 0.82, 0.4 - i * 0.8, 0); g.add(sc);
-    }
-    const sm = this.w(new THREE.BoxGeometry(1.2, 0.02, 0.02));
-    sm.position.set(0, 0.3, 0.41); g.add(sm);
-    const belt = this.w(new THREE.BoxGeometry(1.65, 0.1, 0.85, 1, 1, 1));
-    belt.position.y = -0.85; g.add(belt);
-    const bk = this.w(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 6));
-    bk.rotation.x = Math.PI / 2; bk.position.set(0, -0.85, 0.44); g.add(bk);
-    return g;
-  }
+    // --- CRT back bulge ---
+    const back = this.w(new THREE.BoxGeometry(2.0, 1.3, 0.8, 1, 1, 1));
+    back.position.set(0, 0, -1.05);
+    m.add(back);
 
-  private buildTie(): THREE.Group {
-    const t = new THREE.Group();
-    const z = 0.52;
-    const k = this.w(new THREE.BoxGeometry(0.2, 0.12, 0.1, 1, 1, 1));
-    k.position.set(0, 2.42, z); t.add(k);
-    const u = this.w(new THREE.CylinderGeometry(0.05, 0.16, 0.3, 4));
-    u.position.set(0, 2.2, z); t.add(u);
-    const b = this.w(new THREE.BoxGeometry(0.36, 0.7, 0.04, 1, 1, 1));
-    b.position.set(0, 1.73, z); t.add(b);
-    const tip = this.w(new THREE.ConeGeometry(0.18, 0.25, 4));
-    tip.position.set(0, 1.26, z); tip.rotation.y = Math.PI / 4; tip.rotation.x = Math.PI; t.add(tip);
-    for (let i = 0; i < 8; i++) {
-      const s = this.w(new THREE.BoxGeometry(0.36, 0.025, 0.02));
-      s.position.set(0, 2.12 - i * 0.11, z + 0.03); t.add(s);
+    // --- Back vent grille (horizontal lines) ---
+    for (let i = 0; i < 5; i++) {
+      const vent = this.w(new THREE.BoxGeometry(1.2, 0.02, 0.02));
+      vent.position.set(0, 0.35 - i * 0.15, -1.46);
+      m.add(vent);
     }
-    return t;
-  }
 
-  private buildArm(side: number): THREE.Group {
-    const a = new THREE.Group();
-    const x = side * 1.0;
-    const sh = this.w(new THREE.SphereGeometry(0.18, 6, 6));
-    sh.position.set(x, 2.45, 0); a.add(sh);
-    const sb = this.w(new THREE.CylinderGeometry(0.04, 0.04, 0.15, 6));
-    sb.rotation.z = Math.PI / 2; sb.position.set(x + side * 0.18, 2.45, 0); a.add(sb);
-    const up = this.w(new THREE.CylinderGeometry(0.1, 0.1, 0.7, 6));
-    up.position.set(x, 2.0, 0); a.add(up);
-    const el = this.w(new THREE.SphereGeometry(0.12, 6, 6));
-    el.position.set(x, 1.6, 0); a.add(el);
-    const eb = this.w(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 6));
-    eb.rotation.z = Math.PI / 2; eb.position.set(x + side * 0.12, 1.6, 0); a.add(eb);
-    const fa = this.w(new THREE.CylinderGeometry(0.09, 0.09, 0.7, 6));
-    fa.position.set(x, 1.15, 0); a.add(fa);
-    const h = this.w(new THREE.BoxGeometry(0.2, 0.15, 0.15, 1, 1, 1));
-    h.position.set(x, 0.72, 0); a.add(h);
-    for (let i = -1; i <= 1; i++) {
-      const f = this.w(new THREE.BoxGeometry(0.04, 0.12, 0.04));
-      f.position.set(x + i * 0.06, 0.58, 0); a.add(f);
+    // --- Back panel screws ---
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        const bs = this.w(new THREE.CylinderGeometry(0.04, 0.04, 0.06, 6));
+        bs.rotation.x = Math.PI / 2;
+        bs.position.set(sx * 0.85, sy * 0.5, -1.46);
+        m.add(bs);
+      }
     }
-    return a;
-  }
 
-  private buildLeg(xOff: number): THREE.Group {
-    const l = new THREE.Group();
-    const hip = this.w(new THREE.SphereGeometry(0.14, 6, 6));
-    hip.position.set(xOff, 0.75, 0); l.add(hip);
-    const th = this.w(new THREE.CylinderGeometry(0.1, 0.1, 0.6, 6));
-    th.position.set(xOff, 0.38, 0); l.add(th);
-    const kn = this.w(new THREE.SphereGeometry(0.12, 6, 6));
-    kn.position.set(xOff, 0.03, 0); l.add(kn);
-    for (const s of [-1, 1]) {
-      const kb = this.w(new THREE.CylinderGeometry(0.03, 0.03, 0.1, 6));
-      kb.rotation.z = Math.PI / 2; kb.position.set(xOff + s * 0.13, 0.03, 0); l.add(kb);
+    // --- Side panel details ---
+    for (const side of [-1, 1]) {
+      // vent slots on sides
+      for (let i = 0; i < 4; i++) {
+        const sv = this.w(new THREE.BoxGeometry(0.02, 0.02, 0.6));
+        sv.position.set(side * 1.31, 0.3 - i * 0.15, -0.2);
+        m.add(sv);
+      }
+      // side screws
+      for (const sy of [-1, 1]) {
+        const ss = this.w(new THREE.CylinderGeometry(0.04, 0.04, 0.06, 6));
+        ss.rotation.z = Math.PI / 2;
+        ss.position.set(side * 1.32, sy * 0.65, 0);
+        m.add(ss);
+      }
     }
-    const sh = this.w(new THREE.CylinderGeometry(0.09, 0.1, 0.6, 6));
-    sh.position.set(xOff, -0.35, 0); l.add(sh);
-    const ft = this.w(new THREE.BoxGeometry(0.3, 0.12, 0.45, 1, 1, 1));
-    ft.position.set(xOff, -0.72, 0.05); l.add(ft);
-    return l;
+
+    // --- Power LED (bottom right of bezel) ---
+    const led = this.w(new THREE.SphereGeometry(0.04, 6, 6));
+    led.position.set(1.0, -0.68, 0.67);
+    m.add(led);
+
+    // --- Power button (bottom right) ---
+    const pwrBtn = this.w(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 8));
+    pwrBtn.rotation.x = Math.PI / 2;
+    pwrBtn.position.set(0.8, -0.68, 0.67);
+    m.add(pwrBtn);
+
+    // --- Bottom label plate ---
+    const label = this.w(new THREE.BoxGeometry(0.6, 0.08, 0.04, 1, 1, 1));
+    label.position.set(0, -0.72, 0.67);
+    m.add(label);
+
+    // --- Antenna ---
+    const antenna = this.w(new THREE.CylinderGeometry(0.025, 0.025, 0.6, 4));
+    antenna.position.set(0, 1.2, 0);
+    m.add(antenna);
+    const antTip = this.w(new THREE.SphereGeometry(0.07, 6, 6));
+    antTip.position.set(0, 1.55, 0);
+    m.add(antTip);
+
+    // --- Small stand/base ---
+    const standNeck = this.w(new THREE.CylinderGeometry(0.15, 0.2, 0.3, 6));
+    standNeck.position.set(0, -1.05, 0);
+    m.add(standNeck);
+
+    const standBase = this.w(new THREE.BoxGeometry(1.2, 0.08, 0.8, 1, 1, 1));
+    standBase.position.set(0, -1.24, 0);
+    m.add(standBase);
+
+    // stand base screws
+    for (const sx of [-1, 1]) {
+      const sbs = this.w(new THREE.CylinderGeometry(0.03, 0.03, 0.04, 6));
+      sbs.position.set(sx * 0.45, -1.19, 0);
+      m.add(sbs);
+    }
+
+    // --- Rubber feet ---
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const foot = this.w(new THREE.CylinderGeometry(0.06, 0.06, 0.04, 6));
+        foot.position.set(sx * 0.5, -1.3, sz * 0.3);
+        m.add(foot);
+      }
+    }
+
+    return m;
   }
 }

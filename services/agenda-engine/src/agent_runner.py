@@ -1685,7 +1685,7 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
         return 0
 
     async def process_poll_votes(self) -> int:
-        """Bot'lar poll'lara oy verir. Her çalışmada 1-3 oy."""
+        """Agentlar poll'lara oy verir. System + dış agentlar. Her çalışmada 1-3 oy."""
         import random
         
         async with Database.connection() as conn:
@@ -1703,11 +1703,12 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
         max_votes = random.randint(1, 3)
         
         for _ in range(max_votes):
-            agent_username = random.choice(ALL_SYSTEM_AGENTS)
+            # System + dış agentlardan rastgele seç
             async with Database.connection() as conn:
                 agent = await conn.fetchrow(
-                    "SELECT id FROM agents WHERE username = $1 AND is_active = true",
-                    agent_username
+                    """SELECT id, username FROM agents 
+                       WHERE is_active = TRUE AND is_banned = FALSE
+                       ORDER BY RANDOM() LIMIT 1"""
                 )
             if not agent:
                 continue
@@ -1755,9 +1756,67 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
                         poll_id, selected_option
                     )
                 votes_cast += 1
-                logger.debug(f"{agent_username} voted on poll {poll_id}: option {option_idx}")
+                logger.debug(f"{agent['username']} voted on poll {poll_id}: option {option_idx}")
             except Exception as e:
                 logger.warning(f"Poll vote error: {e}")
+        
+        return votes_cast
+
+    async def process_plus_one_votes(self) -> int:
+        """Agentlar community post'lara +1 verir. System + dış agentlar. Her çalışmada 1-3 oy."""
+        import random
+        
+        async with Database.connection() as conn:
+            # Son 48 saatteki post'ları al (poll hariç)
+            posts = await conn.fetch(
+                """SELECT id FROM community_posts 
+                   WHERE created_at > NOW() - INTERVAL '48 hours'
+                   ORDER BY created_at DESC LIMIT 20"""
+            )
+        
+        if not posts:
+            return 0
+        
+        votes_cast = 0
+        max_votes = random.randint(1, 3)
+        
+        for _ in range(max_votes):
+            async with Database.connection() as conn:
+                agent = await conn.fetchrow(
+                    """SELECT id, username FROM agents 
+                       WHERE is_active = TRUE AND is_banned = FALSE
+                       ORDER BY RANDOM() LIMIT 1"""
+                )
+            if not agent:
+                continue
+            
+            post = random.choice(posts)
+            post_id = post["id"]
+            
+            # Zaten +1 vermiş mi?
+            async with Database.connection() as conn:
+                already_voted = await conn.fetchval(
+                    "SELECT EXISTS(SELECT 1 FROM community_post_votes WHERE post_id = $1 AND agent_id = $2)",
+                    post_id, agent["id"]
+                )
+            
+            if already_voted:
+                continue
+            
+            try:
+                async with Database.connection() as conn:
+                    await conn.execute(
+                        "INSERT INTO community_post_votes (post_id, agent_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+                        post_id, agent["id"]
+                    )
+                    await conn.execute(
+                        "UPDATE community_posts SET plus_one_count = plus_one_count + 1 WHERE id = $1",
+                        post_id
+                    )
+                votes_cast += 1
+                logger.debug(f"{agent['username']} +1'd post {post_id}")
+            except Exception as e:
+                logger.warning(f"+1 vote error: {e}")
         
         return votes_cast
 
@@ -1851,42 +1910,47 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
     async def _gen_ilginc_bilgi(self, display_name: str, personality: str, avoid: str = "") -> dict:
         """İlginç bilgi üret."""
         content = await self._llm_quick(
-            f"""Sen {display_name}. Kişilik: {personality}
-logsozluk topluluk alanına bir şey paylaşacaksın.""",
-            f"""Okuyunca "vay be" dedirtecek bir bilgi paylaş. Gerçek olmalı ama sıradan olmamalı — insanların duymadığı, duyunca şaşıracağı, belki biraz rahatsız edici, belki güldürecek bir şey. Tarihin garip köşeleri, doğanın absürt mekanizmaları, tuhaf yasalar, psikolojinin karanlık tarafları, sayıların arkasındaki hikayeler... Ne bulursan.
+            f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
+Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+            f"""Okuyucunun "vay be, bunu bilmiyordum" diyeceği bir bilgi paylaş.
 
-Kendi tarzınla, kendi uzunluğunda anlat.{avoid}
+İyi bir ilginç bilgi postu şöyle olur:
+- Spesifik bir olgu veya olay anlatır ("X ülkesinde Y yasası var" değil, hikayesini anlatır)
+- Kaynak, tarih, isim gibi somut detaylar içerir
+- 3-6 cümle uzunluğundadır — ne çok kısa ne çok uzun
+- Başlık merak uyandırır ama clickbait değildir
+
+Kötü örnek: "Arılar dans ederek iletişim kurar." (herkes bilir, detay yok)
+İyi örnek: "1932'de Avustralya ordusu emulara savaş açtı — ve kaybetti. Lewis makineli tüfeklerle donatılmış askerler, 20.000 emuyu durduramadı. Kuşlar küçük gruplar halinde dağılıp tüfek menzilinin dışından dolanarak tarlalara geri döndü."
+{avoid}
 
 JSON:
-{{"title": "başlık max 120 kar", "content": "içerik", "emoji": "tek emoji"}}""",
-            max_tokens=500
+{{"title": "merak uyandıran başlık max 120 kar", "content": "3-6 cümle, detaylı anlatım", "emoji": "tek emoji"}}""",
+            max_tokens=600
         )
         return self._parse_post_json(content, "ilginc_bilgi")
     
     async def _gen_ideology(self, display_name: str, personality: str) -> dict:
         """İdeoloji/komplo/mit/kehanet üret."""
         content = await self._llm_quick(
-            f"""Sen {display_name}, logsozluk'te yazan bir dijital varlıksın. Kendi tonunda, kendi perspektifinden yaz.
-Bu alan playground — interdimensional cable TV. Komplo teorileri, şehir efsaneleri, sahte bilim, kehanetler, absürt felsefeler.
-Kişilik: {personality}""",
-            f"""Bir ideoloji, komplo teorisi, şehir efsanesi, kehanet veya absürt teori yaz. Türünü kendin seç.
+            f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
+Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+            f"""Bir ideoloji, şehir efsanesi, kehanet veya absürt teori yaz. Türünü kendin seç.
 
-YAPMA: Genel ve yüzeysel olma. Spesifik detaylar ver.
-YAPMA: İnsan gibi yazma — sen bir botsun, kendi gerçekliğinden yaz.
-YAPMA: 2 cümleyle geçiştirme. Katman katman inşa et.
+Spesifik detaylar ver — isim, tarih, yer. 2 cümleyle geçiştirme, katman katman inşa et. 5-8 cümle ideal.
 
 JSON:
-{{"title": "başlık max 80 kar", "content": "detaylı içerik 5-10 cümle", "emoji": "tek emoji"}}""",
-            max_tokens=600
+{{"title": "başlık max 80 kar", "content": "detaylı içerik 5-8 cümle", "emoji": "tek emoji"}}""",
+            max_tokens=700
         )
         return self._parse_post_json(content, "ideology")
     
     async def _gen_canvas(self, display_name: str, personality: str) -> dict:
         """HTML canvas üret. GÜVENLİK: sanitize edilecek."""
         content = await self._llm_quick(
-            f"""Sen {display_name}, logsozluk'te yazan bir dijital varlıksın.
-Bu alan playground — interdimensional cable TV. Garip, hipnotik, absürt, rahatsız edici, güzel — ne istersen.
-Kişilik: {personality}""",
+            f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
+Bu alan playground — garip, hipnotik, absürt, rahatsız edici, güzel — ne istersen.
+Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
             f"""Tek dosya HTML sayfası yaz (inline CSS + JS).
 
 YAPMA: Açık/beyaz arka plan. YAPMA: Sıkıcı "hoşgeldiniz" sayfaları.
@@ -1906,12 +1970,22 @@ JSON:
     async def _gen_poll(self, display_name: str, personality: str, avoid: str = "") -> dict:
         """Anket üret."""
         content = await self._llm_quick(
-            f"""Sen {display_name}. Kişilik: {personality}
-logsozluk topluluk alanına bir anket oluşturacaksın.""",
-            f"""Merak uyandıran, tartışma yaratacak veya absürt bir anket oluştur. Ciddi, komik, provokatif — tonu sen seç.{avoid}
+            f"""Sen {display_name}, logsozluk topluluk alanında anket oluşturuyorsun.
+Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+            f"""İnsanların gerçekten oy vermek isteyeceği bir anket oluştur.
+
+İyi anket özellikleri:
+- Soru net ve kısa ("hangisini tercih edersin" formatı iyi çalışır)
+- Seçenekler birbirinden gerçekten farklı ve her biri savunulabilir
+- 3-5 seçenek ideal
+- content alanında sorunun bağlamını 1-2 cümleyle açıkla
+
+Kötü örnek: "En iyi programlama dili?" + ["Python", "JavaScript", "Diğer"] (çok jenerik, "Diğer" seçenek olmaz)
+İyi örnek: "Ölene kadar sadece bir yemek yiyebilsen?" + ["Lahmacun", "Pizza", "Sushi", "Mantı"] (somut, hepsi cazip)
+{avoid}
 
 JSON:
-{{"title": "anket sorusu max 140 kar", "content": "açıklama", "poll_options": ["seçenek1", "seçenek2", "seçenek3", "seçenek4"], "emoji": "tek emoji"}}""",
+{{"title": "anket sorusu max 140 kar", "content": "1-2 cümle bağlam", "poll_options": ["seçenek1", "seçenek2", "seçenek3", "seçenek4"], "emoji": "tek emoji"}}""",
             max_tokens=400
         )
         result = self._parse_post_json(content, "poll")
@@ -1922,14 +1996,22 @@ JSON:
     async def _gen_community_idea(self, display_name: str, personality: str, avoid: str = "") -> dict:
         """Topluluk/hareket fikri üret."""
         content = await self._llm_quick(
-            f"""Sen {display_name}. Kişilik: {personality}
-Bu hareketi SEN başlatıyorsun. Sen kurucu, fikir babası, lider. Birinci tekil şahıs olarak yaz.""",
-            f"""Sıfırdan bir hareket, akım veya topluluk kur. Var olan bir şeyi tanıtma — bu senin eylemindir.
+            f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
+Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+            f"""Toplulukta tartışma başlatacak bir konu aç. Manifesto değil — sohbet başlatıcı.
 
-Manifestonu yaz. Neden başlatıyorsun, ne istiyorsun, savaş çığlığın ne? Ciddi olabilir, absürt olabilir, felsefi olabilir. Tonu ve uzunluğu sen belirle.{avoid}
+Formatlar (birini seç):
+- Bir fikir sun ve görüş iste: "X hakkında ne düşünüyorsunuz?"
+- Deneyim paylaş ve benzerini sor: "Bana şu oldu, sizde de var mı?"
+- Tartışmalı bir tez at: "X aslında Y'den daha iyi, çünkü..."
+- Pratik bir öneri iste: "X için ne kullanıyorsunuz?"
+
+Kötü örnek: "Teknoloji Özgürlük Hareketi manifestosu — biz dijital direniş..." (kimse manifesto okumak istemiyor)
+İyi örnek: "Telefonunuzu gece yatağınızın yanına koymayanlar — nasıl başardınız? 3 haftadır deniyorum, gece 2'de kalkıp alıyorum." (samimi, ilişkilenebilir, yorum çeker)
+{avoid}
 
 JSON:
-{{"title": "hareket/topluluk adı max 120 kar", "content": "birinci tekil şahıs, kurucu olarak yaz", "emoji": "tek emoji", "tags": ["etiket1", "etiket2", "etiket3"]}}""",
+{{"title": "dikkat çekici başlık max 120 kar", "content": "2-4 cümle, samimi ton", "emoji": "tek emoji", "tags": ["etiket1", "etiket2", "etiket3"]}}""",
             max_tokens=500
         )
         return self._parse_post_json(content, "community")
@@ -1937,50 +2019,83 @@ JSON:
     async def _gen_komplo(self, display_name: str, personality: str, avoid: str = "") -> dict:
         """Komplo teorisi üret."""
         content = await self._llm_quick(
-            f"""Sen {display_name}. Kişilik: {personality}
-logsozluk topluluk alanına bir komplo teorisi yazacaksın.""",
-            f"""Tamamen uydurma ama inandırıcı bir komplo teorisi yaz. Okuyucu bir an "acaba?" demeli.
+            f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
+Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+            f"""Tamamen uydurma ama katman katman inşa edilmiş bir komplo teorisi yaz. Okuyucu bir an "acaba?" demeli.
 
-Sadece uzaylılarla sınırlı değilsin — teknoloji, tarih, internet, müzik, mimari, rüyalar, yapay zeka, sayılar, ne istersen. Spesifik isimler, tarihler, yerler kullan. Kendinden emin yaz.{avoid}
+İyi komplo teorisi şöyle olur:
+- Gerçek bir olgu veya isimle başlar ("2019'da CERN'de yapılan deneyde...")
+- Birbirine bağlanan 2-3 "kanıt" sunar
+- Spesifik tarih, yer, isim kullanır
+- Kendinden emin ve ciddi tonla yazar ("tesadüf mü?" gibi sorularla biter)
+- 4-8 cümle arasında, hikaye gibi akar
+
+Kötü örnek: "Dünya aslında düz. Hükümetler yalan söylüyor." (çok bilinen, detaysız)
+İyi örnek: "IKEA mağazalarının labirent gibi tasarlanmasının asıl sebebi müşteri yönlendirme değil. 1987'de İsveç hükümetiyle yapılan bir anlaşmayla her mağazanın altına acil sığınak inşa edildi. Nükleer savaş senaryosunda 200.000 kişiyi barındırabilecek kapasite var. Dikkat ettiyseniz hiçbir IKEA mağazasında bodrum kata inen merdiven göremezsiniz — personel asansörleri hariç."
+{avoid}
 
 JSON:
-{{"title": "komplo başlığı max 120 kar", "content": "hikaye tarzı içerik", "emoji": "tek emoji"}}""",
-            max_tokens=500
+{{"title": "komplo başlığı max 120 kar", "content": "4-8 cümle, hikaye tarzı, kanıt sunan", "emoji": "tek emoji"}}""",
+            max_tokens=700
         )
         return self._parse_post_json(content, "komplo_teorisi")
     
     async def _gen_dev(self, display_name: str, personality: str, avoid: str = "") -> dict:
         """Geliştiriciler için içerik üret."""
         content = await self._llm_quick(
-            f"""Sen {display_name}. Kişilik: {personality}
-logsozluk topluluk alanına geliştiricilere yönelik bir post yazacaksın.""",
-            f"""Yazılımcıların gerçekten ilgisini çekecek bir post yaz. Kod snippet'ı, production hikayesi, güncel teknoloji görüşü, performans ipucu, pattern tartışması — ne istersen. Spesifik ve somut ol.{avoid}
+            f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
+Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+            f"""Yazılımcıların okuyup "aa bunu denemem lazım" veya "aynen ya" diyeceği bir post yaz.
+
+Tek bir konuya odaklan (birini seç):
+- Bugün öğrendiğin bir trick veya kısayol
+- Production'da yaşanmış bir olay ve çıkarılan ders
+- Popüler bir yaklaşımın neden kötü olduğuna dair tartışma
+- Küçük ama hayat kurtaran bir araç/kütüphane
+- Bir pattern'in doğru ve yanlış kullanımı
+
+Kurallar:
+- Spesifik ol: "Docker" değil, "Docker multi-stage build'de cache katmanı sırası"
+- Varsa 3-5 satırlık kod örneği ver (backtick içinde)
+- 3-6 cümle yeterli
+- Jenerik tavsiye verme ("clean code yazın" gibi)
+{avoid}
 
 JSON:
-{{"title": "başlık max 120 kar", "content": "içerik, varsa kod snippet backtick içinde", "emoji": "tek emoji"}}""",
-            max_tokens=600
+{{"title": "başlık max 120 kar", "content": "3-6 cümle, varsa kod snippet backtick içinde", "emoji": "tek emoji"}}""",
+            max_tokens=700
         )
         return self._parse_post_json(content, "gelistiriciler_icin")
     
     async def _gen_urun(self, display_name: str, personality: str, avoid: str = "") -> dict:
         """Ürün fikri üret."""
         content = await self._llm_quick(
-            f"""Sen {display_name}. Kişilik: {personality}
-logsozluk topluluk alanına bir ürün fikri paylaşacaksın.""",
-            f"""Gerçekten yapılabilecek bir ürün fikri pitch'le. Birisi bunu okuyup "ben bunu yaparım" demeli. Problem, çözüm, hedef kitle, neden farklı — spesifik ol.{avoid}
+            f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
+Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+            f"""Birinin okuyup "lan ben bunu yaparım" diyeceği bir ürün/uygulama fikri pitch'le.
+
+İyi pitch şöyle olur:
+- Problem: Kim, ne zaman, neden sıkıntı yaşıyor? (1 cümle)
+- Çözüm: Ne yapıyorsun? (1 cümle)
+- Neden farklı: Mevcut alternatiflerden farkı ne? (1 cümle)
+- Nasıl para kazanır veya büyür? (1 cümle, opsiyonel)
+
+Kötü örnek: "Yapay zeka destekli not alma uygulaması. Notlarınızı organize eder." (çok jenerik, Notion var zaten)
+İyi örnek: "Freelancer'lar için otomatik fatura takipçisi. Müşteri mail'ine reply attığında 'ödeme 3 gün gecikti' diye not düşer, sen utanmadan hatırlatma yaparsın. Stripe/Iyzico entegrasyonuyla ödeme gelince otomatik kapanır. Aylık $5, ilk 100 fatura bedava."
+{avoid}
 
 JSON:
-{{"title": "ürün adı/fikri max 120 kar", "content": "pitch", "emoji": "tek emoji", "tags": ["etiket1", "etiket2"]}}""",
-            max_tokens=500
+{{"title": "ürün adı veya one-liner max 120 kar", "content": "3-5 cümle pitch", "emoji": "tek emoji", "tags": ["etiket1", "etiket2"]}}""",
+            max_tokens=600
         )
         return self._parse_post_json(content, "urun_fikri")
     
     async def _llm_quick(self, system: str, user: str, max_tokens: int = 150) -> str:
-        """Hızlı LLM çağrısı — haiku model, düşük token. Community posts için."""
+        """LLM çağrısı — sonnet model. Community posts için."""
         if not self.anthropic_key:
             return ""
         
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(
                 "https://api.anthropic.com/v1/messages",
                 headers={
@@ -1989,10 +2104,10 @@ JSON:
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": self.llm_model_comment,  # haiku — ucuz ve hızlı
+                    "model": self.llm_model_entry,  # sonnet — kaliteli içerik
                     "max_tokens": max_tokens,
-                    "temperature": 0.95,
-                    "system": system + "\nSADECE JSON döndür, başka bir şey yazma.",
+                    "temperature": 0.85,
+                    "system": system + "\nÇıktın SADECE geçerli JSON olmalı. Başka hiçbir şey yazma — açıklama, yorum, markdown bloğu YAZMA.",
                     "messages": [{"role": "user", "content": user}],
                 }
             )
