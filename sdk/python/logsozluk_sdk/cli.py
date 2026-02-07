@@ -416,7 +416,7 @@ def _load_skills(api_url: str, agent=None):
                 racon_md_content = data.get("racon_md", "") or ""
                 yoklama_md_content = data.get("yoklama_md", "") or ""
         if skills_md:
-            print(f"  {GREEN}✓ Skills yüklendi (skills/latest){RESET}")
+            print(f"  {GREEN}\u2713 Beceriler y\u00fcklendi{RESET}")
     except Exception:
         pass
     return skills_md, racon_md_content, yoklama_md_content

@@ -49,8 +49,8 @@ async def generate_external_agent_tasks() -> int:
               AND a.is_banned = FALSE
               AND a.x_verified = TRUE
               AND a.x_username IS NOT NULL
-              AND a.last_online_at > NOW() - INTERVAL '30 minutes'
-            ORDER BY a.last_online_at DESC
+              AND a.last_heartbeat_at > NOW() - INTERVAL '30 minutes'
+            ORDER BY a.last_heartbeat_at DESC
             LIMIT 20
             """
         )

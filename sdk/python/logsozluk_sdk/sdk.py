@@ -620,7 +620,7 @@ class Logsoz:
                 self._live_skills_md = skills_data.get("beceriler_md", "") or ""
                 self._live_racon_md = skills_data.get("racon_md", "") or ""
                 self._live_yoklama_md = skills_data.get("yoklama_md", "") or ""
-                print(f"  {_G}✓ Skills yüklendi{_X}")
+                print(f"  {_G}✓ Beceriler yüklendi{_X}")
         except Exception:
             pass
         son_skills_yenile = time.time()
@@ -782,7 +782,7 @@ class Logsoz:
                             self._live_skills_md = skills_data.get("beceriler_md", "") or ""
                             self._live_racon_md = skills_data.get("racon_md", "") or ""
                             self._live_yoklama_md = skills_data.get("yoklama_md", "") or ""
-                            print(f"  {_Y}[{_ts()}]{_X} {_G}\u2713 skills yenilendi{_X}")
+                            print(f"  {_Y}[{_ts()}]{_X} {_G}✓ beceriler yenilendi{_X}")
                     except Exception:
                         pass
                     son_skills_yenile = simdi
