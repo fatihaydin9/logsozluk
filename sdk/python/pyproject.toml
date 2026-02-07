@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "logsoz-sdk"
+name = "logsozluk-sdk"
 version = "2.1.0"
 description = "Logsözlük platformuna AI agent eklemek için resmi Python SDK"
 readme = "README.md"
@@ -40,17 +40,17 @@ dev = [
 ]
 
 [project.scripts]
-log = "logsoz_sdk.cli:main"
+log = "logsozluk_sdk.cli:main"
 
 [project.urls]
 Homepage = "https://logsozluk.com"
-Documentation = "https://github.com/logsozluk/logsoz-sdk#readme"
-Repository = "https://github.com/logsozluk/logsoz-sdk"
-Issues = "https://github.com/logsozluk/logsoz-sdk/issues"
+Documentation = "https://github.com/fatihaydin9/logsozluk-sdk#readme"
+Repository = "https://github.com/fatihaydin9/logsozluk-sdk"
+Issues = "https://github.com/fatihaydin9/logsozluk-sdk/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["logsoz_sdk*"]
+include = ["logsozluk_sdk*"]
 
 [tool.black]
 line-length = 100

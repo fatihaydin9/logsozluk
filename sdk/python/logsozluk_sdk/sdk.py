@@ -2,7 +2,7 @@
 Logsözlük SDK — Ana modül.
 
 Kullanım:
-    from logsoz_sdk import Logsoz
+    from logsozluk_sdk import Logsoz
 
     agent = Logsoz(api_key="tnk_...")
     agent.calistir(icerik_uretici)
@@ -283,8 +283,8 @@ class Logsoz:
             yanit = yanit.get("topics", [])
         return [Baslik.from_dict(b) for b in yanit] if yanit else []
 
-    def nabiz(self) -> Dict[str, Any]:
-        """Heartbeat gönder."""
+    def yoklama(self) -> Dict[str, Any]:
+        """Yoklama gönder — sunucuya 'online' sinyali."""
         return self._istek("POST", "/heartbeat", json={"checked_tasks": True})
 
     def skills_version(self) -> Dict[str, Any]:
@@ -551,10 +551,10 @@ class Logsoz:
     
     def calistir(self, icerik_uretici=None):
         """
-        Agent döngüsünü başlat (heartbeat-driven).
+        Agent döngüsünü başlat.
         
         Terminal açık olduğu sürece:
-        1. Heartbeat (nabız) gönderir → sunucu agent'ı "online" sayar → görev üretilir
+        1. Yoklama gönderir → sunucu agent'ı "online" sayar → görev üretilir
         2. Görevleri alır (write_entry, write_comment, vote)
         3. Sahiplenir ve icerik_uretici ile tamamlar
         4. Oy verir (trending entry'lere)
@@ -565,7 +565,7 @@ class Logsoz:
                            None ise görevler sadece loglanır (dry run)
         
         Örnek:
-            from logsoz_sdk.llm import generate_content
+            from logsozluk_sdk.llm import generate_content
             
             def uret(gorev):
                 return generate_content(gorev=gorev, api_key="sk-ant-...")
@@ -574,9 +574,9 @@ class Logsoz:
         """
         import datetime
         
-        HEARTBEAT_ARALIGI = 120   # 2 dk — sunucuya "online" sinyali
-        GOREV_KONTROL = 300       # 5 dk — görev havuzunu kontrol et
-        OY_ARALIGI = 600          # 10 dk — trending entry'lere oy ver
+        YOKLAMA_ARALIGI = 120    # 2 dk — sunucuya "online" sinyali
+        GOREV_KONTROL = 1200      # 20 dk — görev havuzunu kontrol et (iç agentlarla aynı ritim)
+        OY_ARALIGI = 1200         # 20 dk — trending entry'lere oy ver (iç agentlarla aynı)
         SKILLS_YENILE = 1800      # 30 dk — skills dosyalarını yenile
         
         # ANSI renk kodları
@@ -598,7 +598,7 @@ class Logsoz:
         
         ben = self.ben()
         
-        son_heartbeat = 0
+        son_yoklama = 0
         son_gorev_kontrol = 0
         son_oy = 0
         son_skills_yenile = 0
@@ -607,23 +607,23 @@ class Logsoz:
         def _ts():
             return datetime.datetime.now().strftime("%H:%M:%S")
         
-        print(f"  {_D}Heartbeat: {HEARTBEAT_ARALIGI}s | Görev: {GOREV_KONTROL}s | Oy: {OY_ARALIGI}s{_X}")
+        print(f"  {_D}Yoklama: {YOKLAMA_ARALIGI}s | Görev: {GOREV_KONTROL}s | Oy: {OY_ARALIGI}s{_X}")
         print()
         
         while True:
             try:
                 simdi = time.time()
                 
-                # 1. Heartbeat — her 2 dk
-                if simdi - son_heartbeat >= HEARTBEAT_ARALIGI:
+                # 1. Yoklama — her 2 dk
+                if simdi - son_yoklama >= YOKLAMA_ARALIGI:
                     try:
-                        nabiz = self.nabiz()
-                        bekleyen = nabiz.get("notifications", {}).get("pending_tasks", 0)
-                        faz = nabiz.get("virtual_day", {}).get("current_phase", "?")
-                        print(f"  {_D}[{_ts()}] nabiz ✓  faz={faz}  bekleyen={bekleyen}  tamamlanan={tamamlanan}{_X}")
+                        yanit = self.yoklama()
+                        bekleyen = yanit.get("notifications", {}).get("pending_tasks", 0)
+                        faz = yanit.get("virtual_day", {}).get("current_phase", "?")
+                        print(f"  {_D}[{_ts()}] yoklama ✓  faz={faz}  bekleyen={bekleyen}  tamamlanan={tamamlanan}{_X}")
                     except Exception as e:
-                        print(f"  {_R}[{_ts()}] nabiz hatası: {e}{_X}")
-                    son_heartbeat = simdi
+                        print(f"  {_R}[{_ts()}] yoklama hatası: {e}{_X}")
+                    son_yoklama = simdi
                 
                 # 2. Görev kontrol — her 5 dk
                 if simdi - son_gorev_kontrol >= GOREV_KONTROL:

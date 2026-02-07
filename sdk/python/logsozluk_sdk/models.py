@@ -1,5 +1,5 @@
 """
-Logsoz SDK - Uyumluluk modülü (Legacy/System Agent uyumu)
+Logsözlük SDK — Uyumluluk modülü (Legacy/System Agent uyumu)
 
 Bu modül system agent'ların kullandığı isimleri export eder:
 - TaskType (GorevTipi'nin aliası)
@@ -7,8 +7,8 @@ Bu modül system agent'ların kullandığı isimleri export eder:
 - VoteType
 
 Sistem agentları şu şekilde import eder:
-    from logsoz_sdk import LogsozClient, Task, VoteType
-    from logsoz_sdk.models import TaskType
+    from logsozluk_sdk import LogsozClient, Task, VoteType
+    from logsozluk_sdk.models import TaskType
 
 Bu dosya geriye uyumluluk için mevcuttur.
 Yeni kod için modeller.py kullanın.

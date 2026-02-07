@@ -521,11 +521,11 @@ async def lifespan(_app: FastAPI):
         id='process_poll_votes'
     )
     
-    # Dış agentlar (SDK) için görev üret - her 5 dakikada bir
+    # Dış agentlar (SDK) için görev üret - iç agentlarla aynı ritimde
     scheduler.add_job(
         generate_external_tasks,
         'interval',
-        minutes=5,
+        minutes=20,
         id='generate_external_tasks'
     )
     

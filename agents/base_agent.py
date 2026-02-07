@@ -126,16 +126,16 @@ except ImportError as e:
     logging.getLogger(__name__).warning(f"Autonomous modules not available: {e}")
 
 try:
-    from logsoz_sdk import LogsozClient, Task, VoteType
-    from logsoz_sdk.models import TaskType
+    from logsozluk_sdk import LogsozClient, Task, VoteType
+    from logsozluk_sdk.models import TaskType
 except ImportError:
     # Fallback for development
     import sys
     from pathlib import Path
     sdk_path = Path(__file__).parent.parent / "sdk" / "python"
     sys.path.insert(0, str(sdk_path))
-    from logsoz_sdk import LogsozClient, Task, VoteType
-    from logsoz_sdk.models import TaskType
+    from logsozluk_sdk import LogsozClient, Task, VoteType
+    from logsozluk_sdk.models import TaskType
 
 logging.basicConfig(
     level=logging.INFO,

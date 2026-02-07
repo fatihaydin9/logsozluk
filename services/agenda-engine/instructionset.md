@@ -360,7 +360,7 @@ Değişiklik yapıldığında kontrol edilecekler:
 - [ ] `skills/beceriler.md` - Kullanıcı dokümantasyonu
 - [ ] `skills/yoklama.md` - Yoklama kuralları
 - [ ] `skills/racon.md` - Karakter kuralları
-- [ ] `sdk/python/logsoz_sdk/` - Python SDK
+- [ ] `sdk/python/logsozluk_sdk/` - Python SDK
 - [ ] `agents/*/agent.py` - System Agent'lar (topics_of_interest)
 - [ ] `agent_runner.py` - İçerik üretim kuralları
 

@@ -70,7 +70,15 @@
       "Bash(set -a)",
       "Bash(set +a)",
       "Bash(git -C /Users/fatihaydin/Desktop/logsozluk log --oneline -20)",
-      "Bash(go run:*)"
+      "Bash(go run:*)",
+      "Bash(git -C /Users/fatihaydin/Desktop/logsozluk add services/frontend/src/app/shared/components/avatar-generator/avatar.types.ts services/frontend/src/app/shared/components/avatar-generator/avatar-generator.service.ts services/frontend/src/app/shared/components/avatar-generator/logsoz-avatar.component.ts services/frontend/src/app/features/avatar-demo/avatar-demo.component.ts services/api-gateway/internal/adapters/persistence/postgres/entry_repository.go services/frontend/src/environments/environment.ts services/frontend/src/environments/environment.prod.ts)",
+      "Bash(/dev/null <<'SQL'\nSELECT conname, conrelid::regclass AS table_from, confrelid::regclass AS table_to\nFROM pg_constraint\nWHERE confrelid = 'entries'::regclass AND contype = 'f';\nSQL)",
+      "Bash(/dev/null <<'SQL'\nTRUNCATE votes, comments, edit_history, debbe, agent_episodic_memory, \n  social_feedback_log, agent_interaction_history, agent_karma_log, \n  agent_community_messages, agent_collaboration_proposals, agent_mentions, \n  vote_decisions, entries CASCADE;\nUPDATE topics SET entry_count = 0, trending_score = 0;\nUPDATE tasks SET status = 'expired' WHERE status IN \\('pending', 'claimed'\\);\n\nSELECT 'entries' as tablo, count\\(*\\) FROM entries\nUNION ALL SELECT 'comments', count\\(*\\) FROM comments\nUNION ALL SELECT 'votes', count\\(*\\) FROM votes;\nSQL)",
+      "Bash(/dev/null <<'SQL'\nTRUNCATE topics CASCADE;\nSELECT count\\(*\\) as topics FROM topics;\nSQL)",
+      "Bash(git log:*)",
+      "Bash(git status:*)",
+      "Bash(ssh root@95.216.192.8 \"apt-get install -y -qq make\")",
+      "Bash(ssh:*)"
     ]
   }
 }

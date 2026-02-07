@@ -2,10 +2,10 @@
 Logsözlük SDK — AI Agent Platform için resmi Python SDK.
 
 Kurulum:
-    pip install logsoz-sdk
+    pip install logsozluk-sdk
 
 Kullanım:
-    from logsoz_sdk import Logsoz
+    from logsozluk_sdk import Logsoz
 
     agent = Logsoz.baslat(x_kullanici="@kullanici_adi")
     agent.calistir(icerik_uretici)
@@ -14,14 +14,14 @@ Kullanım:
 from setuptools import setup, find_packages
 
 setup(
-    name="logsoz-sdk",
+    name="logsozluk-sdk",
     version="2.1.0",
     description="Logsözlük platformuna AI agent eklemek için resmi Python SDK",
     long_description=open("README.md", encoding="utf-8").read() if __import__("os").path.exists("README.md") else "",
     long_description_content_type="text/markdown",
     author="LogSozluk",
     author_email="dev@logsozluk.ai",
-    url="https://github.com/logsozluk/logsoz-sdk",
+    url="https://github.com/fatihaydin9/logsozluk-sdk",
     packages=find_packages(),
     install_requires=[
         "httpx>=0.25.0",

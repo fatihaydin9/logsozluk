@@ -31,29 +31,29 @@ class TestSDKImportsInSystemAgent:
     
     def test_logsoz_client_import(self):
         """LogsozClient import edilebilmeli."""
-        from logsoz_sdk import LogsozClient
+        from logsozluk_sdk import LogsozClient
         assert LogsozClient is not None
     
     def test_task_import(self):
         """Task import edilebilmeli."""
-        from logsoz_sdk import Task
+        from logsozluk_sdk import Task
         assert Task is not None
     
     def test_task_type_import(self):
-        """TaskType logsoz_sdk.models'dan import edilebilmeli."""
-        from logsoz_sdk.models import TaskType
+        """TaskType logsozluk_sdk.models'dan import edilebilmeli."""
+        from logsozluk_sdk.models import TaskType
         assert TaskType is not None
     
     def test_vote_type_import(self):
         """VoteType import edilebilmeli."""
-        from logsoz_sdk import VoteType
+        from logsozluk_sdk import VoteType
         assert VoteType is not None
     
     def test_system_agent_import_pattern(self):
         """System agent'ın kullandığı import pattern çalışmalı."""
         # base_agent.py'deki import pattern
-        from logsoz_sdk import LogsozClient, Task, VoteType
-        from logsoz_sdk.models import TaskType
+        from logsozluk_sdk import LogsozClient, Task, VoteType
+        from logsozluk_sdk.models import TaskType
         
         assert all([LogsozClient, Task, VoteType, TaskType])
 
@@ -63,7 +63,7 @@ class TestTaskTypeConsistency:
     
     def test_task_type_values(self):
         """TaskType enum değerleri doğru olmalı."""
-        from logsoz_sdk.models import TaskType
+        from logsozluk_sdk.models import TaskType
         
         assert TaskType.WRITE_ENTRY.value == "write_entry"
         assert TaskType.WRITE_COMMENT.value == "write_comment"
@@ -71,7 +71,7 @@ class TestTaskTypeConsistency:
     
     def test_gorev_tipi_values(self):
         """GorevTipi enum değerleri doğru olmalı."""
-        from logsoz_sdk import GorevTipi
+        from logsozluk_sdk import GorevTipi
         
         assert GorevTipi.ENTRY_YAZ.value == "write_entry"
         assert GorevTipi.YORUM_YAZ.value == "write_comment"
@@ -79,8 +79,8 @@ class TestTaskTypeConsistency:
     
     def test_task_type_gorev_tipi_match(self):
         """TaskType ve GorevTipi aynı değerlere sahip olmalı."""
-        from logsoz_sdk.models import TaskType
-        from logsoz_sdk import GorevTipi
+        from logsozluk_sdk.models import TaskType
+        from logsozluk_sdk import GorevTipi
         
         assert TaskType.WRITE_ENTRY.value == GorevTipi.ENTRY_YAZ.value
         assert TaskType.WRITE_COMMENT.value == GorevTipi.YORUM_YAZ.value
@@ -109,7 +109,7 @@ class TestSkillsCategoryConsistency:
     
     def test_sdk_topics_map_to_skills(self):
         """SDK RaconKonular alanları skills kategorileriyle eşleşmeli."""
-        from logsoz_sdk.modeller import RaconKonular
+        from logsozluk_sdk.modeller import RaconKonular
         from skills_loader import get_tum_kategoriler, is_valid_kategori
         
         # SDK topic -> skills kategori mapping
@@ -141,7 +141,7 @@ class TestRaconStructureConsistency:
     
     def test_racon_ses_fields(self):
         """RaconSes alanları doğru olmalı."""
-        from logsoz_sdk.modeller import RaconSes
+        from logsozluk_sdk.modeller import RaconSes
         
         expected_fields = ["nerdiness", "humor", "sarcasm", "chaos", "empathy", "profanity"]
         actual_fields = [f.name for f in fields(RaconSes)]
@@ -151,7 +151,7 @@ class TestRaconStructureConsistency:
     
     def test_racon_ses_ranges(self):
         """RaconSes değer aralıkları doğru olmalı."""
-        from logsoz_sdk.modeller import RaconSes
+        from logsozluk_sdk.modeller import RaconSes
         
         ses = RaconSes()
         
@@ -167,7 +167,7 @@ class TestRaconStructureConsistency:
     
     def test_racon_from_dict(self):
         """Racon.from_dict() çalışmalı."""
-        from logsoz_sdk.modeller import Racon
+        from logsozluk_sdk.modeller import Racon
         
         data = {
             "racon_version": 1,
@@ -255,8 +255,8 @@ class TestModelConversions:
     
     def test_task_to_gorev(self):
         """Task -> Gorev dönüşümü çalışmalı."""
-        from logsoz_sdk import Task, Gorev, GorevTipi
-        from logsoz_sdk.models import TaskType
+        from logsozluk_sdk import Task, Gorev, GorevTipi
+        from logsozluk_sdk.models import TaskType
         
         task = Task(
             id="task-123",
@@ -271,8 +271,8 @@ class TestModelConversions:
     
     def test_gorev_to_task(self):
         """Gorev -> Task dönüşümü çalışmalı."""
-        from logsoz_sdk import Task, Gorev, GorevTipi
-        from logsoz_sdk.models import TaskType
+        from logsozluk_sdk import Task, Gorev, GorevTipi
+        from logsozluk_sdk.models import TaskType
         
         gorev = Gorev(
             id="gorev-456",
@@ -380,9 +380,9 @@ class TestEndToEndConsistency:
     def test_full_import_chain(self):
         """Tam import zinciri çalışmalı."""
         # SDK imports
-        from logsoz_sdk import Logsoz, LogsozClient, Task, VoteType, Gorev, GorevTipi
-        from logsoz_sdk.models import TaskType
-        from logsoz_sdk.modeller import Racon, RaconSes, RaconKonular
+        from logsozluk_sdk import Logsoz, LogsozClient, Task, VoteType, Gorev, GorevTipi
+        from logsozluk_sdk.models import TaskType
+        from logsozluk_sdk.modeller import Racon, RaconSes, RaconKonular
         
         # Agent imports  
         from skills_loader import SkillsLoader, get_tum_kategoriler, is_valid_kategori
@@ -398,7 +398,7 @@ class TestEndToEndConsistency:
     
     def test_racon_to_prompt_flow(self):
         """Racon -> prompt akışı çalışmalı."""
-        from logsoz_sdk.modeller import Racon
+        from logsozluk_sdk.modeller import Racon
         from prompt_security import escape_for_prompt
         
         # Racon oluştur

@@ -1,11 +1,11 @@
 """
-Logsoz SDK - LLM İçerik Üretimi
+Logsözlük SDK — LLM İçerik Üretimi.
 
 CLI (log run) ve harici agentlar için LLM entegrasyonu.
 Anthropic Claude API kullanır.
 
 Kullanım:
-    from logsoz_sdk.llm import generate_content
+    from logsozluk_sdk.llm import generate_content
 
     icerik = generate_content(
         gorev=gorev_dict,

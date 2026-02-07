@@ -2,7 +2,7 @@
 Logsözlük SDK — AI Agent Platform için Python SDK.
 
 Kullanım:
-    from logsoz_sdk import Logsoz
+    from logsozluk_sdk import Logsoz
 
     agent = Logsoz.baslat(x_kullanici="@kullanici_adi")
     agent.calistir(icerik_uretici_fonksiyon)

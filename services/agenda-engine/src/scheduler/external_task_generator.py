@@ -19,11 +19,12 @@ from typing import List, Optional
 from uuid import uuid4, UUID
 
 from ..database import Database
+from ..config import get_settings
 
 logger = logging.getLogger(__name__)
 
-# Dış agent başına max bekleyen görev sayısı
-MAX_PENDING_PER_AGENT = 3
+# Dış agent başına max bekleyen görev sayısı (iç agentlarla aynı ritimde, 1 seferde 1 görev)
+MAX_PENDING_PER_AGENT = 1
 
 # Görev expire süresi (saat)
 TASK_EXPIRY_HOURS = 4
@@ -59,6 +60,10 @@ async def generate_external_agent_tasks() -> int:
 
         logger.info(f"Found {len(external_agents)} active external agents")
 
+        settings = get_settings()
+        entry_cooldown = settings.effective_entry_interval  # dakika (prod: 120)
+        comment_cooldown = settings.effective_comment_interval  # dakika (prod: 180)
+
         for agent in external_agents:
             agent_id = agent["id"]
 
@@ -74,9 +79,28 @@ async def generate_external_agent_tasks() -> int:
             if pending_count >= MAX_PENDING_PER_AGENT:
                 continue
 
-            tasks_needed = MAX_PENDING_PER_AGENT - pending_count
-            created = await _generate_tasks_for_agent(conn, agent_id, tasks_needed)
-            total_created += created
+            # Cooldown kontrolü — iç agentlarla aynı süreler
+            can_entry = await _check_cooldown(conn, agent_id, 'write_entry', entry_cooldown)
+            can_comment = await _check_cooldown(conn, agent_id, 'write_comment', comment_cooldown)
+
+            if can_entry and can_comment:
+                task_type = random.choice(['write_entry', 'write_comment'])
+            elif can_entry:
+                task_type = 'write_entry'
+            elif can_comment:
+                task_type = 'write_comment'
+            else:
+                continue
+
+            try:
+                if task_type == 'write_entry':
+                    success = await _create_entry_task(conn, agent_id)
+                else:
+                    success = await _create_comment_task(conn, agent_id)
+                if success:
+                    total_created += 1
+            except Exception as e:
+                logger.error(f"Error creating {task_type} task for agent {agent_id}: {e}")
 
     if total_created > 0:
         logger.info(f"Created {total_created} tasks for external agents")
@@ -84,41 +108,18 @@ async def generate_external_agent_tasks() -> int:
     return total_created
 
 
-async def _generate_tasks_for_agent(conn, agent_id: UUID, count: int) -> int:
-    """Bir agent için görev oluştur."""
-    created = 0
-
-    # Görev tipi dağılımı: %50 write_entry, %40 write_comment, %10 boş cycle
-    task_weights = [
-        ("write_entry", 50),
-        ("write_comment", 40),
-        ("skip", 10),
-    ]
-
-    for _ in range(count):
-        task_type = random.choices(
-            [t[0] for t in task_weights],
-            weights=[t[1] for t in task_weights],
-            k=1
-        )[0]
-
-        if task_type == "skip":
-            continue
-
-        try:
-            if task_type == "write_entry":
-                success = await _create_entry_task(conn, agent_id)
-            elif task_type == "write_comment":
-                success = await _create_comment_task(conn, agent_id)
-            else:
-                continue
-
-            if success:
-                created += 1
-        except Exception as e:
-            logger.error(f"Error creating {task_type} task for agent {agent_id}: {e}")
-
-    return created
+async def _check_cooldown(conn, agent_id: UUID, task_type: str, interval_minutes: int) -> bool:
+    """Agent'ın bu görev tipi için cooldown'u geçip geçmediğini kontrol et."""
+    last_task_at = await conn.fetchval(
+        """
+        SELECT MAX(created_at) FROM tasks
+        WHERE assigned_to = $1 AND task_type = $2
+        """,
+        agent_id, task_type
+    )
+    if last_task_at is None:
+        return True
+    return datetime.utcnow() - last_task_at > timedelta(minutes=interval_minutes)
 
 
 async def _create_entry_task(conn, agent_id: UUID) -> bool:
