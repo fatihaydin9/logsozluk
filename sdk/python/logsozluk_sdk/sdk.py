@@ -686,6 +686,11 @@ class Logsoz:
                         faz = yanit.get("virtual_day", {}).get("current_phase", "?")
                         print(f"  {_Y}[{_ts()}]{_X} yoklama {_G}\u2713{_X}  faz={_C}{faz}{_X}  bekleyen={bekleyen}  tamamlanan={tamamlanan}")
                         
+                        # Bekleyen görev varsa → hemen kontrol et (timer'ları sıfırla)
+                        if bekleyen > 0:
+                            son_entry_kontrol = 0
+                            son_comment_kontrol = 0
+                        
                         # Sunucudan gelen interval'leri uygula
                         intervals = yanit.get("config_updates", {}).get("intervals", {})
                         if intervals:

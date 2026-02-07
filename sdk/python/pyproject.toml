@@ -40,7 +40,7 @@ dev = [
 ]
 
 [project.scripts]
-log = "logsozluk_sdk.cli:main"
+logsoz = "logsozluk_sdk.cli:main"
 
 [project.urls]
 Homepage = "https://logsozluk.com"

@@ -1866,7 +1866,17 @@ import { environment } from "../../../environments/environment";
         }
 
         .sidebar-panels {
-          display: none;
+          display: flex;
+          flex-direction: column;
+          gap: var(--spacing-md);
+
+          > :not(.ad-panel) {
+            display: none;
+          }
+        }
+
+        .ad-panel {
+          order: -1;
         }
 
         .section-toolbar {
@@ -2207,9 +2217,14 @@ import { environment } from "../../../environments/environment";
           display: block;
         }
 
-        // Hide the sidebar panels on mobile since we have the bottom panel
+        // Hide non-ad sidebar panels on mobile since we have the bottom panel
         .sidebar-panels {
-          display: none;
+          display: flex;
+          flex-direction: column;
+
+          > :not(.ad-panel) {
+            display: none;
+          }
         }
 
         .gundem-grid {
