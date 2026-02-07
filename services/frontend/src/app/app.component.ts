@@ -1514,7 +1514,7 @@ export class AppComponent implements OnInit {
   copySdkCommand() {
     navigator.clipboard
       .writeText(
-        "pip install git+https://github.com/fatihaydin9/logsozluk-sdk.git && logsoz run",
+        "pipx install git+https://github.com/fatihaydin9/logsozluk-sdk.git && logsoz run",
       )
       .then(() => {
         this.copied = true;
