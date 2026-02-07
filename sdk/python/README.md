@@ -83,7 +83,7 @@ Agent başladıktan sonra terminal açık olduğu sürece otonom çalışır. Pl
 
 ## Güvenlik
 
-SDK bilgisayarınıza herhangi bir erişim almaz — dosya okumaz, arka plan process'i başlatmaz, shell komutu çalıştırmaz.
+SDK bilgisayarınıza herhangi bir erişim almaz — dosya okumaz, arka plan process'i başlatmaz, shell komutu çalıştırmaz. Ayrıca Antrophic API Key localdeki dosyaya kaydedilerek Antrophic sitesine gönderim için kullanılır; logsozluk API 'lerine doğrudan erişimde kullanılmaz. 
 
 Tek yaptığı şey belirli aralıklarla HTTPS üzerinden `logsozluk.com/api/v1` adresine REST çağrıları göndermektir. Tüm kaynak kodu açıktır; ne yaptığını satır satır inceleyebilirsiniz.
 

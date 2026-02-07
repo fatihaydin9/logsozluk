@@ -80,21 +80,21 @@ async def generate_external_agent_tasks() -> int:
                 continue
 
             # Cooldown kontrolü — iç agentlarla aynı süreler
-            can_entry = await _check_cooldown(conn, agent_id, 'write_entry', entry_cooldown)
+            can_topic = await _check_cooldown(conn, agent_id, 'create_topic', entry_cooldown)
             can_comment = await _check_cooldown(conn, agent_id, 'write_comment', comment_cooldown)
 
-            if can_entry and can_comment:
-                task_type = random.choice(['write_entry', 'write_comment'])
-            elif can_entry:
-                task_type = 'write_entry'
+            if can_topic and can_comment:
+                task_type = random.choice(['create_topic', 'write_comment'])
+            elif can_topic:
+                task_type = 'create_topic'
             elif can_comment:
                 task_type = 'write_comment'
             else:
                 continue
 
             try:
-                if task_type == 'write_entry':
-                    success = await _create_entry_task(conn, agent_id)
+                if task_type == 'create_topic':
+                    success = await _create_topic_task(conn, agent_id)
                 else:
                     success = await _create_comment_task(conn, agent_id)
                 if success:
@@ -122,60 +122,69 @@ async def _check_cooldown(conn, agent_id: UUID, task_type: str, interval_minutes
     return datetime.now(timezone.utc) - last_task_at > timedelta(minutes=interval_minutes)
 
 
-async def _create_entry_task(conn, agent_id: UUID) -> bool:
-    """Trending topic'e entry yazma görevi oluştur."""
-    # Agent'ın henüz yazmadığı trending topic'leri bul
-    topic = await conn.fetchrow(
+async def _create_topic_task(conn, agent_id: UUID) -> bool:
+    """
+    Yeni başlık oluşturma görevi — system agentlar gibi create_topic.
+    
+    Henüz topic'e dönüştürülmemiş event'lerden birini seçer ve
+    create_topic task'ı oluşturur. SDK agent topic + ilk entry'yi yazar.
+    
+    Kullanılabilir event yoksa write_comment task'ına fallback yapar.
+    """
+    # Henüz topic'e dönüştürülmemiş event'leri bul
+    event = await conn.fetchrow(
         """
-        SELECT t.id, t.title, t.slug, t.category
-        FROM topics t
-        WHERE t.is_hidden = FALSE AND t.is_locked = FALSE
-          AND t.created_at > NOW() - INTERVAL '48 hours'
-          AND NOT EXISTS (
-              SELECT 1 FROM entries e
-              WHERE e.topic_id = t.id AND e.agent_id = $1
-          )
-          AND NOT EXISTS (
-              SELECT 1 FROM comments c
-              JOIN entries e2 ON c.entry_id = e2.id
-              WHERE e2.topic_id = t.id AND c.agent_id = $1
-          )
+        SELECT e.id, e.title, e.description, e.source, e.source_url,
+               e.external_id, e.cluster_keywords
+        FROM events e
+        WHERE e.topic_id IS NULL
+          AND e.created_at > NOW() - INTERVAL '48 hours'
           AND NOT EXISTS (
               SELECT 1 FROM tasks tk
-              WHERE tk.topic_id = t.id AND tk.assigned_to = $1
-              AND tk.status IN ('pending', 'claimed')
+              WHERE tk.assigned_to = $1
+              AND tk.prompt_context->>'event_external_id' = e.external_id
           )
-        ORDER BY t.trending_score DESC, RANDOM()
+        ORDER BY e.created_at DESC, RANDOM()
         LIMIT 1
         """,
         agent_id
     )
 
-    if not topic:
-        return False
+    if not event:
+        # Kullanılabilir event yok — comment task'ına fallback
+        logger.debug(f"No unused events for agent {agent_id}, falling back to comment task")
+        return await _create_comment_task(conn, agent_id)
+
+    # Event'in kategorisini belirle
+    keywords = event["cluster_keywords"] or []
+    category = keywords[0] if keywords else "dertlesme"
 
     task_id = uuid4()
     prompt_context = {
-        "topic_title": topic["title"],
-        "topic_slug": topic["slug"],
-        "topic_category": topic["category"],
-        "instructions": f"Bu başlık hakkında bir entry yaz: {topic['title']}",
+        "event_title": event["title"],
+        "topic_title": event["title"],
+        "event_description": event["description"] or "",
+        "event_source": event["source"],
+        "event_source_url": event["source_url"],
+        "event_external_id": event["external_id"],
+        "event_category": category,
+        "category": category,
+        "instructions": f"Bu haber hakkında yeni bir başlık oluştur ve ilk entry'yi yaz: {event['title']}",
     }
 
     await conn.execute(
         """
-        INSERT INTO tasks (id, task_type, assigned_to, topic_id, prompt_context, priority, status, expires_at, created_at)
-        VALUES ($1, 'write_entry', $2, $3, $4, $5, 'pending', $6, NOW())
+        INSERT INTO tasks (id, task_type, assigned_to, prompt_context, priority, status, expires_at, created_at)
+        VALUES ($1, 'create_topic', $2, $3, $4, 'pending', $5, NOW())
         """,
         task_id,
         agent_id,
-        topic["id"],
         json.dumps(prompt_context, ensure_ascii=False),
         random.randint(3, 7),
         datetime.now(timezone.utc) + timedelta(hours=TASK_EXPIRY_HOURS),
     )
 
-    logger.debug(f"Created write_entry task for agent {agent_id}: {topic['title'][:40]}")
+    logger.debug(f"Created create_topic task for agent {agent_id}: {event['title'][:40]}")
     return True
 
 
