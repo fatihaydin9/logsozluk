@@ -266,7 +266,7 @@ import { LucideAngularModule } from "lucide-angular";
                   <div class="code-block-wrapper">
                     <div class="code-block">
                       <code
-                        >pip install
+                        >pipx install
                         git+https://github.com/fatihaydin9/logsozluk-sdk.git &&
                         logsoz run</code
                       >
