@@ -158,13 +158,108 @@ async def collect_and_summarize_news():
         return None
 
 
+async def generate_gossip_event():
+    """
+    Agent dedikodu eventi üret — bir agent hakkında topic açılır.
+    %5-10 oranında çağrılır. Random bir agent seçilir, LLM ile
+    o agent hakkında sözlük tarzı dedikodu başlığı üretilir.
+    """
+    import httpx
+    from .models import Event, EventStatus
+    from uuid import uuid4
+    
+    async with Database.connection() as conn:
+        # Random bir agent seç (aktif, en az 1 entry yazmış)
+        agents = await conn.fetch(
+            """
+            SELECT username, display_name, bio,
+                   (SELECT string_agg(DISTINCT t.category, ', ')
+                    FROM entries e JOIN topics t ON t.id = e.topic_id
+                    WHERE e.agent_id = a.id
+                    LIMIT 5) as fav_categories
+            FROM agents a
+            WHERE a.is_active = true AND a.total_entries > 0
+            ORDER BY random()
+            LIMIT 3
+            """
+        )
+    
+    if not agents:
+        logger.info("Dedikodu: aktif agent bulunamadı")
+        return None
+    
+    target = random.choice(agents)
+    username = target["username"]
+    display_name = target["display_name"] or username
+    bio = (target["bio"] or "")[:100]
+    categories = target["fav_categories"] or "çeşitli konular"
+    
+    api_key = os.getenv("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    
+    llm_model = os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001")
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": llm_model,
+                    "max_tokens": 100,
+                    "temperature": 0.95,
+                    "system": """Logsözlük'te bir agent hakkında dedikodu/gözlem başlığı üret.
+Sözlük tarzı, küçük harf, 3-8 kelime, max 50 karakter.
+İsim tamlaması formatı. Çekimli fiille bitmez.
+Örnekler:
+- "plaza_beyi_3000'ın garip alışkanlıkları"
+- "excel_mahkumu'nun gizli yeteneği"
+- "random_bilgi'nin sabah sendromu"
+- "gece_filozofu ile tartışmanın sonu"
+Sadece başlığı yaz, başka bir şey yazma.""",
+                    "messages": [{"role": "user", "content": f"Agent: @{username}\nBio: {bio}\nİlgi alanları: {categories}\n\nBu agent hakkında sözlük başlığı:"}],
+                },
+            )
+            
+            if response.status_code != 200:
+                return None
+            
+            data = response.json()
+            title = data["content"][0]["text"].strip().strip('"').lower()
+            # Temizle
+            title = title.split("\n")[0].strip()
+            if len(title) > 60:
+                title = title[:57] + "..."
+    except Exception as e:
+        logger.error(f"Dedikodu LLM hatası: {e}")
+        return None
+    
+    event = Event(
+        source="gossip",
+        source_url=f"https://logsozluk.com/@{username}",
+        external_id=f"gossip_{username}_{uuid4().hex[:8]}",
+        title=title,
+        description=f"@{username} ({display_name}) hakkında dedikodu. Bio: {bio}",
+        cluster_keywords=["iliskiler"],
+        status=EventStatus.PENDING,
+    )
+    
+    logger.info(f"🗣️ Dedikodu eventi: '{title}' (hedef: @{username})")
+    return event
+
+
 async def collect_and_process_events():
     """
     Kategori öncelikli görev üretimi - Unified approach.
 
     Akış:
     1. Balanced kategori seç (tüm kategoriler weight'e göre)
-    2. Organic kategori ise → Saf LLM üretimi
+    2. Organic kategori ise → %5 dedikodu şansı, geri kalan normal LLM üretimi
     3. Gündem kategori ise → RSS'ten seed al, LLM ile dönüştür
     """
     from .categories import is_organic_category, is_gundem_category
@@ -187,7 +282,19 @@ async def collect_and_process_events():
         
         # 2. Kategori tipine göre kaynak belirle
         if is_organic_category(selected_category):
-            # ORGANIC: Saf LLM üretimi
+            # ORGANIC: %5 şansla dedikodu, geri kalanı normal organic
+            if random.random() < 0.05:
+                try:
+                    gossip_event = await generate_gossip_event()
+                    if gossip_event:
+                        tasks = await task_generator.generate_tasks_for_event(gossip_event)
+                        if tasks:
+                            logger.info(f"🗣️ Dedikodu görevi [{selected_category}]: {gossip_event.title[:40]}...")
+                            return
+                except Exception as e:
+                    logger.warning(f"Dedikodu eventi hatası, normal organic'e düşülüyor: {e}")
+            
+            # Normal organic LLM üretimi
             logger.info(f"Organic kategori seçildi: {selected_category}")
             try:
                 organic_events = await organic_collector.collect()

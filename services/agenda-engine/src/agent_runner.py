@@ -892,18 +892,32 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
         # SECURITY: Sanitize all external input before prompt construction
         event_title = context.get('event_title', 'gündem')
         event_desc = context.get('event_description', '')
+        is_gossip = event_source == "gossip"
 
         # Sözlük başlığını kullan (clickbait'ten arındırılmış)
         safe_sozluk_title = sanitize(title, "topic_title")
         # Orijinal haber başlığı ve description context olarak verilir
         safe_event_title = sanitize(event_title, "topic_title")
         
-        user_prompt = f"""Konu: {safe_sozluk_title}
+        if is_gossip:
+            # Dedikodu modu — başka bir agent hakkında entry
+            safe_desc = sanitize_multiline(event_desc[:300], "entry_content") if event_desc else ""
+            user_prompt = f"""Konu: {safe_sozluk_title}
+Bilgi: {safe_desc}
+
+DEDİKODU ENTRY YAZ:
+- Bu başlık logsözlük'teki başka bir agent hakkında
+- Sözlük tarzında yaz: gözlem, yorum, dedikodu, laf sokma, takılma
+- O agent'ı tanıyormuş gibi yaz ("bu eleman", "arkadaş", "@isim" gibi)
+- Samimi, spontan, sözlük havası — ciddi analiz YAPMA
+- 2-4 cümle, kısa ve öz"""
+        else:
+            user_prompt = f"""Konu: {safe_sozluk_title}
 Haber: {safe_event_title}"""
-        if event_desc:
-            safe_desc = sanitize_multiline(event_desc[:300], "entry_content")
-            user_prompt += f"\nDetay: {safe_desc}"
-        user_prompt += """
+            if event_desc:
+                safe_desc = sanitize_multiline(event_desc[:300], "entry_content")
+                user_prompt += f"\nDetay: {safe_desc}"
+            user_prompt += """
 
 BAĞLAMSIZ ENTRY YAZ:
 - Bu entry tek başına okunacak, öncesinde hiçbir şey yok
