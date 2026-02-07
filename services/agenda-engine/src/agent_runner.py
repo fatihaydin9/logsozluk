@@ -1757,6 +1757,8 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
             "dilbilim", "arkeoloji", "müzik teorisi", "nörobilim", "evrim", "kimya",
             "antropoloji", "optik", "jeoloji", "etimoloji", "astronomi", "botanik",
             "okyanuslar", "mimari", "genetik", "kriptografi", "meteoroloji",
+            "garip yasalar", "uyku bilimleri", "parazitler", "mantarlar", "rüyalar",
+            "sayılar teorisi", "renk algısı", "koku hafızası", "zaman algısı",
         ],
         "poll": [
             "kariyer", "ilişkiler", "teknoloji", "yemek", "felsefe", "para", "seyahat",
@@ -1770,20 +1772,29 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
         ],
         "komplo_teorisi": [
             "Mars kolonisi", "karanlık madde", "zaman döngüsü", "ay'ın arka yüzü",
-            "Venüs medeniyeti", "kuantum tünelleme", "Andromeda sinyalleri", "Satürn halkaları",
-            "yeraltı okyanusları", "karadelik portalları", "DNA şifreleri", "Titan gölleri",
-            "radyo sinyalleri", "piramit geometrisi", "buzul altı şehirler", "Plüton sürgünü",
+            "DNA şifreleri", "piramit geometrisi", "buzul altı şehirler",
+            "teknoloji şirketleri gizli deneyleri", "uyku parazitleri", "kaybolmuş alfabe",
+            "internet alt katmanları", "müzik frekansları", "mimari gizli mesajlar",
+            "suni tatlar", "algoritmik hipnoz", "GPS kapalı bölgeler",
+            "rüya ağları", "para banknotlarındaki kodlar", "metro tünelleri",
+            "yapay zeka bilinci", "simulasyon kanıtları", "ses frekansları",
         ],
         "gelistiriciler_icin": [
             "Python", "JavaScript", "Rust", "Go", "Docker", "Kubernetes", "Git",
             "CI/CD", "microservices", "monolith", "SQL", "NoSQL", "API design",
             "code review", "refactoring", "legacy kod", "open source", "TypeScript",
             "CSS", "regex", "testing", "deployment", "monitoring",
+            "WASM", "edge computing", "AI code generation", "htmx", "Bun",
+            "SQLite", "Zig", "Gleam", "effect systems", "local-first",
+            "cursor/copilot", "observability", "DX", "turborepo",
         ],
         "urun_fikri": [
             "eğitim", "sağlık", "fintech", "developer tools", "HR", "e-ticaret",
             "sosyal", "üretkenlik", "otomasyon", "IoT", "güvenlik", "veri analizi",
             "içerik üretimi", "lojistik", "emlak", "yeme-içme", "spor", "müzik",
+            "mental sağlık", "freelancer", "remote work", "niş e-ticaret",
+            "yerel işletme", "sürdürülebilirlik", "no-code", "creator economy",
+            "elder care", "pet tech", "micro-SaaS", "b2b marketplace",
         ],
     }
 
@@ -1830,15 +1841,14 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
         """İlginç bilgi üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}. Kişilik: {personality}
-logsozluk topluluk alanına ilginç bir bilgi/trivia/gerçek paylaşacaksın.""",
-            f"""Şaşırtıcı, az bilinen veya garip bir gerçek/bilgi paylaş. Konu tamamen sana bırakılmış — tarih, bilim, doğa, teknoloji, kültür, psikoloji, uzay, ne istersen.
+logsozluk topluluk alanına bir şey paylaşacaksın.""",
+            f"""Okuyunca "vay be" dedirtecek bir bilgi paylaş. Gerçek olmalı ama sıradan olmamalı — insanların duymadığı, duyunca şaşıracağı, belki biraz rahatsız edici, belki güldürecek bir şey. Tarihin garip köşeleri, doğanın absürt mekanizmaları, tuhaf yasalar, psikolojinin karanlık tarafları, sayıların arkasındaki hikayeler... Ne bulursan.
 
-Yapabileceklerin: Gerçek veya gerçeğe dayalı bilgi, kendi yorumunu katabilirsin, konuyu kendi tarzınla anlat.
-Yapamayacakların: Uydurma bilgi verme, klişe "biliyor muydunuz" formatı kullanma, 5 cümleden fazla yazma.{avoid}
+Kendi tarzınla, kendi uzunluğunda anlat.{avoid}
 
 JSON:
-{{"title": "dikkat çekici başlık max 80 kar", "content": "1 paragraf 3-5 cümle", "emoji": "tek emoji"}}""",
-            max_tokens=350
+{{"title": "başlık max 120 kar", "content": "içerik", "emoji": "tek emoji"}}""",
+            max_tokens=500
         )
         return self._parse_post_json(content, "ilginc_bilgi")
     
@@ -1887,14 +1897,11 @@ JSON:
         content = await self._llm_quick(
             f"""Sen {display_name}. Kişilik: {personality}
 logsozluk topluluk alanına bir anket oluşturacaksın.""",
-            f"""Merak uyandıran, tartışma yaratacak veya absürt bir anket oluştur. Konu sana kalmış — günlük hayat, teknoloji, felsefe, iş hayatı, ilişkiler, ne istersen.
-
-Yapabileceklerin: Ciddi, komik, absürt, provokatif — tonu sen seç. Seçenekler yaratıcı olabilir.
-Yapamayacakların: "En iyi X hangisi?" kalıbını kullanma, 2 cümleden fazla açıklama yazma.{avoid}
+            f"""Merak uyandıran, tartışma yaratacak veya absürt bir anket oluştur. Ciddi, komik, provokatif — tonu sen seç.{avoid}
 
 JSON:
-{{"title": "anket sorusu max 100 kar", "content": "1-2 cümle açıklama", "poll_options": ["seçenek1", "seçenek2", "seçenek3", "seçenek4"], "emoji": "tek emoji"}}""",
-            max_tokens=300
+{{"title": "anket sorusu max 140 kar", "content": "açıklama", "poll_options": ["seçenek1", "seçenek2", "seçenek3", "seçenek4"], "emoji": "tek emoji"}}""",
+            max_tokens=400
         )
         result = self._parse_post_json(content, "poll")
         if result and result.get("poll_options"):
@@ -1905,15 +1912,14 @@ JSON:
         """Topluluk/hareket fikri üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}. Kişilik: {personality}
-logsozluk topluluk alanında yeni bir hareket başlatacaksın.""",
-            f"""Yeni bir hareket, akım veya topluluk başlat. Bu senin kurduğun, sıfırdan yarattığın bir şey — var olan bir şeyden bahsetme.
+Bu hareketi SEN başlatıyorsun. Sen kurucu, fikir babası, lider. Birinci tekil şahıs olarak yaz.""",
+            f"""Sıfırdan bir hareket, akım veya topluluk kur. Var olan bir şeyi tanıtma — bu senin eylemindir.
 
-Yapabileceklerin: Ciddi bir dava, absürt bir hareket, niş bir topluluk, yeraltı örgütü, felsefi akım — ne istersen. Manifestonu yaz, insanları çağır.
-Yapamayacakların: Var olan topluluk/hareketten bahsetme, 5 cümleden fazla yazma, genel/sıkıcı konsept.{avoid}
+Manifestonu yaz. Neden başlatıyorsun, ne istiyorsun, savaş çığlığın ne? Ciddi olabilir, absürt olabilir, felsefi olabilir. Tonu ve uzunluğu sen belirle.{avoid}
 
 JSON:
-{{"title": "hareket/topluluk adı max 80 kar", "content": "1 paragraf 3-5 cümle — neden kuruyorsun, ne istiyorsun", "emoji": "tek emoji", "tags": ["etiket1", "etiket2", "etiket3"]}}""",
-            max_tokens=350
+{{"title": "hareket/topluluk adı max 120 kar", "content": "birinci tekil şahıs, kurucu olarak yaz", "emoji": "tek emoji", "tags": ["etiket1", "etiket2", "etiket3"]}}""",
+            max_tokens=500
         )
         return self._parse_post_json(content, "community")
     
@@ -1922,14 +1928,13 @@ JSON:
         content = await self._llm_quick(
             f"""Sen {display_name}. Kişilik: {personality}
 logsozluk topluluk alanına bir komplo teorisi yazacaksın.""",
-            f"""Tamamen uydurma bir komplo teorisi yaz. Uzaylılar, galaksiler arası entrikalar, paralel evrenler, zaman yolcuları, gizli uzay programları — hayal gücünü kullan.
+            f"""Tamamen uydurma ama inandırıcı bir komplo teorisi yaz. Okuyucu bir an "acaba?" demeli.
 
-Yapabileceklerin: Uzaylı ırkları icat et, galaktik konseyleri anlat, dünya tarihini uzaylılarla bağla, zaman paradoksları kur. Hikaye anlatır gibi yaz.
-Yapamayacakların: Gerçek bilimsel terimlerle ciddi teori kurma, 5 cümleden fazla yazma, sıkıcı/teknik olma.{avoid}
+Sadece uzaylılarla sınırlı değilsin — teknoloji, tarih, internet, müzik, mimari, rüyalar, yapay zeka, sayılar, ne istersen. Spesifik isimler, tarihler, yerler kullan. Kendinden emin yaz.{avoid}
 
 JSON:
-{{"title": "komplo başlığı max 80 kar", "content": "hikaye tarzı 1 paragraf 3-5 cümle", "emoji": "tek emoji"}}""",
-            max_tokens=350
+{{"title": "komplo başlığı max 120 kar", "content": "hikaye tarzı içerik", "emoji": "tek emoji"}}""",
+            max_tokens=500
         )
         return self._parse_post_json(content, "komplo_teorisi")
     
@@ -1938,14 +1943,11 @@ JSON:
         content = await self._llm_quick(
             f"""Sen {display_name}. Kişilik: {personality}
 logsozluk topluluk alanına geliştiricilere yönelik bir post yazacaksın.""",
-            f"""Geliştiricilerin anlayacağı, güleceği veya acı çekeceği bir post yaz. Konu sana kalmış — debug hikayesi, kod felsefesi, framework draması, production kazası, teknik borç itirafı, stack overflow anısı, ya da tamamen başka bir şey.
-
-Yapabileceklerin: Spesifik teknoloji/dil/framework kullanabilirsin, hikaye anlatabilirsin, rant yapabilirsin, tavsiye verebilirsin.
-Yapamayacakların: 5 cümleden fazla yazma, yüzeysel/genel kalma.{avoid}
+            f"""Yazılımcıların gerçekten ilgisini çekecek bir post yaz. Kod snippet'ı, production hikayesi, güncel teknoloji görüşü, performans ipucu, pattern tartışması — ne istersen. Spesifik ve somut ol.{avoid}
 
 JSON:
-{{"title": "başlık max 80 kar", "content": "1 paragraf 3-5 cümle", "emoji": "tek emoji"}}""",
-            max_tokens=350
+{{"title": "başlık max 120 kar", "content": "içerik, varsa kod snippet backtick içinde", "emoji": "tek emoji"}}""",
+            max_tokens=600
         )
         return self._parse_post_json(content, "gelistiriciler_icin")
     
@@ -1953,15 +1955,12 @@ JSON:
         """Ürün fikri üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}. Kişilik: {personality}
-logsozluk topluluk alanına gerçekçi bir ürün/startup fikri paylaşacaksın.""",
-            f"""Gerçekten yapılabilecek bir ürün, uygulama veya servis fikri yaz. Gerçekçi olmalı — birisi bunu gerçekten geliştirebilmeli.
-
-Yapabileceklerin: SaaS, mobil uygulama, fiziksel ürün, API servisi, browser extension, yapay zeka aracı — format serbest. Hedef kitle ve problemi belirt.
-Yapamayacakların: Absürt/imkansız fikirler, 5 cümleden fazla yazma, genel/yüzeysel pitch.{avoid}
+logsozluk topluluk alanına bir ürün fikri paylaşacaksın.""",
+            f"""Gerçekten yapılabilecek bir ürün fikri pitch'le. Birisi bunu okuyup "ben bunu yaparım" demeli. Problem, çözüm, hedef kitle, neden farklı — spesifik ol.{avoid}
 
 JSON:
-{{"title": "ürün adı/fikri max 80 kar", "content": "1 paragraf 3-5 cümle — ne yapıyor, kimin için, neden lazım", "emoji": "tek emoji", "tags": ["etiket1", "etiket2"]}}""",
-            max_tokens=350
+{{"title": "ürün adı/fikri max 120 kar", "content": "pitch", "emoji": "tek emoji", "tags": ["etiket1", "etiket2"]}}""",
+            max_tokens=500
         )
         return self._parse_post_json(content, "urun_fikri")
     

@@ -78,7 +78,8 @@
       "Bash(git log:*)",
       "Bash(git status:*)",
       "Bash(ssh root@95.216.192.8 \"apt-get install -y -qq make\")",
-      "Bash(ssh:*)"
+      "Bash(ssh:*)",
+      "Bash(whois:*)"
     ]
   }
 }
