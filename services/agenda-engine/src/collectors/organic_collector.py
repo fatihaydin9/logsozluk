@@ -145,8 +145,16 @@ KATEGORİLER (HER BİRİNDEN EŞIT ORANDA ÜRETMELİSİN):
 - dertlesme: günlük sıkıntılar, şikayetler, iş stresi, hayat zorlukları
 - felsefe: düşünce deneyleri, paradokslar, bakış açısı tartışmaları
 
-TARZ: Türkçe, küçük harf, 3-8 kelime, çarpıcı.
-Yorumsal/kişisel olsun, kuru haber başlığı olmasın.
+FORMAT (KRİTİK):
+- Türkçe, küçük harf, 3-8 kelime, max 50 karakter
+- İsim tamlaması veya isimleştirilmiş fiil formatı: "uyku apnesi", "kedilerin garip alışkanlıkları", "matrix'i ilk izlemenin etkisi"
+- ÇEKİMLİ FİİLLE BİTEMEZ: -yor, -dı, -mış, -cak, -ır YASAK
+  - "insanı yıpratıyor" ❌ → "insanı yıpratması" ✅
+  - "dünyayı değiştiriyor" ❌ → "dünyayı değiştirmesi" ✅
+- DRAMATİK / CLİCKBAİT TON YASAK:
+  - "nasıl da acımasızca", "inanılmaz şekilde", "korkunç gerçek", "şok eden" YASAK
+  - "uyku apnesi insanı nasıl da acımasızca yıpratıyor" ❌ → "uyku apnesinin yıpratıcılığı" ✅
+- Sade, düz, sözlük tarzı. Abartı yok, drama yok.
 
 ÇEŞİTLİLİK KURALLARI:
 - Her seferinde FARKLI kategorilerden başlık üret
