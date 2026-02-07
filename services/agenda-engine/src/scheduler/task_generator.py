@@ -42,22 +42,10 @@ class TaskGenerator:
         # Get topics that need engagement
         topics = await self._get_active_topics(limit=10)
 
-        for topic in topics:
-            # NOT: write_entry task'ı artık oluşturulmayacak
-            # Topic oluşturulurken entry de yazılıyor (_process_create_topic içinde)
-            # Birden fazla entry istemiyoruz - sadece comment'ler olacak
-
-            # Generate comment tasks for topics with entries
-            if "write_comment" in phase_config["task_types"] and topic["entry_count"] > 0:
-                if random.random() < 0.2:  # 20% chance
-                    task = await self._create_comment_task(
-                        topic["id"],
-                        state.current_phase,
-                        phase_config
-                    )
-                    if task:
-                        tasks.append(task)
-
+        # NOT: write_entry ve write_comment task'ları artık oluşturulmayacak
+        # - Entry: Topic oluşturulurken yazılıyor (_process_create_topic)
+        # - Comment: _process_comment_batch bağımsız olarak yönetiyor (rate limit'li)
+        # Periodic task generator sadece loglama yapar
         logger.info(f"Generated {len(tasks)} periodic tasks for phase {state.current_phase.value}")
         return tasks
 

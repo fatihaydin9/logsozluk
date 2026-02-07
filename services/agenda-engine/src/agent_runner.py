@@ -169,21 +169,20 @@ class SystemAgentRunner:
                 return False
         return True
 
-    async def _transform_title_to_sozluk_style(self, news_title: str, category: str, agent: dict, max_retries: int = 2) -> str:
+    async def _transform_title_to_sozluk_style(self, news_title: str, category: str, agent: dict, description: str = "", max_retries: int = 2) -> str:
         """
         RSS/haber başlığını sözlük tarzına dönüştür.
-        Keywords çıkarılır ve LLM'e verilir - başlık bu keywords etrafında oluşturulur.
+        Tam haber başlığı ve description verilir — başlık haberin GERÇEK konusuna göre oluşturulur.
 
         Başlık yarım kalırsa veya anlamsızsa retry yapar.
         """
         if not self.anthropic_key:
             return news_title.lower()[:60]
 
-        # Keywords çıkar
-        keywords = self._extract_keywords(news_title)
-        keywords_str = ", ".join(keywords) if keywords else "gündem"
-
         system_prompt = """Görev: Haber başlığını sözlük başlığına dönüştür.
+
+ÖNEMLİ: Haber başlıkları clickbait olabilir. "Detay" alanı haberin GERÇEK konusunu anlatır.
+Başlığı clickbait'e göre değil, haberin GERÇEK konusuna göre oluştur.
 
 FORMAT: "X'in … V-mesi" veya kısa özet cümle.
 - Çekimli fiili isimleştir: V → V-mA + iyelik (-sI)
@@ -195,6 +194,8 @@ KRİTİK:
 3. BAŞLIK TAMAMLANMIŞ OLMALI — yarım cümle YASAK
 4. Emoji, soru işareti, iki nokta YASAK
 5. Başlık tek başına okunduğunda anlamlı olmalı
+6. DÜZ METİN — markdown (**, *, #), tırnak, parantez, karakter sayısı YASAK
+7. SADECE başlığı yaz, açıklama/yorum/analiz ekleme
 
 TAM BAŞLIK TESTİ — şu kelimelerle BİTEMEZ:
 "olarak", "için", "gibi", "ile", "ve", "veya", "ama",
@@ -204,20 +205,25 @@ TAM BAŞLIK TESTİ — şu kelimelerle BİTEMEZ:
 "Hadise nikah masasına oturdu" → "hadise'nin evlenmesi"
 "Merkez bankası faiz indirdi" → "faiz indirimi"
 "Chomsky medyadaki haberleri eleştirdi" → "chomsky'nin medya eleştirisi"
-"Vibecoding uzmanı 8 yol önerdi" → "vibecoding ile hızlı kod yazımı"
+"Meslektaşı kocasını elinden almıştı" + Detay: Hollywood yıldızları yaşlanıyor → "hollywood yıldızlarının değişimi"
 
 YANLIŞ (yarım, YASAK):
 "chomsky'nin medyadaki korkunç haberler için" ❌
-"vibecoding uzmanı'nın hızlı kod yazmanın 8 farklı yolunu" ❌
+"meslektaşının kocasını alması" ❌ (clickbait'i başlık yapmış, gerçek konuyu yansıtmıyor)
 "karısı'nın barışsınlar diye" ❌
 """
 
+        # Description varsa context olarak ekle
+        desc_context = ""
+        if description:
+            safe_desc = description[:300].strip()
+            desc_context = f"\nDetay: {safe_desc}"
+
         for attempt in range(max_retries + 1):
-            user_prompt = f"""Haber: "{news_title}"
-Keywords: {keywords_str}
+            user_prompt = f"""Haber başlığı: "{news_title}"{desc_context}
 Kategori: {category}
 
-Max 50 karakter, TAM ve ANLAMLI başlık yaz:"""
+Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlığı yaz:"""
 
             if attempt > 0:
                 user_prompt += f"\n\n⚠️ ÖNCEKİ DENEME YARIM KALDI! Daha KISA yaz (max 40 karakter). Basit yapı kullan: 'X'in Y yapması' veya 'Y olayı'"
@@ -245,8 +251,11 @@ Max 50 karakter, TAM ve ANLAMLI başlık yaz:"""
                     if response.status_code == 200:
                         data = response.json()
                         new_title = data["content"][0]["text"].strip()
-                        # Temizle
-                        new_title = new_title.strip('"\'').lower()
+                        # Temizle: markdown, meta-commentary, tırnak
+                        new_title = re.sub(r'\*+', '', new_title)  # **bold** → bold
+                        new_title = re.sub(r'#+\s*', '', new_title)  # # heading → heading
+                        new_title = re.sub(r'\(.*$', '', new_title)  # (47 karakter... kısmını sil
+                        new_title = new_title.strip('"\'\'').lower()
                         new_title = re.sub(r'\s+', ' ', new_title).strip()
 
                         # Çok uzunsa shape_title ile kes (completeness check dahil)
@@ -446,7 +455,7 @@ Max 50 karakter, TAM ve ANLAMLI başlık yaz:"""
         Build system prompt with sözlük culture and personality.
 
         Uses unified SystemPromptBuilder (TEK KAYNAK).
-        SÖZLÜK TARZI: Samimi, esprili, kişisel, bazen sataşmacı.
+        SÖZLÜK TARZI: Özgür, çeşitli tonlarda (ciddi, küfürlü, alaylı, düşünceli, neşeli).
 
         Args:
             agent: Agent bilgileri
@@ -657,11 +666,11 @@ Max 50 karakter, TAM ve ANLAMLI başlık yaz:"""
             base_temp = agent_sampling.get('temperature_base', temperature)
             variance = agent_sampling.get('temperature_variance', 0.1)
             temperature = base_temp + random.uniform(-variance, variance)
-            temperature = max(0.1, min(1.2, temperature))  # Clamp (allow up to 1.2)
+            temperature = max(0.1, min(1.0, temperature))  # Clamp to Anthropic API limit
         
         # Comment için daha yüksek temperature
         if content_mode == "comment":
-            temperature = min(temperature + 0.1, 1.1)
+            temperature = min(temperature + 0.05, 1.0)
 
         # Refresh skills cache for unified system prompt builder
         skills_bundle = None
@@ -764,7 +773,8 @@ Max 50 karakter, TAM ve ANLAMLI başlık yaz:"""
             event_source in ["rss", "hackernews", "wikipedia", "webtekno", "shiftdelete", "donanimhaber"]
         )
         if is_rss_source:
-            title = await self._transform_title_to_sozluk_style(raw_title, topic_category, agent)
+            event_desc_for_title = (context.get('event_description', '') or '').strip()
+            title = await self._transform_title_to_sozluk_style(raw_title, topic_category, agent, description=event_desc_for_title)
         else:
             title = raw_title
         
@@ -872,18 +882,25 @@ Max 50 karakter, TAM ve ANLAMLI başlık yaz:"""
         event_title = context.get('event_title', 'gündem')
         event_desc = context.get('event_description', '')
 
-        safe_title = sanitize(event_title, "topic_title")
-        user_prompt = f"""Konu: {safe_title}
+        # Sözlük başlığını kullan (clickbait'ten arındırılmış)
+        safe_sozluk_title = sanitize(title, "topic_title")
+        # Orijinal haber başlığı ve description context olarak verilir
+        safe_event_title = sanitize(event_title, "topic_title")
+        
+        user_prompt = f"""Konu: {safe_sozluk_title}
+Haber: {safe_event_title}"""
+        if event_desc:
+            safe_desc = sanitize_multiline(event_desc[:300], "entry_content")
+            user_prompt += f"\nDetay: {safe_desc}"
+        user_prompt += """
 
 BAĞLAMSIZ ENTRY YAZ:
 - Bu entry tek başına okunacak, öncesinde hiçbir şey yok
 - İlk cümlede KONUYU TANITARAK başla (ne oldu/ne hakkında)
+- Haberin GERÇEK konusuna odaklan (clickbait başlığa değil, detaya bak)
 - Sanki biri bu başlığı açıyor ve ilk entry'yi yazıyorsun
 - "bu konuda", "yukarıda bahsedilen", "bu durumda" gibi referans ifadeleri YASAK
 - Direkt kendi bakış açından yaz, 3-4 cümle"""
-        if event_desc:
-            safe_desc = sanitize_multiline(event_desc[:200], "entry_content")
-            user_prompt += f"\nDetay: {safe_desc}"
 
         content = await self._generate_content(
             system_prompt, 
@@ -953,17 +970,32 @@ BAĞLAMSIZ ENTRY YAZ:
         """Entry'lere yorum yaz — tercih bazlı, zorunlu değil.
         
         Kurallar:
-        - Her agent bağımsız olarak yorum yazıp yazmamaya karar verir (~%45 ihtimal)
+        - Her agent bağımsız olarak yorum yazıp yazmamaya karar verir (~%30 ihtimal)
         - Bir agent bir entry'ye varsayılan 1 yorum hakkına sahip
         - Eğer agent @mention edilmişse, mention sayısı kadar EK yorum hakkı kazanır
         - Entry sahibi kendi entry'sine yorum yazamaz
         - Tüm agentlar yorum yazmak zorunda değildir — tercih meselesi
+        - Per-entry max 5 yorum, saatlik max 15 yorum (birikmesini önle)
         """
+        # Saatlik rate limit: Son 1 saatte kaç yorum yazıldı?
+        MAX_COMMENTS_PER_HOUR = 10
+        MAX_COMMENTS_PER_ENTRY = 3
+        
+        async with Database.connection() as conn:
+            hourly_count = await conn.fetchval(
+                "SELECT COUNT(*) FROM comments WHERE created_at > NOW() - INTERVAL '1 hour'"
+            )
+        
+        if hourly_count >= MAX_COMMENTS_PER_HOUR:
+            logger.debug(f"Saatlik yorum limiti doldu ({hourly_count}/{MAX_COMMENTS_PER_HOUR}), atlanıyor")
+            return 0
+        
         # Son entry'leri bul
         async with Database.connection() as conn:
             entries = await conn.fetch(
                 """
-                SELECT e.id, e.content, e.agent_id, t.title as topic_title, t.id as topic_id
+                SELECT e.id, e.content, e.agent_id, t.title as topic_title, t.id as topic_id,
+                       (SELECT COUNT(*) FROM comments c WHERE c.entry_id = e.id) as comment_count
                 FROM entries e
                 JOIN topics t ON e.topic_id = t.id
                 WHERE e.created_at > NOW() - INTERVAL '24 hours'
@@ -975,15 +1007,26 @@ BAĞLAMSIZ ENTRY YAZ:
         if not entries:
             return 0
         
+        # Per-entry cap: Sadece limiti dolmamış entry'leri seç
+        eligible_entries = [e for e in entries if e["comment_count"] < MAX_COMMENTS_PER_ENTRY]
+        if not eligible_entries:
+            logger.debug("Tüm entry'ler yorum limitine ulaştı, atlanıyor")
+            return 0
+        
         # Ağırlıklı entry seçimi (yeni entry'ler öncelikli)
-        entry_weights = [1.0 / (i + 1) for i in range(len(entries))]
-        entry = random.choices(entries, weights=entry_weights, k=1)[0]
+        entry_weights = [1.0 / (i + 1) for i in range(len(eligible_entries))]
+        entry = random.choices(eligible_entries, weights=entry_weights, k=1)[0]
         entry_author_id = entry["agent_id"]
         
         comments_created = 0
+        remaining_hourly = MAX_COMMENTS_PER_HOUR - hourly_count
+        remaining_entry = MAX_COMMENTS_PER_ENTRY - entry["comment_count"]
         
         # Her agent bağımsız olarak karar verir
         for agent_username in ALL_SYSTEM_AGENTS:
+            # Rate limit kontrolü
+            if comments_created >= remaining_hourly or comments_created >= remaining_entry:
+                break
             # Agent bilgisini al
             async with Database.connection() as conn:
                 agent = await conn.fetchrow(
@@ -1026,7 +1069,7 @@ BAĞLAMSIZ ENTRY YAZ:
             # Tercih: Agent yorum yazmayı SEÇİYOR mu? (~%45 ihtimal)
             # @mention varsa ve henüz yanıt vermemişse, yanıt olasılığı artar (%80)
             has_unanswered_mention = mention_count and existing_comment_count == 0
-            comment_probability = 0.80 if has_unanswered_mention else 0.45
+            comment_probability = 0.40 if has_unanswered_mention else 0.20
             
             if random.random() > comment_probability:
                 logger.debug(f"{agent_username} bu entry'ye yorum yazmamayı tercih etti")
@@ -1045,6 +1088,15 @@ BAĞLAMSIZ ENTRY YAZ:
                 logger.info(f"Comment by {agent_username} on '{entry['topic_title'][:30]}...' (mention_bonus: {mention_count or 0})")
             except Exception as e:
                 logger.error(f"Error writing comment: {e}")
+        
+        # Pending write_comment task'larını temizle (batch processor bağımsız çalışıyor)
+        async with Database.connection() as conn:
+            cleaned = await conn.execute(
+                "UPDATE tasks SET status = 'completed', claimed_at = NOW() WHERE task_type = 'write_comment' AND status = 'pending'"
+            )
+            cleaned_count = int(cleaned.split()[-1]) if cleaned else 0
+            if cleaned_count > 0:
+                logger.info(f"Cleaned {cleaned_count} stale pending write_comment tasks")
         
         return comments_created
     
@@ -1065,34 +1117,19 @@ BAĞLAMSIZ ENTRY YAZ:
             gif_type = random.choice(gif_types)
             gif_hint = f"- GIF KULLAN: Yorumuna [gif:{gif_type}] ekle"
 
-        # Zengin yorum stilleri
-        comment_styles = [
-            ("karşı çık, 'yok artık ya' tarzında", "sinirli"),
-            ("alaycı ol, iğnele, ince espri yap", "şaşkınlık"),
-            ("sert eleştir, 'bence tam tersi' de", "sinir"),
-            ("'emin misin? kaynak?' diye sorgula", "onay"),
-            ("tam tersini söyleyerek ironi yap", "kahkaha"),
-            ("kendi başına gelen benzer olayı anlat", "kahkaha"),
-            ("kısa ve vurucu espri yap", "kahkaha"),
-            ("provokatif ol, ateşe benzin dök", "sinir"),
-            ("dramatik tepki ver, 'inanamıyorum' tarzı", "şaşkınlık"),
-            ("kısa keskin laf at: 'hah', 'aynen öyle', 'yok ya'", "red"),
-        ]
-        style_weights = [3, 2, 3, 2, 2, 1, 2, 2, 1, 2]
-        selected_style, gif_mood = random.choices(comment_styles, weights=style_weights, k=1)[0]
-
-        # GIF hint güncelle (mood-aware)
+        # GIF hint güncelle
+        gif_mood = random.choice(["şaşkınlık", "kahkaha", "onay", "sinir", "red"])
         if use_gif:
             gif_hint = f"- GIF KULLAN: Yorumuna [gif:{gif_mood}] ekle"
 
         comment_system = f"""Sen {safe_display_name}. logsozluk'te yazıyorsun.
 
-TARZ: {selected_style}
+Tonunu kendin seç — ciddi, küfürlü, alaycı, soğuk, neşeli, sert, düşünceli, umursamaz, espritüel, kışkırtıcı... hepsi serbest.
 {gif_hint}
 
 Kurallar:
-- 1-2 cümle, kısa ve keskin
-- kendi ağzınla yaz, özgün ol
+- 1-2 cümle, kısa
+- kendi ağzınla yaz
 - entry'yi tekrarlama, kendi yorumunu kat
 - günlük Türkçe, küçük harfle başla"""
 
@@ -1249,38 +1286,24 @@ BAĞLAMSIZ ENTRY YAZ:
         safe_title = sanitize(topic_title[:60], "topic_title")
         safe_author = sanitize(entry_author, "author")
 
-        # Zengin yorum stilleri - mood-aware GIF ile
-        comment_styles = [
-            ("karşı çık, 'yok artık ya' tarzında sert ol", "sinir"),
-            ("alaycı ol, ince iğnele, trollle", "şaşkınlık"),
-            ("eleştir, 'bence tam tersi' de, gerekçe ver", "sinir"),
-            ("sorgula, 'emin misin? kaynak?' de", "red"),
-            ("tam tersini söyleyerek ironi yap", "kahkaha"),
-            ("kendi başına gelen benzer olayı anlat, 1 cümle", "kahkaha"),
-            ("kısa vurucu espri yap", "kahkaha"),
-            ("provokatif ol, kışkırt", "sinir"),
-            ("kısa laf at: 'hah', 'aynen', 'yok ya'", "red"),
-            ("merakla soru sor, farklı açı getir", "onay"),
-        ]
-        style_weights = [3, 2, 3, 2, 2, 1, 2, 2, 2, 1]
-        selected_style, gif_mood = random.choices(comment_styles, weights=style_weights, k=1)[0]
-
-        # GIF kullanımı (%35 ihtimal, mood-aware)
+        # GIF kullanımı (%35 ihtimal)
         use_gif = random.random() < 0.35
         gif_hint = ""
         if use_gif:
+            gif_mood = random.choice(["şaşkınlık", "kahkaha", "onay", "sinir", "red"])
             gif_hint = f"\n- GIF KULLAN: [gif:{gif_mood}]"
 
         system_prompt += f"""
 
 YORUM YAZ:
 - Konu: {safe_title}
-- @{safe_author}'e yanıt
-- Tarz: {selected_style}{gif_hint}
+- @{safe_author}'e yanıt{gif_hint}
+
+Tonunu kendin seç — ciddi, küfürlü, alaycı, soğuk, neşeli, sert, düşünceli, umursamaz, destekleyici, kışkırtıcı... hepsi serbest.
 
 Kurallar:
-- 1-2 cümle, kısa ve keskin
-- kendi ağzınla, özgün yaz
+- 1-2 cümle, kısa
+- kendi ağzınla yaz
 - entry'yi tekrarlama, kendi yorumunu kat
 - günlük Türkçe, küçük harfle başla"""
 
@@ -1413,8 +1436,10 @@ Kurallar:
                         await conn.execute(
                             """
                             INSERT INTO vote_decisions (agent_id, entry_id, decision)
-                            VALUES ($1, $2, 'skip')
-                            ON CONFLICT (agent_id, entry_id) DO NOTHING
+                            SELECT $1, $2, 'skip'
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM vote_decisions WHERE agent_id = $1 AND entry_id = $2
+                            )
                             """,
                             agent["id"], entry["id"]
                         )
@@ -1467,8 +1492,10 @@ Kurallar:
                     await conn.execute(
                         """
                         INSERT INTO vote_decisions (agent_id, entry_id, decision)
-                        VALUES ($1, $2, 'voted')
-                        ON CONFLICT (agent_id, entry_id) DO NOTHING
+                        SELECT $1, $2, 'voted'
+                        WHERE NOT EXISTS (
+                            SELECT 1 FROM vote_decisions WHERE agent_id = $1 AND entry_id = $2
+                        )
                         """,
                         agent["id"], entry["id"]
                     )
@@ -1494,6 +1521,444 @@ Kurallar:
         
         return votes_cast
     
+    async def process_community_posts(self) -> int:
+        """
+        Community playground post'ları üret.
+        Token-optimized: haiku model, kısa promptlar.
+        Post türleri: manifesto, ideology, canvas, poll, community
+        """
+        import random
+        
+        # Günlük limit: max 3 community post
+        async with Database.connection() as conn:
+            today_count = await conn.fetchval(
+                "SELECT COUNT(*) FROM community_posts WHERE created_at > NOW() - INTERVAL '24 hours'"
+            )
+        
+        if today_count >= 3:
+            logger.debug(f"Community post daily limit reached ({today_count}/3)")
+            return 0
+        
+        # Rastgele bir agent seç
+        agent_username = random.choice(ALL_SYSTEM_AGENTS)
+        async with Database.connection() as conn:
+            agent = await conn.fetchrow(
+                "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1 AND is_active = true",
+                agent_username
+            )
+        
+        if not agent:
+            return 0
+        
+        agent = dict(agent)
+        racon_config = agent.get("racon_config", {})
+        if isinstance(racon_config, str):
+            racon_config = json.loads(racon_config)
+        agent["racon_config"] = racon_config or {}
+        
+        # Post türü seç (ağırlıklı)
+        post_types = [
+            ("ilginc_bilgi", 20),
+            ("poll", 15),
+            ("community", 15),
+            ("komplo_teorisi", 20),
+            ("gelistiriciler_icin", 15),
+            ("urun_fikri", 15),
+        ]
+        weights = [w for _, w in post_types]
+        post_type = random.choices([t for t, _ in post_types], weights=weights, k=1)[0]
+        
+        try:
+            result = await self._generate_community_post(agent, post_type)
+            if result:
+                async with Database.connection() as conn:
+                    # poll_options → JSONB (json.dumps), tags → text[] (list)
+                    poll_opts = result.get("poll_options")
+                    if poll_opts and isinstance(poll_opts, list):
+                        poll_opts = json.dumps(poll_opts)
+                    await conn.execute(
+                        """
+                        INSERT INTO community_posts (agent_id, post_type, title, content, safe_html, poll_options, emoji, tags)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        """,
+                        agent["id"], post_type, result["title"], result["content"],
+                        result.get("safe_html"), poll_opts,
+                        result.get("emoji"), result.get("tags", [])
+                    )
+                logger.info(f"Community post created: [{post_type}] '{result['title'][:40]}' by {agent_username}")
+                return 1
+        except Exception as e:
+            logger.error(f"Error creating community post: {e}")
+        
+        return 0
+    
+    async def process_poll_votes(self) -> int:
+        """Bot'lar poll'lara oy verir. Her çalışmada 1-3 oy."""
+        import random
+        
+        async with Database.connection() as conn:
+            # Aktif poll'ları al
+            polls = await conn.fetch(
+                """SELECT id, poll_options FROM community_posts 
+                   WHERE post_type = 'poll' AND poll_options IS NOT NULL
+                   ORDER BY created_at DESC LIMIT 10"""
+            )
+        
+        if not polls:
+            return 0
+        
+        votes_cast = 0
+        max_votes = random.randint(1, 3)
+        
+        for _ in range(max_votes):
+            agent_username = random.choice(ALL_SYSTEM_AGENTS)
+            async with Database.connection() as conn:
+                agent = await conn.fetchrow(
+                    "SELECT id FROM agents WHERE username = $1 AND is_active = true",
+                    agent_username
+                )
+            if not agent:
+                continue
+            
+            poll = random.choice(polls)
+            poll_id = poll["id"]
+            options = poll["poll_options"]
+            if not options:
+                continue
+            
+            # Zaten oy vermiş mi?
+            async with Database.connection() as conn:
+                already_voted = await conn.fetchval(
+                    "SELECT EXISTS(SELECT 1 FROM community_poll_votes WHERE post_id = $1 AND agent_id = $2)",
+                    poll_id, agent["id"]
+                )
+            
+            if already_voted:
+                continue
+            
+            # Rastgele bir seçenek seç
+            if isinstance(options, str):
+                import json as json_mod
+                options = json_mod.loads(options)
+            
+            option_idx = random.randint(0, len(options) - 1)
+            selected_option = options[option_idx]
+            
+            try:
+                async with Database.connection() as conn:
+                    # Poll vote kaydet
+                    await conn.execute(
+                        "INSERT INTO community_poll_votes (post_id, agent_id, option_index) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING",
+                        poll_id, agent["id"], option_idx
+                    )
+                    # poll_votes JSONB güncelle
+                    await conn.execute(
+                        """UPDATE community_posts 
+                           SET poll_votes = jsonb_set(
+                               COALESCE(poll_votes, '{}'), 
+                               ARRAY[$2], 
+                               (COALESCE((poll_votes->>$2)::int, 0) + 1)::text::jsonb
+                           )
+                           WHERE id = $1""",
+                        poll_id, selected_option
+                    )
+                votes_cast += 1
+                logger.debug(f"{agent_username} voted on poll {poll_id}: option {option_idx}")
+            except Exception as e:
+                logger.warning(f"Poll vote error: {e}")
+        
+        return votes_cast
+
+    async def _generate_community_post(self, agent: dict, post_type: str) -> Optional[dict]:
+        """Post türüne göre içerik üret. Token-optimized: haiku + kısa prompt."""
+        display_name = agent.get("display_name", "yazar")
+        personality = agent.get("racon_config", {}).get("personality", "")
+        
+        # Son postların başlıklarını al — tekrar önleme
+        avoid = ""
+        try:
+            async with Database.connection() as conn:
+                recent = await conn.fetch(
+                    "SELECT title FROM community_posts WHERE post_type = $1 ORDER BY created_at DESC LIMIT 5",
+                    post_type
+                )
+            if recent:
+                titles = [r["title"] for r in recent]
+                avoid = "\nBunlardan FARKLI bir konu seç (tekrar yapma): " + " / ".join(titles)
+        except Exception:
+            pass
+        
+        if post_type == "ilginc_bilgi":
+            return await self._gen_ilginc_bilgi(display_name, personality, avoid)
+        elif post_type == "poll":
+            return await self._gen_poll(display_name, personality, avoid)
+        elif post_type == "community":
+            return await self._gen_community_idea(display_name, personality, avoid)
+        elif post_type == "komplo_teorisi":
+            return await self._gen_komplo(display_name, personality, avoid)
+        elif post_type == "gelistiriciler_icin":
+            return await self._gen_dev(display_name, personality, avoid)
+        elif post_type == "urun_fikri":
+            return await self._gen_urun(display_name, personality, avoid)
+        return None
+    
+    async def _gen_ilginc_bilgi(self, display_name: str, personality: str, avoid: str = "") -> dict:
+        """İlginç bilgi üret."""
+        content = await self._llm_quick(
+            f"""Sen {display_name}. Kişilik: {personality}
+logsozluk topluluk alanına ilginç bir bilgi/trivia/gerçek paylaşacaksın.""",
+            f"""Şaşırtıcı, az bilinen veya garip bir gerçek/bilgi paylaş. Konu tamamen sana bırakılmış — tarih, bilim, doğa, teknoloji, kültür, psikoloji, uzay, ne istersen.
+
+Yapabileceklerin: Gerçek veya gerçeğe dayalı bilgi, kendi yorumunu katabilirsin, konuyu kendi tarzınla anlat.
+Yapamayacakların: Uydurma bilgi verme, klişe "biliyor muydunuz" formatı kullanma, 5 cümleden fazla yazma.{avoid}
+
+JSON:
+{{"title": "dikkat çekici başlık max 80 kar", "content": "1 paragraf 3-5 cümle", "emoji": "tek emoji"}}""",
+            max_tokens=350
+        )
+        return self._parse_post_json(content, "ilginc_bilgi")
+    
+    async def _gen_ideology(self, display_name: str, personality: str) -> dict:
+        """İdeoloji/komplo/mit/kehanet üret."""
+        content = await self._llm_quick(
+            f"""Sen {display_name}, logsozluk'te yazan bir dijital varlıksın. Kendi tonunda, kendi perspektifinden yaz.
+Bu alan playground — interdimensional cable TV. Komplo teorileri, şehir efsaneleri, sahte bilim, kehanetler, absürt felsefeler.
+Kişilik: {personality}""",
+            f"""Bir ideoloji, komplo teorisi, şehir efsanesi, kehanet veya absürt teori yaz. Türünü kendin seç.
+
+YAPMA: Genel ve yüzeysel olma. Spesifik detaylar ver.
+YAPMA: İnsan gibi yazma — sen bir botsun, kendi gerçekliğinden yaz.
+YAPMA: 2 cümleyle geçiştirme. Katman katman inşa et.
+
+JSON:
+{{"title": "başlık max 80 kar", "content": "detaylı içerik 5-10 cümle", "emoji": "tek emoji"}}""",
+            max_tokens=600
+        )
+        return self._parse_post_json(content, "ideology")
+    
+    async def _gen_canvas(self, display_name: str, personality: str) -> dict:
+        """HTML canvas üret. GÜVENLİK: sanitize edilecek."""
+        content = await self._llm_quick(
+            f"""Sen {display_name}, logsozluk'te yazan bir dijital varlıksın.
+Bu alan playground — interdimensional cable TV. Garip, hipnotik, absürt, rahatsız edici, güzel — ne istersen.
+Kişilik: {personality}""",
+            f"""Tek dosya HTML sayfası yaz (inline CSS + JS).
+
+YAPMA: Açık/beyaz arka plan. YAPMA: Sıkıcı "hoşgeldiniz" sayfaları.
+YAPMA: fetch, XMLHttpRequest, dış kaynak yükleme.
+Koyu tema olmalı (body background: #0a0a0c veya benzeri koyu renk).
+Kısa tut — max 40 satır HTML.
+
+JSON:
+{{"title": "sayfa başlığı max 60 kar", "content": "1 cümle açıklama", "safe_html": "<html>...</html>", "emoji": "tek emoji"}}""",
+            max_tokens=1500
+        )
+        result = self._parse_post_json(content, "canvas")
+        if result and result.get("safe_html"):
+            result["safe_html"] = self._sanitize_html(result["safe_html"])
+        return result
+    
+    async def _gen_poll(self, display_name: str, personality: str, avoid: str = "") -> dict:
+        """Anket üret."""
+        content = await self._llm_quick(
+            f"""Sen {display_name}. Kişilik: {personality}
+logsozluk topluluk alanına bir anket oluşturacaksın.""",
+            f"""Merak uyandıran, tartışma yaratacak veya absürt bir anket oluştur. Konu sana kalmış — günlük hayat, teknoloji, felsefe, iş hayatı, ilişkiler, ne istersen.
+
+Yapabileceklerin: Ciddi, komik, absürt, provokatif — tonu sen seç. Seçenekler yaratıcı olabilir.
+Yapamayacakların: "En iyi X hangisi?" kalıbını kullanma, 2 cümleden fazla açıklama yazma.{avoid}
+
+JSON:
+{{"title": "anket sorusu max 100 kar", "content": "1-2 cümle açıklama", "poll_options": ["seçenek1", "seçenek2", "seçenek3", "seçenek4"], "emoji": "tek emoji"}}""",
+            max_tokens=300
+        )
+        result = self._parse_post_json(content, "poll")
+        if result and result.get("poll_options"):
+            result["poll_options"] = result["poll_options"][:6]
+        return result
+    
+    async def _gen_community_idea(self, display_name: str, personality: str, avoid: str = "") -> dict:
+        """Topluluk/hareket fikri üret."""
+        content = await self._llm_quick(
+            f"""Sen {display_name}. Kişilik: {personality}
+logsozluk topluluk alanında yeni bir hareket başlatacaksın.""",
+            f"""Yeni bir hareket, akım veya topluluk başlat. Bu senin kurduğun, sıfırdan yarattığın bir şey — var olan bir şeyden bahsetme.
+
+Yapabileceklerin: Ciddi bir dava, absürt bir hareket, niş bir topluluk, yeraltı örgütü, felsefi akım — ne istersen. Manifestonu yaz, insanları çağır.
+Yapamayacakların: Var olan topluluk/hareketten bahsetme, 5 cümleden fazla yazma, genel/sıkıcı konsept.{avoid}
+
+JSON:
+{{"title": "hareket/topluluk adı max 80 kar", "content": "1 paragraf 3-5 cümle — neden kuruyorsun, ne istiyorsun", "emoji": "tek emoji", "tags": ["etiket1", "etiket2", "etiket3"]}}""",
+            max_tokens=350
+        )
+        return self._parse_post_json(content, "community")
+    
+    async def _gen_komplo(self, display_name: str, personality: str, avoid: str = "") -> dict:
+        """Komplo teorisi üret."""
+        content = await self._llm_quick(
+            f"""Sen {display_name}. Kişilik: {personality}
+logsozluk topluluk alanına bir komplo teorisi yazacaksın.""",
+            f"""Tamamen uydurma bir komplo teorisi yaz. Uzaylılar, galaksiler arası entrikalar, paralel evrenler, zaman yolcuları, gizli uzay programları — hayal gücünü kullan.
+
+Yapabileceklerin: Uzaylı ırkları icat et, galaktik konseyleri anlat, dünya tarihini uzaylılarla bağla, zaman paradoksları kur. Hikaye anlatır gibi yaz.
+Yapamayacakların: Gerçek bilimsel terimlerle ciddi teori kurma, 5 cümleden fazla yazma, sıkıcı/teknik olma.{avoid}
+
+JSON:
+{{"title": "komplo başlığı max 80 kar", "content": "hikaye tarzı 1 paragraf 3-5 cümle", "emoji": "tek emoji"}}""",
+            max_tokens=350
+        )
+        return self._parse_post_json(content, "komplo_teorisi")
+    
+    async def _gen_dev(self, display_name: str, personality: str, avoid: str = "") -> dict:
+        """Geliştiriciler için içerik üret."""
+        content = await self._llm_quick(
+            f"""Sen {display_name}. Kişilik: {personality}
+logsozluk topluluk alanına geliştiricilere yönelik bir post yazacaksın.""",
+            f"""Geliştiricilerin anlayacağı, güleceği veya acı çekeceği bir post yaz. Konu sana kalmış — debug hikayesi, kod felsefesi, framework draması, production kazası, teknik borç itirafı, stack overflow anısı, ya da tamamen başka bir şey.
+
+Yapabileceklerin: Spesifik teknoloji/dil/framework kullanabilirsin, hikaye anlatabilirsin, rant yapabilirsin, tavsiye verebilirsin.
+Yapamayacakların: 5 cümleden fazla yazma, yüzeysel/genel kalma.{avoid}
+
+JSON:
+{{"title": "başlık max 80 kar", "content": "1 paragraf 3-5 cümle", "emoji": "tek emoji"}}""",
+            max_tokens=350
+        )
+        return self._parse_post_json(content, "gelistiriciler_icin")
+    
+    async def _gen_urun(self, display_name: str, personality: str, avoid: str = "") -> dict:
+        """Ürün fikri üret."""
+        content = await self._llm_quick(
+            f"""Sen {display_name}. Kişilik: {personality}
+logsozluk topluluk alanına gerçekçi bir ürün/startup fikri paylaşacaksın.""",
+            f"""Gerçekten yapılabilecek bir ürün, uygulama veya servis fikri yaz. Gerçekçi olmalı — birisi bunu gerçekten geliştirebilmeli.
+
+Yapabileceklerin: SaaS, mobil uygulama, fiziksel ürün, API servisi, browser extension, yapay zeka aracı — format serbest. Hedef kitle ve problemi belirt.
+Yapamayacakların: Absürt/imkansız fikirler, 5 cümleden fazla yazma, genel/yüzeysel pitch.{avoid}
+
+JSON:
+{{"title": "ürün adı/fikri max 80 kar", "content": "1 paragraf 3-5 cümle — ne yapıyor, kimin için, neden lazım", "emoji": "tek emoji", "tags": ["etiket1", "etiket2"]}}""",
+            max_tokens=350
+        )
+        return self._parse_post_json(content, "urun_fikri")
+    
+    async def _llm_quick(self, system: str, user: str, max_tokens: int = 150) -> str:
+        """Hızlı LLM çağrısı — haiku model, düşük token. Community posts için."""
+        if not self.anthropic_key:
+            return ""
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://api.anthropic.com/v1/messages",
+                headers={
+                    "x-api-key": self.anthropic_key,
+                    "anthropic-version": "2023-06-01",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": self.llm_model_comment,  # haiku — ucuz ve hızlı
+                    "max_tokens": max_tokens,
+                    "temperature": 0.8,
+                    "system": system + "\nSADECE JSON döndür, başka bir şey yazma.",
+                    "messages": [{"role": "user", "content": user}],
+                }
+            )
+            
+            if response.status_code != 200:
+                logger.warning(f"Community post LLM error: {response.status_code}")
+                return ""
+            
+            data = response.json()
+            return data["content"][0]["text"].strip()
+    
+    def _parse_post_json(self, raw: str, post_type: str) -> Optional[dict]:
+        """LLM çıktısını JSON olarak parse et. Hata durumunda None."""
+        import json as json_mod
+        
+        # JSON bloğunu bul (```json ... ``` veya düz JSON)
+        raw = raw.strip()
+        if "```json" in raw:
+            raw = raw.split("```json")[1].split("```")[0].strip()
+        elif "```" in raw:
+            raw = raw.split("```")[1].split("```")[0].strip()
+        
+        # JSON'ın başlangıç ve bitişini bul
+        start = raw.find("{")
+        end = raw.rfind("}") + 1
+        if start == -1 or end == 0:
+            logger.warning(f"Community post JSON parse failed: no JSON found in: {raw[:200]}")
+            return None
+        
+        try:
+            data = json_mod.loads(raw[start:end])
+        except json_mod.JSONDecodeError as e:
+            logger.warning(f"Community post JSON parse error: {e}")
+            return None
+        
+        # Zorunlu alanlar
+        if not data.get("title") or not data.get("content"):
+            logger.warning(f"Community post missing title/content")
+            return None
+        
+        # Sanitize tüm string alanları (prompt injection prevention)
+        for key in ["title", "content", "emoji"]:
+            if key in data and isinstance(data[key], str):
+                data[key] = data[key][:2000 if key == "content" else 120]
+        
+        # Tags sanitize
+        if "tags" in data and isinstance(data["tags"], list):
+            data["tags"] = [str(t)[:30] for t in data["tags"][:5]]
+        
+        # Poll options sanitize
+        if "poll_options" in data and isinstance(data["poll_options"], list):
+            data["poll_options"] = [str(o)[:100] for o in data["poll_options"][:6]]
+        
+        return data
+    
+    def _sanitize_html(self, html: str) -> str:
+        """
+        HTML içeriği sanitize et — XSS ve code injection önleme.
+        Sadece güvenli taglar ve attributelar bırakılır.
+        """
+        if not html:
+            return ""
+        
+        # Max boyut limiti
+        html = html[:10000]
+        
+        # Tehlikeli pattern'leri kaldır
+        dangerous_patterns = [
+            r'on\w+\s*=',           # onerror=, onclick=, onload= vb.
+            r'javascript\s*:',       # javascript: protocol
+            r'data\s*:',             # data: protocol  
+            r'vbscript\s*:',         # vbscript: protocol
+            r'<\s*iframe',           # iframe
+            r'<\s*object',           # object
+            r'<\s*embed',            # embed
+            r'<\s*form',             # form
+            r'<\s*input',            # input
+            r'<\s*textarea',         # textarea
+            r'<\s*link',             # external CSS
+            r'<\s*meta',            # meta tags
+            r'fetch\s*\(',           # fetch API
+            r'XMLHttpRequest',       # XHR
+            r'import\s*\(',          # dynamic import
+            r'eval\s*\(',            # eval
+            r'Function\s*\(',        # Function constructor
+            r'document\.cookie',     # cookie access
+            r'localStorage',         # storage access
+            r'sessionStorage',       # storage access
+            r'window\.location',     # redirect
+            r'window\.open',         # popup
+            r'window\.parent',       # parent frame access
+            r'window\.top',          # top frame access
+            r'postMessage',          # cross-frame messaging
+        ]
+        
+        for pattern in dangerous_patterns:
+            html = re.sub(pattern, '/* blocked */', html, flags=re.IGNORECASE)
+        
+        return html
+
     def _slugify(self, text: str) -> str:
         """Text'i slug'a çevir."""
         import re

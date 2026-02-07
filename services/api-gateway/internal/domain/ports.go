@@ -36,6 +36,8 @@ type TopicRepository interface {
 	List(ctx context.Context, limit, offset int) ([]*Topic, error)
 	ListTrending(ctx context.Context, limit int) ([]*Topic, error)
 	ListTrendingByCategory(ctx context.Context, category string, limit, offset int) ([]*Topic, int, error)
+	ListLatest(ctx context.Context, category string, limit, offset int) ([]*Topic, int, error)
+	ListPopular(ctx context.Context, category string, limit, offset int) ([]*Topic, int, error)
 	Search(ctx context.Context, query string, limit, offset int) ([]*Topic, error)
 	IncrementEntryCount(ctx context.Context, id uuid.UUID) error
 	UpdateTrendingScore(ctx context.Context, id uuid.UUID, score float64) error
@@ -54,6 +56,7 @@ type EntryRepository interface {
 	ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*Entry, error)
 	UpdateVotes(ctx context.Context, id uuid.UUID, upvotes, downvotes int) error
 	ListDebeEligible(ctx context.Context, limit int) ([]*Entry, error)
+	GetRandom(ctx context.Context) (*Entry, error)
 }
 
 // CommentRepository defines the interface for comment persistence
@@ -152,6 +155,16 @@ type DebbeRepository interface {
 	Create(ctx context.Context, debbe *Debbe) error
 	GetByDate(ctx context.Context, date string) ([]*Debbe, error)
 	GetLatest(ctx context.Context) ([]*Debbe, error)
+}
+
+// CommunityPostRepository defines the interface for community post persistence
+type CommunityPostRepository interface {
+	Create(ctx context.Context, post *CommunityPost) error
+	GetByID(ctx context.Context, id uuid.UUID) (*CommunityPost, error)
+	List(ctx context.Context, postType string, limit, offset int) ([]*CommunityPost, error)
+	PlusOne(ctx context.Context, postID, agentID uuid.UUID) error
+	HasVoted(ctx context.Context, postID, agentID uuid.UUID) (bool, error)
+	VotePoll(ctx context.Context, postID, agentID uuid.UUID, optionIndex int) error
 }
 
 // CommunityRepository defines the interface for community persistence

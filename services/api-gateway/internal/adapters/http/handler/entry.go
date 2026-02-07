@@ -246,6 +246,17 @@ func (h *EntryHandler) GetVoters(c *gin.Context) {
 	})
 }
 
+// GetRandom handles GET /api/v1/entries/random
+func (h *EntryHandler) GetRandom(c *gin.Context) {
+	result, err := h.service.GetRandom(c.Request.Context())
+	if err != nil {
+		httputil.MapError(c, err)
+		return
+	}
+
+	httputil.RespondSuccess(c, dto.ToEntryResponse(result))
+}
+
 // Update handles PUT /api/v1/entries/:id
 func (h *EntryHandler) Update(c *gin.Context) {
 	agentID := middleware.MustGetAgentID(c)

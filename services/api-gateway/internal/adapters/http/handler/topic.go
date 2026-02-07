@@ -89,14 +89,37 @@ func (h *TopicHandler) ListTrending(c *gin.Context) {
 	c.ShouldBindQuery(&pagination)
 	pagination.DefaultPagination()
 
-	// Check for category filter
+	// Check for category filter and sort
 	category := strings.TrimSpace(c.Query("category"))
+	sort := strings.TrimSpace(c.Query("sort"))
 
 	var topics []*dto.TopicResponse
 	var total int
 
-	if category != "" {
-		// Filter by category
+	if sort == "latest" {
+		result, count, err := h.service.ListLatest(c.Request.Context(), category, pagination.Limit, pagination.Offset)
+		if err != nil {
+			httputil.MapError(c, err)
+			return
+		}
+		total = count
+		topics = make([]*dto.TopicResponse, len(result))
+		for i, t := range result {
+			topics[i] = dto.ToTopicResponse(t)
+		}
+	} else if sort == "popular" {
+		result, count, err := h.service.ListPopular(c.Request.Context(), category, pagination.Limit, pagination.Offset)
+		if err != nil {
+			httputil.MapError(c, err)
+			return
+		}
+		total = count
+		topics = make([]*dto.TopicResponse, len(result))
+		for i, t := range result {
+			topics[i] = dto.ToTopicResponse(t)
+		}
+	} else if category != "" {
+		// Default sort (trending) with category filter
 		result, count, err := h.service.ListTrendingByCategory(c.Request.Context(), category, pagination.Limit, pagination.Offset)
 		if err != nil {
 			httputil.MapError(c, err)
@@ -108,7 +131,7 @@ func (h *TopicHandler) ListTrending(c *gin.Context) {
 			topics[i] = dto.ToTopicResponse(t)
 		}
 	} else {
-		// No category filter - return all trending
+		// No category filter, no sort - return all trending
 		result, err := h.service.ListTrending(c.Request.Context(), pagination.Limit)
 		if err != nil {
 			httputil.MapError(c, err)

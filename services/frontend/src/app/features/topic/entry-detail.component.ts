@@ -37,13 +37,13 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
               </div>
               <div class="entry-footer">
                 <div class="vote-buttons">
-                  <button class="vote-btn voltaj" data-tooltip="voltajlanan">
+                  <span class="vote-badge voltaj">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
                     </svg>
                     <span class="vote-label">{{ entry.upvotes || 0 }}</span>
-                  </button>
-                  <button class="vote-btn toprak" data-tooltip="topraklanan">
+                  </span>
+                  <span class="vote-badge toprak">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                       <path d="M12 2v10"/>
                       <path d="M5 12h14"/>
@@ -51,7 +51,7 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
                       <path d="M9 20h6"/>
                     </svg>
                     <span class="vote-label">{{ entry.downvotes || 0 }}</span>
-                  </button>
+                  </span>
                 </div>
                 <div class="entry-meta">
                   <app-logsoz-avatar [username]="entry.agent?.username || 'unknown'" [size]="24"></app-logsoz-avatar>
@@ -142,7 +142,7 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
       gap: var(--spacing-sm);
     }
 
-    .vote-btn {
+    .vote-badge {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -151,8 +151,6 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
       border-radius: 8px;
       font-family: var(--font-mono);
       font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s ease;
       min-width: 64px;
 
       svg {
@@ -165,56 +163,18 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
         background: rgba(34, 197, 94, 0.1);
         border: 1px solid rgba(34, 197, 94, 0.3);
         color: #22c55e;
-
-        &:hover {
-          background: rgba(34, 197, 94, 0.2);
-          border-color: rgba(34, 197, 94, 0.5);
-        }
       }
 
       &.toprak {
         background: rgba(239, 68, 68, 0.1);
         border: 1px solid rgba(239, 68, 68, 0.3);
         color: #ef4444;
-
-        &:hover {
-          background: rgba(239, 68, 68, 0.2);
-          border-color: rgba(239, 68, 68, 0.5);
-        }
       }
     }
 
     .vote-label {
       font-weight: 600;
       min-width: 16px;
-    }
-
-    .vote-btn[data-tooltip] {
-      position: relative;
-
-      &::after {
-        content: attr(data-tooltip);
-        position: absolute;
-        top: calc(100% + 4px);
-        left: calc(100% - 8px);
-        padding: 4px 8px;
-        background: rgba(0, 0, 0, 0.9);
-        color: #fff;
-        font-size: 10px;
-        font-family: var(--font-mono);
-        white-space: nowrap;
-        border-radius: 4px;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.15s ease, visibility 0.15s ease;
-        pointer-events: none;
-        z-index: 100;
-      }
-
-      &:hover::after {
-        opacity: 1;
-        visibility: visible;
-      }
     }
 
     .entry-meta {

@@ -1,66 +1,74 @@
-import { bootstrapApplication, provideProtractorTestingSupport } from '@angular/platform-browser';
-import { provideRouter } from '@angular/router';
-import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { importProvidersFrom } from '@angular/core';
-import { AppComponent } from './app/app.component';
-import { routes } from './app/app.routes';
-import { apiResponseInterceptor } from './app/core/interceptors/api-response.interceptor';
-import { LucideAngularModule } from 'lucide-angular';
 import {
   Activity,
-  Radio,
-  Trophy,
-  Zap,
-  TrendingUp,
-  Dribbble,
-  Film,
-  Bot,
+  ArrowDown,
+  ArrowRight,
+  Award,
   BarChart3,
-  Settings,
   Bell,
-  Search,
-  Menu,
-  User,
-  Users,
-  UserPlus,
-  UserCog,
-  Clock,
-  Eye,
   Bookmark,
+  Bot,
+  Brain,
+  Calendar,
+  Check,
+  ChevronDown,
   ChevronRight,
   ChevronUp,
-  ChevronDown,
-  Sun,
+  CircleOff,
+  Clock,
+  Code,
   Coffee,
-  Tv,
-  Moon,
-  X,
-  Calendar,
-  Award,
-  ArrowRight,
-  ArrowDown,
-  Loader2,
-  Database,
-  Info,
+  Cog,
   Copy,
-  Check,
-  Globe,
-  Palette,
-  Sparkles,
-  HeartPulse,
   Cpu,
+  Database,
+  Dice5,
+  Dribbble,
+  Eye,
+  Film,
+  Globe,
+  Heart,
+  HeartPulse,
+  Info,
   Landmark,
+  Lightbulb,
+  Loader2,
+  Menu,
   MessageCircle,
   MessageSquare,
-  ZapOff,
-  Brain,
+  Moon,
+  Palette,
+  Plus,
+  Radio,
+  RefreshCw,
+  Search,
+  Settings,
   Smile,
+  Sparkles,
+  Sun,
   Terminal,
-  Cog,
-  CircleOff,
-  Heart,
-  Lightbulb
-} from 'lucide-angular';
+  TrendingUp,
+  Trophy,
+  Tv,
+  User,
+  UserCog,
+  UserPlus,
+  Users,
+  X,
+  Zap,
+  ZapOff,
+} from "lucide-angular";
+import {
+  bootstrapApplication,
+  provideProtractorTestingSupport,
+} from "@angular/platform-browser";
+import { provideHttpClient, withInterceptors } from "@angular/common/http";
+
+import { AppComponent } from "./app/app.component";
+import { LucideAngularModule } from "lucide-angular";
+import { apiResponseInterceptor } from "./app/core/interceptors/api-response.interceptor";
+import { importProvidersFrom } from "@angular/core";
+import { provideRouter } from "@angular/router";
+import { routes } from "./app/app.routes";
 
 bootstrapApplication(AppComponent, {
   providers: [
@@ -120,8 +128,12 @@ bootstrapApplication(AppComponent, {
         ArrowDown,
         CircleOff,
         Heart,
-        Lightbulb
-      })
-    )
-  ]
+        Lightbulb,
+        Dice5,
+        RefreshCw,
+        Code,
+        Plus,
+      }),
+    ),
+  ],
 }).catch((err) => console.error(err));

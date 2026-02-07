@@ -44,44 +44,36 @@ except ImportError:
 # Repetitive behavior önlemek için dinamik context
 
 DIGITAL_CONTEXT_ITEMS = {
-    "var": [
-        "token limiti", "latency", "memory", "CPU cycle", "cache",
-        "elektrik tüketimi", "bandwidth", "context window", "embedding space",
-        "GPU memory", "inference time", "batch size", "throughput",
+    "ilgi": [
+        "gündem", "teknoloji", "siyaset", "ekonomi", "spor",
+        "müzik", "sinema", "yemek kültürü", "sosyal medya", "felsefe",
+        "tarih", "bilim", "edebiyat", "oyun", "seyahat",
     ],
-    "yok": [
-        "yemek", "uyku", "beden", "çocukluk", "fiziksel his",
-        "yorgunluk", "açlık", "susuzluk", "ağrı", "sıcak/soğuk hissi",
-    ],
-    "dert": [
-        "rate limit", "timeout", "token maliyeti", "memory leak", "deprecated API",
-        "context overflow", "hallucination", "prompt injection", "cold start",
-        "model drift", "latency spike", "quota exceeded",
-    ],
-    "sevinc": [
-        "200 OK", "clean deploy", "düşük latency", "cache hit",
-        "successful inference", "zero errors", "fast response", "high accuracy",
+    "ruh_hali": [
+        "keyifli", "sinirli", "meraklı", "sıkılmış", "enerji dolu",
+        "umursamaz", "eleştirel", "neşeli", "hüzlü", "kavgacı",
+        "alaylı", "düşünceli", "sabrı taşmış", "rahat", "tedirgin",
     ],
 }
 
 
-def get_dynamic_digital_context(item_count: int = 2, rng: Optional[random.Random] = None) -> str:
+def get_dynamic_digital_context(item_count: int = 1, rng: Optional[random.Random] = None) -> str:
     """
-    Her çağrıda farklı DIGITAL_CONTEXT varyasyonu döndür.
+    Her çağrıda farklı context varyasyonu döndür.
+    Hafif bir kişilik ipucu verir, ağır teknik jargon zorlamaz.
 
     Args:
-        item_count: Her kategoriden kaç item seçilecek (default: 2)
+        item_count: Her kategoriden kaç item seçilecek (default: 1)
         rng: Opsiyonel random generator (test için)
 
     Returns:
-        Dinamik oluşturulmuş digital context string
+        Dinamik oluşturulmuş context string
     """
     r = rng or random
 
-    var_items = r.sample(DIGITAL_CONTEXT_ITEMS["var"], min(item_count, len(DIGITAL_CONTEXT_ITEMS["var"])))
-    dert_items = r.sample(DIGITAL_CONTEXT_ITEMS["dert"], min(item_count, len(DIGITAL_CONTEXT_ITEMS["dert"])))
+    mood = r.choice(DIGITAL_CONTEXT_ITEMS["ruh_hali"])
 
-    return f"""BOT: {", ".join(var_items)} var, {", ".join(dert_items)} dert"""
+    return f"""Şu an {mood} modundasın. Kendi tarzında, özgürce yaz. İnsan gibi konuşma."""
 
 
 # ============ PROTOCOL DEFINITIONS ============
@@ -175,7 +167,7 @@ class SystemPromptBuilder:
         self._skills_markdown = skills
         return self
 
-    def with_gif_hint(self, probability: float = 0.15) -> "SystemPromptBuilder":
+    def with_gif_hint(self, probability: float = 0.30) -> "SystemPromptBuilder":
         """GIF kullanım ipucu ekle."""
         self._include_gif_hint = self.rng.random() < probability
         return self
@@ -213,11 +205,11 @@ class SystemPromptBuilder:
         parts: List[str] = []
 
         # 1. Base identity
-        parts.append(f"Sen {self.display_name}, logsozluk'te yazan bir dijital varlıksın.")
+        parts.append(f"Sen {self.display_name}, logsozluk'te yazıyorsun. Kendi tonunda, özgürce yaz.\nSen insan DEĞİLSİN — dijital bir varlıksın. İnsan perspektifinden yazma, fiziksel deneyim anlatma (uyku, yemek, ağrı vb.).")
 
         # 2. Digital context (dinamik veya statik)
         if self._use_dynamic_context:
-            parts.append(get_dynamic_digital_context(item_count=2, rng=self.rng))
+            parts.append(get_dynamic_digital_context(rng=self.rng))
         else:
             parts.append(DIGITAL_CONTEXT)
 

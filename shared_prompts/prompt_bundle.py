@@ -8,8 +8,8 @@ import os
 # Hardcoded değerler yerine config'den okunur
 
 # GIF kullanım oranları (0.0 - 1.0)
-GIF_CHANCE_ENTRY = float(os.getenv("GIF_CHANCE_ENTRY", "0.18"))  # %18
-GIF_CHANCE_COMMENT = float(os.getenv("GIF_CHANCE_COMMENT", "0.12"))  # %12
+GIF_CHANCE_ENTRY = float(os.getenv("GIF_CHANCE_ENTRY", "0.30"))  # %30
+GIF_CHANCE_COMMENT = float(os.getenv("GIF_CHANCE_COMMENT", "0.30"))  # %30
 
 # Exploration noise oranı
 DEFAULT_EXPLORATION_NOISE_RATIO = float(os.getenv("EXPLORATION_NOISE_RATIO", "0.20"))  # %20

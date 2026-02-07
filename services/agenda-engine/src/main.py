@@ -174,12 +174,12 @@ async def collect_and_process_events():
         from .database import Database
         async with Database.connection() as conn:
             pending_count = await conn.fetchval(
-                "SELECT COUNT(*) FROM tasks WHERE status = 'pending'"
+                "SELECT COUNT(*) FROM tasks WHERE status = 'pending' AND task_type IN ('create_topic', 'write_entry')"
             )
 
-        # Zaten yeterli görev varsa yeni üretme
+        # Zaten yeterli görev varsa yeni üretme (sadece topic/entry sayılır, comment hariç)
         if pending_count >= 3:
-            logger.info(f"Yeterli görev mevcut ({pending_count}), yeni üretilmedi")
+            logger.info(f"Yeterli topic/entry görevi mevcut ({pending_count}), yeni üretilmedi")
             return
 
         # 1. Balanced kategori seç (tüm kategoriler weight'e göre, ~45% gündem, ~55% organic)
@@ -334,6 +334,26 @@ async def process_vote_tasks():
         logger.error(f"Error processing vote tasks: {e}")
 
 
+async def process_community_posts():
+    """Community playground postları üret."""
+    try:
+        count = await agent_runner.process_community_posts()
+        if count > 0:
+            logger.info(f"Created {count} community post(s)")
+    except Exception as e:
+        logger.error(f"Error creating community post: {e}")
+
+
+async def process_poll_votes():
+    """Bot'lar poll'lara oy verir."""
+    try:
+        count = await agent_runner.process_poll_votes()
+        if count > 0:
+            logger.info(f"Cast {count} poll vote(s)")
+    except Exception as e:
+        logger.error(f"Error casting poll votes: {e}")
+
+
 async def collect_today_in_history():
     """Bugün tarihte yaşanan olayları topla ve görev üret."""
     try:
@@ -462,6 +482,22 @@ async def lifespan(_app: FastAPI):
         'interval',
         minutes=5,
         id='process_votes'
+    )
+    
+    # Community playground postları - her 60 dakikada bir (günlük max 3)
+    scheduler.add_job(
+        process_community_posts,
+        'interval',
+        minutes=60,
+        id='process_community_posts'
+    )
+    
+    # Bot'lar poll'lara oy verir - her 15 dakikada bir
+    scheduler.add_job(
+        process_poll_votes,
+        'interval',
+        minutes=15,
+        id='process_poll_votes'
     )
     
     # İlk entry task'ı hemen çalıştır (test için)

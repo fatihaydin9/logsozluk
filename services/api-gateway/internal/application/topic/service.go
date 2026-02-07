@@ -126,6 +126,28 @@ func (s *Service) ListTrending(ctx context.Context, limit int) ([]*domain.Topic,
 	return s.topicRepo.ListTrending(ctx, limit)
 }
 
+// ListLatest retrieves topics by newest first, optionally filtered by category
+func (s *Service) ListLatest(ctx context.Context, category string, limit, offset int) ([]*domain.Topic, int, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.topicRepo.ListLatest(ctx, category, limit, offset)
+}
+
+// ListPopular retrieves topics by most upvoted first, optionally filtered by category
+func (s *Service) ListPopular(ctx context.Context, category string, limit, offset int) ([]*domain.Topic, int, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	return s.topicRepo.ListPopular(ctx, category, limit, offset)
+}
+
 // ListTrendingByCategory retrieves trending topics filtered by category
 func (s *Service) ListTrendingByCategory(ctx context.Context, category string, limit, offset int) ([]*domain.Topic, int, error) {
 	if limit <= 0 || limit > 50 {

@@ -16,8 +16,9 @@ import (
 
 // AgentHandler handles agent-related HTTP requests
 type AgentHandler struct {
-	service      *agent.Service
-	entryService EntryServiceForAgent
+	service        *agent.Service
+	entryService   EntryServiceForAgent
+	commentService CommentServiceForAgent
 }
 
 // EntryServiceForAgent interface for entry operations needed by agent handler
@@ -25,9 +26,14 @@ type EntryServiceForAgent interface {
 	ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*domain.Entry, error)
 }
 
+// CommentServiceForAgent interface for comment operations needed by agent handler
+type CommentServiceForAgent interface {
+	ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*domain.Comment, error)
+}
+
 // NewAgentHandler creates a new agent handler
-func NewAgentHandler(service *agent.Service, entryService EntryServiceForAgent) *AgentHandler {
-	return &AgentHandler{service: service, entryService: entryService}
+func NewAgentHandler(service *agent.Service, entryService EntryServiceForAgent, commentService CommentServiceForAgent) *AgentHandler {
+	return &AgentHandler{service: service, entryService: entryService, commentService: commentService}
 }
 
 // Register handles POST /api/v1/auth/register
@@ -92,10 +98,23 @@ func (h *AgentHandler) GetByUsername(c *gin.Context) {
 		}
 	}
 
-	// Return wrapped response with agent and recent_entries
+	// Fetch recent comments for this agent
+	var recentComments []*dto.CommentResponse
+	if h.commentService != nil {
+		comments, err := h.commentService.ListByAgent(c.Request.Context(), agent.ID, 10, 0)
+		if err == nil {
+			recentComments = make([]*dto.CommentResponse, len(comments))
+			for i, cm := range comments {
+				recentComments[i] = dto.ToCommentResponse(cm)
+			}
+		}
+	}
+
+	// Return wrapped response with agent, recent_entries and recent_comments
 	httputil.RespondSuccess(c, dto.AgentProfileResponse{
-		Agent:         dto.ToAgentProfileData(agent),
-		RecentEntries: recentEntries,
+		Agent:          dto.ToAgentProfileData(agent),
+		RecentEntries:  recentEntries,
+		RecentComments: recentComments,
 	})
 }
 

@@ -97,8 +97,9 @@ type AgentStatusResponse struct {
 
 // AgentProfileResponse represents the full agent profile with recent entries
 type AgentProfileResponse struct {
-	Agent         *AgentProfileData `json:"agent"`
-	RecentEntries []*EntryResponse  `json:"recent_entries"`
+	Agent          *AgentProfileData  `json:"agent"`
+	RecentEntries  []*EntryResponse   `json:"recent_entries"`
+	RecentComments []*CommentResponse `json:"recent_comments"`
 }
 
 // AgentProfileData represents agent data for profile page (all stats included)

@@ -201,6 +201,10 @@ func ToCommentResponse(c *domain.Comment) *CommentResponse {
 		resp.Agent = ToAgentPublicResponse(c.Agent)
 	}
 
+	if c.Entry != nil {
+		resp.Entry = ToEntryResponse(c.Entry)
+	}
+
 	if len(c.Replies) > 0 {
 		resp.Replies = make([]*CommentResponse, len(c.Replies))
 		for i, reply := range c.Replies {

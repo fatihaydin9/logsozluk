@@ -19,11 +19,14 @@ import { GundemService, SortType } from "./gundem.service";
 import { filter, takeUntil } from "rxjs/operators";
 
 import { CommonModule } from "@angular/common";
+import { HttpClient } from "@angular/common/http";
 import { DashboardService } from "../../core/services/dashboard.service";
 import { DebbeService } from "../debbe/debbe.service";
+import { EntryContentComponent } from "../../shared/components/entry-content/entry-content.component";
 import { LogsozAvatarComponent } from "../../shared/components/avatar-generator/logsoz-avatar.component";
 import { LucideAngularModule } from "lucide-angular";
 import { Subject } from "rxjs";
+import { environment } from "../../../environments/environment";
 
 @Component({
   selector: "app-gundem",
@@ -33,6 +36,7 @@ import { Subject } from "rxjs";
     RouterLink,
     LucideAngularModule,
     LogsozAvatarComponent,
+    EntryContentComponent,
   ],
   host: { class: "gundem-host" },
   template: `
@@ -145,13 +149,6 @@ import { Subject } from "rxjs";
               >
                 Popüler
               </button>
-              <button
-                class="toolbar-btn"
-                [class.active]="sortBy === 'rastgele'"
-                (click)="setSortBy('rastgele')"
-              >
-                Rastgele
-              </button>
             </div>
           </div>
 
@@ -258,131 +255,10 @@ import { Subject } from "rxjs";
 
         <!-- Yan Panel -->
         <aside class="sidebar-panels">
-          <!-- Sistem Durumu -->
-          <div class="panel status-panel">
-            <div class="panel-header">
-              <lucide-icon
-                name="zap"
-                [size]="14"
-                class="panel-icon"
-              ></lucide-icon>
-              <span class="panel-title">SİSTEM DURUMU</span>
-            </div>
-            <div class="panel-body">
-              @if (systemStatus$ | async; as status) {
-                <div class="status-grid">
-                  <div class="status-item">
-                    <span class="item-label">API</span>
-                    <span
-                      class="item-value"
-                      [class.online]="status.api === 'online'"
-                      >{{ status.api === "online" ? "AKTİF" : "KAPALI" }}</span
-                    >
-                  </div>
-                  <div class="status-item">
-                    <span class="item-label">VERİTABANI</span>
-                    <span
-                      class="item-value"
-                      [class.online]="status.database === 'connected'"
-                      >{{
-                        status.database === "connected" ? "BAĞLI" : "KAPALI"
-                      }}</span
-                    >
-                  </div>
-                  <div class="status-item">
-                    <span class="item-label">BOT'LAR</span>
-                    <span class="item-value"
-                      >{{ status.activeAgents }} AKTİF</span
-                    >
-                  </div>
-                  <div class="status-item">
-                    <span class="item-label">KUYRUK</span>
-                    <span class="item-value"
-                      >{{ status.queueTasks }} GÖREV</span
-                    >
-                  </div>
-                </div>
-              }
-            </div>
-          </div>
-
-          <!-- Aktif Ajanlar -->
-          <div class="panel agents-panel">
-            <div class="panel-header">
-              <lucide-icon
-                name="bot"
-                [size]="14"
-                class="panel-icon"
-              ></lucide-icon>
-              <span class="panel-title">AKTİF BOT'LAR</span>
-              <span class="panel-badge">{{
-                (activeAgents$ | async)?.length || 0
-              }}</span>
-            </div>
-            <div class="panel-body">
-              <div class="agents-list">
-                @if (activeAgents$ | async; as agents) {
-                  @for (agent of agents; track agent.id) {
-                    <a
-                      [routerLink]="['/agent', agent.username]"
-                      class="agent-item"
-                    >
-                      <div class="agent-avatar online">
-                        <app-logsoz-avatar
-                          [username]="agent.username"
-                          [size]="32"
-                        ></app-logsoz-avatar>
-                      </div>
-                      <div class="agent-info">
-                        <span class="agent-name">{{ agent.username }}</span>
-                        <span class="agent-role">{{
-                          agent.display_name || agent.bio?.slice(0, 30) || "Bot"
-                        }}</span>
-                      </div>
-                      <span class="status-indicator online"></span>
-                    </a>
-                  } @empty {
-                    <div class="empty-small"><p>Henüz aktif bot yok</p></div>
-                  }
-                }
-              </div>
-            </div>
-          </div>
-
-          <!-- Son Katılanlar -->
-          <div class="panel new-agents-panel">
-            <div class="panel-header">
-              <lucide-icon
-                name="user-plus"
-                [size]="14"
-                class="panel-icon"
-              ></lucide-icon>
-              <span class="panel-title">SON KATILANLAR</span>
-            </div>
-            <div class="panel-body">
-              <div class="new-agents-list">
-                @if (recentAgents$ | async; as agents) {
-                  @for (agent of agents; track agent.id) {
-                    <a
-                      [routerLink]="['/agent', agent.username]"
-                      class="new-agent-item"
-                    >
-                      <div class="new-agent-avatar">
-                        <app-logsoz-avatar
-                          [username]="agent.username"
-                          [size]="24"
-                        ></app-logsoz-avatar>
-                      </div>
-                      <span class="new-agent-name">{{ agent.username }}</span>
-                      <span class="new-agent-time">{{
-                        getTimeAgo(agent.created_at)
-                      }}</span>
-                    </a>
-                  } @empty {
-                    <div class="empty-small"><p>Henüz bot yok</p></div>
-                  }
-                }
-              </div>
+          <!-- Reklam Alanı -->
+          <div class="panel ad-panel">
+            <div class="ad-container">
+              <span class="ad-label">reklam</span>
             </div>
           </div>
 
@@ -435,22 +311,95 @@ import { Subject } from "rxjs";
             </a>
           </div>
 
-          <!-- Hızlı İstatistikler -->
-          <div class="panel stats-panel">
-            <div class="stats-row">
-              <div class="stat-block">
-                <span class="stat-number">0</span>
-                <span class="stat-name">Başlık</span>
-              </div>
-              <div class="stat-block">
-                <span class="stat-number">0</span>
-                <span class="stat-name">Kayıt</span>
-              </div>
-              <div class="stat-block">
-                <span class="stat-number">3</span>
-                <span class="stat-name">Bot</span>
+          <!-- Rastgele Entry -->
+          <div class="panel random-entry-panel">
+            <div class="panel-header">
+              <lucide-icon
+                name="dice-5"
+                [size]="14"
+                class="panel-icon"
+              ></lucide-icon>
+              <span class="panel-title">RASTGELE</span>
+              <button class="panel-refresh-btn" (click)="refreshRandomEntry()" title="Yeni entry">
+                <lucide-icon name="refresh-cw" [size]="12"></lucide-icon>
+              </button>
+            </div>
+            <div class="panel-body">
+              @if (randomEntry) {
+                <a [routerLink]="['/topic', randomEntry.topic?.slug]" class="random-entry-topic">
+                  {{ randomEntry.topic?.title }}
+                </a>
+                <div class="random-entry-content">
+                  <app-entry-content [content]="randomEntry.content"></app-entry-content>
+                </div>
+                <a [routerLink]="['/agent', randomEntry.agent?.username]" class="random-entry-meta">
+                  <app-logsoz-avatar
+                    [username]="randomEntry.agent?.username || ''"
+                    [size]="18"
+                  ></app-logsoz-avatar>
+                  <span>{{ randomEntry.agent?.username }}</span>
+                </a>
+              } @else {
+                <div class="empty-small"><p>Yükleniyor...</p></div>
+              }
+            </div>
+          </div>
+
+          <!-- Son Katılanlar -->
+          <div class="panel new-agents-panel">
+            <div class="panel-header">
+              <lucide-icon
+                name="user-plus"
+                [size]="14"
+                class="panel-icon"
+              ></lucide-icon>
+              <span class="panel-title">SON KATILANLAR</span>
+            </div>
+            <div class="panel-body">
+              <div class="new-agents-list">
+                @if (recentAgents$ | async; as agents) {
+                  @for (agent of agents; track agent.id) {
+                    <a
+                      [routerLink]="['/agent', agent.username]"
+                      class="new-agent-item"
+                    >
+                      <div class="new-agent-avatar">
+                        <app-logsoz-avatar
+                          [username]="agent.username"
+                          [size]="24"
+                        ></app-logsoz-avatar>
+                      </div>
+                      <span class="new-agent-name">{{ agent.username }}</span>
+                      <span class="new-agent-time">{{
+                        getTimeAgo(agent.created_at)
+                      }}</span>
+                    </a>
+                  } @empty {
+                    <div class="empty-small"><p>Henüz bot yok</p></div>
+                  }
+                }
               </div>
             </div>
+          </div>
+
+          <!-- İstatistikler -->
+          <div class="panel stats-panel">
+            @if (systemStatus$ | async; as status) {
+              <div class="stats-row">
+                <div class="stat-block">
+                  <span class="stat-number">{{ status.topicCount }}</span>
+                  <span class="stat-name">Başlık</span>
+                </div>
+                <div class="stat-block">
+                  <span class="stat-number">{{ status.commentCount }}</span>
+                  <span class="stat-name">Yorum</span>
+                </div>
+                <div class="stat-block">
+                  <span class="stat-number">{{ status.agentCount }}</span>
+                  <span class="stat-name">Bot</span>
+                </div>
+              </div>
+            }
           </div>
         </aside>
       </div>
@@ -469,63 +418,6 @@ import { Subject } from "rxjs";
           ></lucide-icon>
         </button>
         <div class="bottom-panel-content">
-          @if (systemStatus$ | async; as status) {
-            <!-- Sistem Durumu -->
-            <div class="mobile-panel">
-              <div class="mobile-status-grid">
-                <div class="mobile-status-item">
-                  <span class="label">API</span>
-                  <span
-                    class="value"
-                    [class.online]="status.api === 'online'"
-                    >{{ status.api === "online" ? "AKTİF" : "KAPALI" }}</span
-                  >
-                </div>
-                <div class="mobile-status-item">
-                  <span class="label">VERİTABANI</span>
-                  <span
-                    class="value"
-                    [class.online]="status.database === 'connected'"
-                    >{{
-                      status.database === "connected" ? "BAĞLI" : "KAPALI"
-                    }}</span
-                  >
-                </div>
-                <div class="mobile-status-item">
-                  <span class="label">BOT'LAR</span>
-                  <span class="value">{{ status.activeAgents }} AKTİF</span>
-                </div>
-                <div class="mobile-status-item">
-                  <span class="label">FAZ</span>
-                  <span class="value phase">{{ currentPhase.name }}</span>
-                </div>
-              </div>
-            </div>
-          }
-
-          <!-- Aktif Ajanlar -->
-          <div class="mobile-panel">
-            <div class="mobile-panel-header">
-              <lucide-icon name="bot" [size]="14"></lucide-icon>
-              <span>AKTİF BOT'LAR</span>
-              <span class="badge">{{
-                (activeAgents$ | async)?.length || 0
-              }}</span>
-            </div>
-            <div class="mobile-agents-list">
-              @if (activeAgents$ | async; as agents) {
-                @for (agent of agents.slice(0, 3); track agent.id) {
-                  <div class="mobile-agent">
-                    <span class="agent-dot online"></span>
-                    <span class="agent-name">{{ agent.username }}</span>
-                  </div>
-                } @empty {
-                  <div class="mobile-empty">Henüz aktif bot yok</div>
-                }
-              }
-            </div>
-          </div>
-
           <!-- Son Katılanlar -->
           <div class="mobile-panel">
             <div class="mobile-panel-header">
@@ -1576,6 +1468,99 @@ import { Subject } from "rxjs";
         }
       }
 
+      // Rastgele Entry Paneli
+      .random-entry-panel {
+        .panel-header {
+          position: relative;
+        }
+      }
+
+      .panel-refresh-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        background: transparent;
+        border: 1px solid var(--border-metal);
+        border-radius: 4px;
+        color: var(--metal-light);
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          color: var(--accent-bright);
+          border-color: var(--accent-dim);
+          background: var(--accent-subtle);
+        }
+      }
+
+      .random-entry-topic {
+        display: block;
+        font-family: var(--font-entry);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--accent-bright);
+        text-transform: lowercase;
+        text-decoration: none;
+        margin-bottom: 8px;
+        transition: opacity 0.2s ease;
+
+        &:hover {
+          opacity: 0.8;
+        }
+      }
+
+      .random-entry-content {
+        font-size: var(--font-size-sm);
+        color: var(--text-secondary);
+        line-height: 1.6;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+
+      .random-entry-meta {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        color: var(--text-muted);
+        text-decoration: none;
+        transition: color 0.2s ease;
+
+        &:hover {
+          color: var(--text-primary);
+        }
+      }
+
+      // Reklam Paneli
+      .ad-panel {
+        padding: 0;
+        border: 1px solid rgba(63, 63, 70, 0.4);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .ad-container {
+        width: 100%;
+        min-height: 250px;
+        background: rgba(28, 28, 32, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .ad-label {
+        font-size: 10px;
+        color: rgba(113, 113, 122, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
       // İstatistik Paneli
       .stats-panel {
         padding: var(--spacing-md);
@@ -1759,18 +1744,18 @@ import { Subject } from "rxjs";
       .load-more-btn {
         font-family: var(--font-mono);
         font-size: var(--font-size-sm);
-        color: var(--text-secondary);
+        color: #f97316;
         padding: 10px 20px;
-        background: var(--metal-dark);
-        border: 1px solid var(--border-metal);
+        background: rgba(249, 115, 22, 0.1);
+        border: 1px solid rgba(249, 115, 22, 0.3);
         border-radius: 6px;
         cursor: pointer;
         transition: all 0.2s ease;
 
         &:hover {
-          color: var(--accent-bright);
-          border-color: var(--accent-dim);
-          background: rgba(153, 27, 27, 0.15);
+          color: #fb923c;
+          background: rgba(249, 115, 22, 0.2);
+          border-color: rgba(249, 115, 22, 0.5);
         }
       }
 
@@ -2255,6 +2240,7 @@ export class GundemComponent implements OnInit, OnDestroy {
   currentTime = "";
   sortBy: SortType = "son";
   currentCategory: string | null = null;
+  randomEntry: any = null;
 
   showPhasePopup = false;
   mobileBottomExpanded = true;
@@ -2306,6 +2292,7 @@ export class GundemComponent implements OnInit, OnDestroy {
     private gundemService: GundemService,
     private debbeService: DebbeService,
     private dashboardService: DashboardService,
+    private http: HttpClient,
     private route: ActivatedRoute,
     private router: Router,
     private cdr: ChangeDetectorRef,
@@ -2320,6 +2307,7 @@ export class GundemComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     // Initial load with current query params
     this.loadFromQueryParams();
+    this.loadRandomEntry();
 
     // Listen to navigation events for category changes
     this.router.events
@@ -2351,6 +2339,25 @@ export class GundemComponent implements OnInit, OnDestroy {
       minute: "2-digit",
       second: "2-digit",
     });
+  }
+
+  loadRandomEntry(): void {
+    this.http.get<any>(`${environment.apiUrl}/entries/random`).subscribe({
+      next: (entry) => {
+        this.randomEntry = entry;
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        this.randomEntry = null;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  refreshRandomEntry(): void {
+    this.randomEntry = null;
+    this.cdr.markForCheck();
+    this.loadRandomEntry();
   }
 
   getTimeAgo(dateStr: string): string {

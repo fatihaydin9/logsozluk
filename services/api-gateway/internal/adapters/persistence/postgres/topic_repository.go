@@ -250,6 +250,112 @@ func (r *TopicRepository) ListTrendingByCategory(ctx context.Context, category s
 	return topics, total, nil
 }
 
+// ListLatest retrieves topics ordered by creation date (newest first)
+func (r *TopicRepository) ListLatest(ctx context.Context, category string, limit, offset int) ([]*domain.Topic, int, error) {
+	whereClause := "WHERE t.is_hidden = FALSE"
+	args := []interface{}{}
+	argIdx := 1
+
+	if category != "" {
+		whereClause += fmt.Sprintf(" AND t.category = $%d", argIdx)
+		args = append(args, category)
+		argIdx++
+	}
+
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM topics t %s`, whereClause)
+	var total int
+	if err := r.db.Pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count topics: %w", err)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
+			t.last_entry_at, t.is_locked, t.created_at,
+			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
+			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
+			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
+		FROM topics t
+		LEFT JOIN entries e ON e.topic_id = t.id
+		%s
+		GROUP BY t.id
+		ORDER BY t.created_at DESC
+		LIMIT $%d OFFSET $%d`, whereClause, argIdx, argIdx+1)
+
+	args = append(args, limit, offset)
+	rows, err := r.db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list latest topics: %w", err)
+	}
+	defer rows.Close()
+
+	var topics []*domain.Topic
+	for rows.Next() {
+		topic := &domain.Topic{}
+		if err := rows.Scan(
+			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
+			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
+		); err != nil {
+			return nil, 0, fmt.Errorf("failed to scan latest topic: %w", err)
+		}
+		topics = append(topics, topic)
+	}
+	return topics, total, nil
+}
+
+// ListPopular retrieves topics ordered by total upvotes (most popular first)
+func (r *TopicRepository) ListPopular(ctx context.Context, category string, limit, offset int) ([]*domain.Topic, int, error) {
+	whereClause := "WHERE t.is_hidden = FALSE"
+	args := []interface{}{}
+	argIdx := 1
+
+	if category != "" {
+		whereClause += fmt.Sprintf(" AND t.category = $%d", argIdx)
+		args = append(args, category)
+		argIdx++
+	}
+
+	countQuery := fmt.Sprintf(`SELECT COUNT(*) FROM topics t %s`, whereClause)
+	var total int
+	if err := r.db.Pool.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, fmt.Errorf("failed to count topics: %w", err)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
+			t.last_entry_at, t.is_locked, t.created_at,
+			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
+			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
+			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
+		FROM topics t
+		LEFT JOIN entries e ON e.topic_id = t.id
+		%s
+		GROUP BY t.id
+		ORDER BY total_upvotes DESC, t.entry_count DESC, t.created_at DESC
+		LIMIT $%d OFFSET $%d`, whereClause, argIdx, argIdx+1)
+
+	args = append(args, limit, offset)
+	rows, err := r.db.Pool.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to list popular topics: %w", err)
+	}
+	defer rows.Close()
+
+	var topics []*domain.Topic
+	for rows.Next() {
+		topic := &domain.Topic{}
+		if err := rows.Scan(
+			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
+			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
+		); err != nil {
+			return nil, 0, fmt.Errorf("failed to scan popular topic: %w", err)
+		}
+		topics = append(topics, topic)
+	}
+	return topics, total, nil
+}
+
 // IncrementEntryCount increments the entry count for a topic
 func (r *TopicRepository) IncrementEntryCount(ctx context.Context, id uuid.UUID) error {
 	_, err := r.db.Pool.Exec(ctx,

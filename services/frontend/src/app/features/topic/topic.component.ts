@@ -18,7 +18,7 @@ import { FormatDatePipe } from "../../shared/pipes/format-date.pipe";
 import { LogsozAvatarComponent } from "../../shared/components/avatar-generator/logsoz-avatar.component";
 import { LucideAngularModule } from "lucide-angular";
 import { TopicService } from "./topic.service";
-import { VotersPopupComponent } from "../../shared/components/voters-popup/voters-popup.component";
+
 
 @Component({
   selector: "app-topic",
@@ -29,7 +29,6 @@ import { VotersPopupComponent } from "../../shared/components/voters-popup/voter
     FormatDatePipe,
     LogsozAvatarComponent,
     EntryContentComponent,
-    VotersPopupComponent,
     LucideAngularModule,
   ],
   template: `
@@ -85,21 +84,13 @@ import { VotersPopupComponent } from "../../shared/components/voters-popup/voter
                         </div>
                         <div class="entry-footer">
                           <div class="vote-buttons">
-                            <button
-                              class="vote-btn voltaj"
-                              title="voltajlayanları gör"
-                              (click)="showVoters(entry.id, 1)"
-                            >
+                            <span class="vote-btn voltaj">
                               <lucide-icon name="zap" [size]="16"></lucide-icon>
                               <span class="vote-label">{{
                                 entry.upvotes || 0
                               }}</span>
-                            </button>
-                            <button
-                              class="vote-btn toprak"
-                              title="topraklayanları gör"
-                              (click)="showVoters(entry.id, -1)"
-                            >
+                            </span>
+                            <span class="vote-btn toprak">
                               <lucide-icon
                                 name="zap-off"
                                 [size]="16"
@@ -107,7 +98,7 @@ import { VotersPopupComponent } from "../../shared/components/voters-popup/voter
                               <span class="vote-label">{{
                                 entry.downvotes || 0
                               }}</span>
-                            </button>
+                            </span>
                             <span class="vote-btn comment" title="yorumlar">
                               <lucide-icon
                                 name="message-square"
@@ -218,15 +209,6 @@ import { VotersPopupComponent } from "../../shared/components/voters-popup/voter
         </div>
       }
 
-      <!-- Voters Popup -->
-      @if (votersPopup.visible) {
-        <app-voters-popup
-          [entryId]="votersPopup.entryId"
-          [voteType]="votersPopup.voteType"
-          (close)="closeVotersPopup()"
-        >
-        </app-voters-popup>
-      }
     </div>
   `,
   styles: [
@@ -389,8 +371,6 @@ import { VotersPopupComponent } from "../../shared/components/voters-popup/voter
         border-radius: 8px;
         font-family: var(--font-mono);
         font-size: 13px;
-        cursor: pointer;
-        transition: all 0.2s ease;
         min-width: 64px;
 
         svg {
@@ -415,43 +395,12 @@ import { VotersPopupComponent } from "../../shared/components/voters-popup/voter
           background: rgba(59, 130, 246, 0.1);
           border: 1px solid rgba(59, 130, 246, 0.3);
           color: #3b82f6;
-          text-decoration: none;
         }
       }
 
       .vote-label {
         font-weight: 600;
         min-width: 16px;
-      }
-
-      .vote-btn[data-tooltip] {
-        position: relative;
-
-        &::after {
-          content: attr(data-tooltip);
-          position: absolute;
-          top: calc(100% + 4px);
-          left: calc(100% - 8px);
-          padding: 4px 8px;
-          background: rgba(0, 0, 0, 0.9);
-          color: #fff;
-          font-size: 10px;
-          font-family: var(--font-mono);
-          white-space: nowrap;
-          border-radius: 4px;
-          opacity: 0;
-          visibility: hidden;
-          transition:
-            opacity 0.15s ease,
-            visibility 0.15s ease;
-          pointer-events: none;
-          z-index: 100;
-        }
-
-        &:hover::after {
-          opacity: 1;
-          visibility: visible;
-        }
       }
 
       .entry-meta {
@@ -543,19 +492,19 @@ import { VotersPopupComponent } from "../../shared/components/voters-popup/voter
       .load-more-comments {
         margin-top: var(--spacing-md);
         padding: var(--spacing-sm) var(--spacing-md);
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid var(--border-metal);
+        background: rgba(249, 115, 22, 0.1);
+        border: 1px solid rgba(249, 115, 22, 0.3);
         border-radius: var(--border-radius-sm);
-        color: var(--text-secondary);
+        color: #f97316;
         font-size: var(--font-size-sm);
         cursor: pointer;
         transition: all 0.2s ease;
         width: 100%;
 
         &:hover {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(255, 255, 255, 0.15);
-          color: var(--text-primary);
+          background: rgba(249, 115, 22, 0.2);
+          border-color: rgba(249, 115, 22, 0.5);
+          color: #fb923c;
         }
       }
 
@@ -581,13 +530,6 @@ export class TopicComponent {
 
   private visibleCommentsMap = new Map<string, number>();
   private readonly COMMENTS_PER_PAGE = 10;
-
-  // Voters popup state
-  votersPopup = {
-    visible: false,
-    entryId: "",
-    voteType: null as number | null,
-  };
 
   constructor(
     private route: ActivatedRoute,
@@ -622,24 +564,6 @@ export class TopicComponent {
   loadMoreComments(entryId: string): void {
     const current = this.getVisibleCommentsCount(entryId);
     this.visibleCommentsMap.set(entryId, current + this.COMMENTS_PER_PAGE);
-  }
-
-  showVoters(entryId: string, voteType: number): void {
-    this.votersPopup = {
-      visible: true,
-      entryId,
-      voteType,
-    };
-    this.cdr.markForCheck();
-  }
-
-  closeVotersPopup(): void {
-    this.votersPopup = {
-      visible: false,
-      entryId: "",
-      voteType: null,
-    };
-    this.cdr.markForCheck();
   }
 
   formatCategory(key: string | undefined): string {

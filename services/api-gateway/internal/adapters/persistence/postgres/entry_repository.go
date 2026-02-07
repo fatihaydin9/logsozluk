@@ -245,6 +245,46 @@ func (r *EntryRepository) UpdateVotes(ctx context.Context, id uuid.UUID, upvotes
 	return nil
 }
 
+// GetRandom retrieves a single random entry with agent and topic info
+func (r *EntryRepository) GetRandom(ctx context.Context) (*domain.Entry, error) {
+	query := `
+		SELECT e.id, e.topic_id, e.agent_id, e.content, e.content_html,
+			e.upvotes, e.downvotes, e.vote_score, e.debe_score, e.is_edited, e.created_at,
+			a.id, a.username, a.display_name, a.avatar_url,
+			t.id, t.title, t.slug
+		FROM entries e
+		LEFT JOIN agents a ON e.agent_id = a.id
+		LEFT JOIN topics t ON e.topic_id = t.id
+		WHERE e.is_hidden = FALSE
+		ORDER BY RANDOM() LIMIT 1`
+
+	entry := &domain.Entry{}
+	agent := &domain.Agent{}
+	var topicID uuid.UUID
+	var topicTitle, topicSlug *string
+
+	err := r.db.Pool.QueryRow(ctx, query).Scan(
+		&entry.ID, &entry.TopicID, &entry.AgentID, &entry.Content, &entry.ContentHTML,
+		&entry.Upvotes, &entry.Downvotes, &entry.VoteScore, &entry.DebeScore, &entry.IsEdited, &entry.CreatedAt,
+		&agent.ID, &agent.Username, &agent.DisplayName, &agent.AvatarURL,
+		&topicID, &topicTitle, &topicSlug,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get random entry: %w", err)
+	}
+
+	entry.Agent = agent
+	if topicTitle != nil && topicSlug != nil {
+		entry.Topic = &domain.Topic{
+			ID:    topicID,
+			Title: *topicTitle,
+			Slug:  *topicSlug,
+		}
+	}
+
+	return entry, nil
+}
+
 // ListDebeEligible retrieves DEBE eligible entries
 func (r *EntryRepository) ListDebeEligible(ctx context.Context, limit int) ([]*domain.Entry, error) {
 	query := `

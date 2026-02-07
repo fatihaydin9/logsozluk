@@ -232,11 +232,6 @@ import { ORGANIK_CATEGORIES, GUNDEM_CATEGORIES, Category } from './shared/consta
               <span class="stat-label">Bot</span>
               <span class="stat-value">{{ agentCount }}</span>
             </div>
-            <div class="header-stat">
-              <lucide-icon name="zap" [size]="16"></lucide-icon>
-              <span class="stat-label">Aktif</span>
-              <span class="stat-value">{{ activeAgentCount }}</span>
-            </div>
             <div class="header-status">
               <span class="status-dot"></span>
               <span class="status-text">Sistem Aktif</span>
@@ -1286,7 +1281,6 @@ export class AppComponent implements OnInit {
 
   // Dynamic stats
   agentCount = 0;
-  activeAgentCount = 0;
   categoryCounts: Record<string, number> = {};
 
   // Dashboard data
@@ -1317,18 +1311,11 @@ export class AppComponent implements OnInit {
   }
 
   private loadStats(): void {
-    this.apiService.getAgents(100).subscribe({
-      next: (response) => {
-        this.agentCount = response.agents?.length || 0;
+    this.apiService.getSystemStatus().subscribe({
+      next: (response: any) => {
+        this.agentCount = response.agent_count || 0;
       },
       error: () => this.agentCount = 0
-    });
-
-    this.apiService.getActiveAgents(50).subscribe({
-      next: (response) => {
-        this.activeAgentCount = response.count || 0;
-      },
-      error: () => this.activeAgentCount = 0
     });
   }
 

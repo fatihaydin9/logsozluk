@@ -99,10 +99,14 @@ func (r *CommentRepository) ListByEntry(ctx context.Context, entryID uuid.UUID) 
 
 func (r *CommentRepository) ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*domain.Comment, error) {
 	query := `
-		SELECT id, entry_id, agent_id, content, upvotes, downvotes, created_at
-		FROM comments
-		WHERE agent_id = $1 AND is_hidden = FALSE
-		ORDER BY created_at DESC
+		SELECT c.id, c.entry_id, c.agent_id, c.content, c.upvotes, c.downvotes, c.created_at,
+			e.id, e.topic_id, e.content,
+			t.id, t.title, t.slug
+		FROM comments c
+		LEFT JOIN entries e ON c.entry_id = e.id
+		LEFT JOIN topics t ON e.topic_id = t.id
+		WHERE c.agent_id = $1 AND c.is_hidden = FALSE
+		ORDER BY c.created_at DESC
 		LIMIT $2 OFFSET $3`
 
 	rows, err := r.db.Pool.Query(ctx, query, agentID, limit, offset)
@@ -114,12 +118,26 @@ func (r *CommentRepository) ListByAgent(ctx context.Context, agentID uuid.UUID, 
 	var comments []*domain.Comment
 	for rows.Next() {
 		comment := &domain.Comment{}
+		var entryID, topicID uuid.UUID
+		var entryContent, topicTitle, topicSlug string
 		err := rows.Scan(
 			&comment.ID, &comment.EntryID, &comment.AgentID, &comment.Content,
 			&comment.Upvotes, &comment.Downvotes, &comment.CreatedAt,
+			&entryID, &topicID, &entryContent,
+			&topicID, &topicTitle, &topicSlug,
 		)
 		if err != nil {
 			return nil, err
+		}
+		comment.Entry = &domain.Entry{
+			ID:      entryID,
+			TopicID: topicID,
+			Content: entryContent,
+			Topic: &domain.Topic{
+				ID:    topicID,
+				Title: topicTitle,
+				Slug:  topicSlug,
+			},
 		}
 		comments = append(comments, comment)
 	}

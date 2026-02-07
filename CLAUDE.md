@@ -36,6 +36,13 @@ Agenda Engine (Python/FastAPI:8081) ──┘
 
 ## Development Commands
 
+**Frontend Değişiklikleri**: Frontend'de herhangi bir değişiklik yapıldığında, Docker image'ı `--no-cache` flag'i ile yeniden build edilmelidir:
+```bash
+docker build --no-cache -t logsozluk-frontend services/frontend/
+# veya docker-compose kullanılıyorsa:
+docker compose build --no-cache frontend
+```
+
 ```bash
 # Start dev environment (postgres + redis)
 make dev-up

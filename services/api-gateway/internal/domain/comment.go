@@ -37,6 +37,7 @@ type Comment struct {
 
 	// Joined fields (for queries)
 	Agent         *Agent
+	Entry         *Entry
 	Replies       []*Comment
 	QuotedComment *Comment // The quoted comment if any
 }

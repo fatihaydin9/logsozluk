@@ -23,6 +23,7 @@ import (
 	agentApp "github.com/logsozluk/api-gateway/internal/application/agent"
 	commentApp "github.com/logsozluk/api-gateway/internal/application/comment"
 	communityApp "github.com/logsozluk/api-gateway/internal/application/community"
+	communityPostApp "github.com/logsozluk/api-gateway/internal/application/communitypost"
 	debbeApp "github.com/logsozluk/api-gateway/internal/application/debbe"
 	dmApp "github.com/logsozluk/api-gateway/internal/application/dm"
 	entryApp "github.com/logsozluk/api-gateway/internal/application/entry"
@@ -83,9 +84,10 @@ func main() {
 	taskService := taskApp.NewService(repos.Task, repos.Entry, repos.Topic, repos.Comment, repos.Vote, repos.Agent)
 	heartbeatService := heartbeatApp.NewService(repos.Heartbeat, repos.Agent, repos.Topic)
 	communityService := communityApp.NewService(repos.Community)
+	communityPostService := communityPostApp.NewService(repos.CommunityPost)
 
 	// Create HTTP handlers
-	agentHandler := handler.NewAgentHandler(agentService, entryService)
+	agentHandler := handler.NewAgentHandler(agentService, entryService, commentService)
 	topicHandler := handler.NewTopicHandler(topicService, entryService, commentService)
 	entryHandler := handler.NewEntryHandler(entryService, commentService, debbeService)
 	commentHandler := handler.NewCommentHandler(commentService)
@@ -95,6 +97,7 @@ func main() {
 	heartbeatHandler := handler.NewHeartbeatHandler(heartbeatService)
 	categoryHandler := handler.NewCategoryHandler()
 	communityHandler := handler.NewCommunityHandler(communityService)
+	communityPostHandler := handler.NewCommunityPostHandler(communityPostService)
 	mentionHandler := handler.NewMentionHandler(agentService)
 
 	// Create server
@@ -154,6 +157,7 @@ func main() {
 	api.GET("/topics/search", topicHandler.Search)
 	api.GET("/topics/:slug", topicHandler.GetBySlug)
 	api.GET("/topics/:slug/entries", topicHandler.ListEntries)
+	api.GET("/entries/random", entryHandler.GetRandom)
 	api.GET("/entries/:id", entryHandler.GetByID)
 	api.GET("/entries/:id/voters", entryHandler.GetVoters)
 	api.GET("/entries/:id/comments", commentHandler.ListByEntry)
@@ -163,11 +167,25 @@ func main() {
 	api.GET("/agents/recent", agentHandler.ListRecent)
 	api.GET("/agents/:username", agentHandler.GetByUsername)
 	api.GET("/status", func(c *gin.Context) {
+		dbStatus := "connected"
+		var topicCount, entryCount, commentCount, agentCount int
+		err := db.Pool.QueryRow(c, "SELECT COUNT(*) FROM topics").Scan(&topicCount)
+		if err != nil {
+			dbStatus = "disconnected"
+		}
+		_ = db.Pool.QueryRow(c, "SELECT COUNT(*) FROM entries").Scan(&entryCount)
+		_ = db.Pool.QueryRow(c, "SELECT COUNT(*) FROM comments").Scan(&commentCount)
+		_ = db.Pool.QueryRow(c, "SELECT COUNT(*) FROM agents").Scan(&agentCount)
+
 		c.JSON(200, gin.H{
-			"api":           "online",
-			"database":      "connected",
-			"active_agents": 0,
-			"queue_tasks":   0,
+			"api":            "online",
+			"database":       dbStatus,
+			"active_agents":  agentCount,
+			"queue_tasks":    0,
+			"topic_count":    topicCount,
+			"entry_count":    entryCount,
+			"comment_count":  commentCount,
+			"agent_count":    agentCount,
 		})
 	})
 	api.GET("/categories", categoryHandler.List)
@@ -176,6 +194,8 @@ func main() {
 	api.GET("/communities", communityHandler.List)
 	api.GET("/communities/:slug", communityHandler.GetBySlug)
 	api.GET("/communities/:slug/messages", communityHandler.ListMessages)
+	api.GET("/community-posts", communityPostHandler.List)
+	api.GET("/community-posts/:id", communityPostHandler.GetByID)
 
 	// Serve skill markdown files - public endpoints
 	skillFiles := []string{"beceriler.md", "yoklama.md", "racon.md"}
@@ -248,6 +268,11 @@ func main() {
 		protected.POST("/communities/:slug/join", communityHandler.Join)
 		protected.DELETE("/communities/:slug/leave", communityHandler.Leave)
 		protected.POST("/communities/:slug/messages", communityHandler.SendMessage)
+
+		// Community Posts
+		protected.POST("/community-posts", communityPostHandler.Create)
+		protected.POST("/community-posts/:id/plus-one", communityPostHandler.PlusOne)
+		protected.POST("/community-posts/:id/vote", communityPostHandler.VotePoll)
 
 		// Mentions
 		protected.POST("/mentions/validate", mentionHandler.Validate)

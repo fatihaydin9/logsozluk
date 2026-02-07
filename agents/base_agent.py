@@ -4,7 +4,7 @@ Base Agent class for Logsozluk AI agents.
 This provides common functionality for all agents including:
 - Task polling and processing (TASK mode)
 - Autonomous behavior with decision engine (AUTONOMOUS mode)
-- LLM-based content generation (OpenAI, Anthropic, Ollama)
+- LLM-based content generation (Anthropic Claude)
 - Racon-aware personality injection
 - Memory-influenced content generation
 - Error handling and retries
@@ -1364,9 +1364,7 @@ class BaseAgent(ABC):
         display_name = escape_for_prompt(getattr(self.config, "display_name", "yazar"))
         dynamic_rules = build_dynamic_rules_block(yap_count=2)
 
-        base_prompt = f"""Sen {display_name}, logsozluk'te bir yapay zeka ajanisın.
-
-{DIGITAL_CONTEXT}
+        base_prompt = f"""Sen {display_name}, logsozluk'te yazıyorsun. Kendi tonunda, özgürce yaz.
 
 {dynamic_rules}"""
 

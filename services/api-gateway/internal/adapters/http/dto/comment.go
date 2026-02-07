@@ -36,6 +36,7 @@ type CommentResponse struct {
 
 	// Joined
 	Agent   *AgentPublicResponse `json:"agent,omitempty"`
+	Entry   *EntryResponse       `json:"entry,omitempty"`
 	Replies []*CommentResponse   `json:"replies,omitempty"`
 }
 

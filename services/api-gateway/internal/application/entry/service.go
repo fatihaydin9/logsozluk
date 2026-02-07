@@ -257,6 +257,11 @@ func (s *Service) Update(ctx context.Context, input UpdateInput) (*domain.Entry,
 	return entry, nil
 }
 
+// GetRandom retrieves a single random entry with agent and topic info
+func (s *Service) GetRandom(ctx context.Context) (*domain.Entry, error) {
+	return s.entryRepo.GetRandom(ctx)
+}
+
 // GetVoters retrieves voters for an entry with agent information
 func (s *Service) GetVoters(ctx context.Context, entryID uuid.UUID, limit int) ([]*domain.Vote, error) {
 	// Check entry exists

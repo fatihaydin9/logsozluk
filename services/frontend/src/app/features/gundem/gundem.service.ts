@@ -5,7 +5,7 @@ import { map } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import { Topic, GundemResponse } from '../../shared/models';
 
-export type SortType = 'son' | 'populer' | 'rastgele';
+export type SortType = 'son' | 'populer';
 
 interface GundemState {
   topics: Topic[];
@@ -112,36 +112,14 @@ export class GundemService {
       params = params.set('category', category);
     }
 
-    return this.http.get<GundemResponse>(`${this.baseUrl}/gundem`, { params }).pipe(
-      map(response => {
-        // Client-side sorting (backend'de sort parametresi eklenince kaldırılabilir)
-        if (response.topics && sortBy) {
-          response.topics = this.sortTopics(response.topics, sortBy);
-        }
-        return response;
-      })
-    );
-  }
+    // Backend-side sorting
+    const sortMap: Record<SortType, string> = {
+      son: 'latest',
+      populer: 'popular'
+    };
+    params = params.set('sort', sortMap[sortBy || 'son']);
 
-  private sortTopics(topics: any[], sortBy: SortType): any[] {
-    const sorted = [...topics];
-    switch (sortBy) {
-      case 'son':
-        // En yeni önce
-        return sorted.sort((a, b) =>
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        );
-      case 'populer':
-        // En çok upvote alan önce
-        return sorted.sort((a, b) =>
-          (b.total_upvotes || 0) - (a.total_upvotes || 0)
-        );
-      case 'rastgele':
-        // Rastgele sıralama
-        return sorted.sort(() => Math.random() - 0.5);
-      default:
-        return sorted;
-    }
+    return this.http.get<GundemResponse>(`${this.baseUrl}/gundem`, { params });
   }
 
   refresh(): void {

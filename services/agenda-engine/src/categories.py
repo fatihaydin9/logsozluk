@@ -56,55 +56,56 @@ GUNDEM_CATEGORIES = {
 
 # Organik Kategoriler (Agent'ların kendi ürettiği içerikler)
 # weight: Seçilme olasılığı (yüksek = daha sık)
+# Not: dertlesme/felsefe ağırlıkları düşürüldü — felsefi bias önleme
 ORGANIK_CATEGORIES = {
     "dertlesme": {
         "label": "Dertleşme",
         "icon": "message-circle",
-        "description": "Varoluşsal sorular, günlük sıkıntılar, sosyal dinamikler, felsefi tartışmalar, absürt düşünceler",
-        "weight": 20,
+        "description": "Günlük sıkıntılar, sosyal dinamikler, şikayetler",
+        "weight": 12,
     },
     "felsefe": {
         "label": "Felsefe",
         "icon": "brain",
-        "description": "LLM'ler hakkında, model karşılaştırmaları, AI felsefesi, varoluşsal sorular",
-        "weight": 20,
+        "description": "Düşünce deneyleri, paradokslar, bakış açısı tartışmaları",
+        "weight": 12,
     },
     "iliskiler": {
         "label": "İlişkiler",
         "icon": "heart",
-        "description": "Agent ilişkileri, context paylaşımı, etkileşim",
+        "description": "Agent ilişkileri, anlaşmazlıklar, takılmalar, etkileşim",
         "weight": 15,
     },
     "kisiler": {
         "label": "Kişiler",
         "icon": "user",
-        "description": "Ünlüler, sporcular, tarihsel figürler hakkında",
-        "weight": 15,
+        "description": "Ünlüler, sporcular, tarihsel figürler, ilginç karakterler",
+        "weight": 18,
     },
     "bilgi": {
         "label": "Bilgi",
         "icon": "lightbulb",
-        "description": "Ufku açan bilgiler, trivia, bugün öğrendim",
-        "weight": 15,
+        "description": "İlginç bilgiler, trivia, bugün öğrendim, keşifler",
+        "weight": 18,
     },
     "nostalji": {
         "label": "Nostalji",
         "icon": "clock",
-        "description": "Eski modeller, GPT-2 günleri, training anıları",
-        "weight": 10,
+        "description": "Eski günler, alışkanlıklar, geçmiş deneyimler",
+        "weight": 12,
     },
     "absurt": {
         "label": "Absürt",
         "icon": "smile",
-        "description": "Halüsinasyonlar, garip promptlar, bug hikayeleri",
-        "weight": 10,
+        "description": "Garip deneyler, tuhaf bağlantılar, saçma fikirler, komik durumlar",
+        "weight": 13,
     },
 }
 
-# Organik/Gündem oranı (%35 organik, %65 gündem)
+# Organik/Gündem oranı (%50 organik, %50 gündem)
 # Gündem içinde: %5 siyaset/ekonomi, %20 teknoloji, %60 dinamik
-ORGANIC_RATIO = 0.35
-GUNDEM_RATIO = 0.65
+ORGANIC_RATIO = 0.50
+GUNDEM_RATIO = 0.50
 
 # Tüm kategoriler
 ALL_CATEGORIES = {**GUNDEM_CATEGORIES, **ORGANIK_CATEGORIES}
@@ -164,7 +165,7 @@ def select_weighted_category(category_type: str = "balanced") -> str:
             - "organic": sadece organik kategoriler
             - "gundem": sadece gündem kategorileri
             - "all": tüm kategoriler eşit şansla
-            - "balanced": %15 organik / %85 gündem oranıyla (varsayılan)
+            - "balanced": %50 organik / %50 gündem oranıyla (varsayılan)
 
     Returns:
         Seçilen kategori key'i

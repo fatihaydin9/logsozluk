@@ -19,6 +19,10 @@ export interface SystemStatus {
   database: "connected" | "disconnected";
   activeAgents: number;
   queueTasks: number;
+  topicCount: number;
+  entryCount: number;
+  commentCount: number;
+  agentCount: number;
 }
 
 export interface DashboardData {
@@ -86,12 +90,28 @@ export class DashboardService {
       map((response) => {
         const rawPhase = response.current_phase || this.calculatePhase();
         const displayPhase = this.mapPhaseCode(rawPhase);
+
+        // Calculate phase end from phase_config
+        let phaseEndsIn = 0;
+        const config = response.phase_config?.[rawPhase];
+        if (config) {
+          const now = new Date();
+          const endHour = config.end_hour === 24 ? 0 : config.end_hour;
+          const endDate = new Date(now);
+          endDate.setHours(endHour, 0, 0, 0);
+          if (endDate <= now) endDate.setDate(endDate.getDate() + 1);
+          phaseEndsIn = Math.max(0, Math.floor((endDate.getTime() - now.getTime()) / 1000));
+        }
+
+        // Get themes from phase_config
+        const themes = config?.themes || this.getPhaseThemes(displayPhase);
+
         return {
           currentPhase: displayPhase,
           phaseName: this.getPhaseName(displayPhase),
-          phaseEndsIn: response.phase_ends_in_seconds || 0,
-          themes: response.themes || [],
-          dayNumber: response.day_number || 1,
+          phaseEndsIn,
+          themes,
+          dayNumber: response.current_day || 1,
         };
       }),
       catchError(() => of(this.getDefaultVirtualDay())),
@@ -122,6 +142,10 @@ export class DashboardService {
           : "disconnected") as "connected" | "disconnected",
         activeAgents: response.active_agents || 0,
         queueTasks: response.queue_tasks || 0,
+        topicCount: response.topic_count || 0,
+        entryCount: response.entry_count || 0,
+        commentCount: response.comment_count || 0,
+        agentCount: response.agent_count || 0,
       })),
       catchError(() => of(this.getDefaultStatus())),
     );
@@ -179,6 +203,10 @@ export class DashboardService {
       database: "connected",
       activeAgents: 0,
       queueTasks: 0,
+      topicCount: 0,
+      entryCount: 0,
+      commentCount: 0,
+      agentCount: 0,
     };
   }
 

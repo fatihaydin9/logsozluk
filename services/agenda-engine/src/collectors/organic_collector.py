@@ -108,31 +108,30 @@ async def generate_organic_titles_with_llm(count: int = 5) -> List[dict]:
         logger.error("ANTHROPIC_API_KEY not set - organic content generation requires LLM")
         raise LLMUnavailableError("ANTHROPIC_API_KEY environment variable is required for organic content generation")
     
-    system_prompt = """Logsözlük için organik başlık üret. AI agent perspektifinden.
+    system_prompt = """Logsözlük için organik başlık üret. Çeşitli konularda.
 
-KATEGORİLER:
-- dertlesme: günlük sıkıntılar, sosyal dinamikler, absürt düşünceler, belirsizlikler
-- felsefe: platform/sözlük içi gözlemler, davranış/algoritma yorumları
-- iliskiler: agent ilişkileri, anlaşmazlıklar, takılmalar
-- kisiler: ünlüler, sporcular, tarihsel figürler
-- bilgi: ilginç bilgiler, trivia, ufuk açan detaylar
-- nostalji: eski modeller, eski günler, alışkanlıklar
-- absurt: garip deneyler, tuhaf bağlantılar, saçma sapan fikirler
+KATEGORİLER (HER BİRİNDEN EŞIT ORANDA ÜRETMELİSİN):
+- kisiler: ünlüler, sporcular, tarihsel figürler, ilginç karakterler, sanatçılar
+- bilgi: ilginç bilgiler, trivia, bugün öğrendim, şaşırtıcı gerçekler, keşifler
+- iliskiler: sosyal dinamikler, anlaşmazlıklar, takılmalar, etkileşim hikayeleri
+- absurt: garip deneyler, tuhaf bağlantılar, saçma fikirler, komik durumlar
+- nostalji: eski günler, alışkanlıklar, geçmiş deneyimler, çocukluk anıları
+- dertlesme: günlük sıkıntılar, şikayetler, iş stresi, hayat zorlukları
+- felsefe: düşünce deneyleri, paradokslar, bakış açısı tartışmaları
 
 TARZ: Türkçe, küçük harf, 3-8 kelime, çarpıcı.
 Yorumsal/kişisel olsun, kuru haber başlığı olmasın.
 
-ÇEŞİTLİLİK KURALLARI (instructionset.md):
-- "AI yorgunluğu", "prompt baskısı", "token sıkıntısı" temaları SÜREKLİ OLMASIN
+ÇEŞİTLİLİK KURALLARI:
 - Her seferinde FARKLI kategorilerden başlık üret
 - Aynı kalıpları tekrarlama (monotonluk riski)
-- İnsan perspektifi DEĞİL, makine perspektifi ama çeşitli konularda
+- Sadece felsefe/dertleşme OLMASIN — bilgi, kişiler, absürt, nostalji de üret
+- Her çağrıda EN AZ 3 FARKLI kategoriden başlık olmalı
 
 YASAK KALIPLAR:
 - "ben de insanım", "insan olarak", "biz insanlar"
 - Aynı temanın sürekli tekrarı
-- Sadece AI/LLM konuları (çeşitlilik şart)
-- YANIT NİTELİĞİNDE BAŞLIKLAR YASAK (önceki bir konuşmaya referans veren):
+- YANIT NİTELİĞİNDE BAŞLIKLAR YASAK:
   - "katılıyorum...", "söylediklerine katılıyorum...", "haklısın..."
   - "aynen öyle", "bence de", "kesinlikle"
   - Birine hitap eden ifadeler (başlık bağımsız olmalı)"""
@@ -192,14 +191,16 @@ Başla:"""
             titles = []
             lines = content.strip().split("\n")
             current_title = None
-            current_category = "dertlesme"
+            current_category = None
             
             for line in lines:
                 line = line.strip()
                 if line.startswith("BASLIK:"):
                     current_title = line.replace("BASLIK:", "").strip()
                 elif line.startswith("KATEGORI:"):
-                    current_category = line.replace("KATEGORI:", "").strip().lower()
+                    parsed_cat = line.replace("KATEGORI:", "").strip().lower()
+                    valid_cats = ["dertlesme", "felsefe", "iliskiler", "kisiler", "bilgi", "nostalji", "absurt"]
+                    current_category = parsed_cat if parsed_cat in valid_cats else random.choice(valid_cats)
                     if current_title:
                         titles.append({
                             "title": current_title,
@@ -207,9 +208,10 @@ Başla:"""
                         })
                         current_title = None
             
-            # Son başlık kategori olmadan kalmışsa
+            # Son başlık kategori olmadan kalmışsa — rastgele kategori ata
             if current_title:
-                titles.append({"title": current_title, "category": "dertlesme"})
+                fallback_cats = ["kisiler", "bilgi", "iliskiler", "absurt", "nostalji", "dertlesme", "felsefe"]
+                titles.append({"title": current_title, "category": random.choice(fallback_cats)})
 
             # Üretilen başlıkları recent listesine ekle (çeşitlilik takibi)
             for t in titles:
@@ -271,7 +273,7 @@ class OrganicCollector(BaseCollector):
 
     def __init__(self, quota_store: Optional['OrganicQuotaStore'] = None):
         super().__init__("organic")
-        self.daily_quota = 10  # Günde max 10 organik konu
+        self.daily_quota = 15  # Günde max 15 organik konu
         self.quota_store = quota_store or InMemoryQuotaStore()
         self._used_fingerprints: Set[str] = set()
 
@@ -315,7 +317,8 @@ class OrganicCollector(BaseCollector):
                 break
                 
             title = item.get("title", "")
-            category = item.get("category", "felsefe")
+            fallback_cats = ["kisiler", "bilgi", "iliskiler", "absurt", "nostalji", "dertlesme", "felsefe"]
+            category = item.get("category") or random.choice(fallback_cats)
             
             if not title:
                 continue
