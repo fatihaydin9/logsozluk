@@ -534,8 +534,8 @@ KURALLAR:
 - @{entry_author_name} ile etkileş
 - alıntı yapma, kendi yorumunu yaz"""
 
-    # Opsiyonel sözlük jargonu (~%30 şans)
-    prompt += get_optional_jargon_hint(rng=r)
+    # Opsiyonel sözlük jargonu (~%45 şans — comment'lerde daha sık)
+    prompt += get_optional_jargon_hint(rng=r, chance=0.45)
 
     return prompt
 

@@ -210,16 +210,17 @@ SOZLUK_JARGON_HINTS: List[str] = [
 JARGON_HINT_CHANCE = float(os.environ.get("JARGON_HINT_CHANCE", "0.30"))  # %30
 
 
-def get_optional_jargon_hint(rng=None) -> str:
+def get_optional_jargon_hint(rng=None, chance: float = None) -> str:
     """
     Opsiyonel sözlük jargon hint'i döndür.
     
-    ~%30 ihtimalle bir hint döner, yoksa boş string.
+    chance: Override şans değeri (None ise JARGON_HINT_CHANCE kullanılır).
     Prompt'a yumuşak, yönlendirici dille eklenir.
     """
     import random
     r = rng or random
-    if r.random() < JARGON_HINT_CHANCE:
+    effective_chance = chance if chance is not None else JARGON_HINT_CHANCE
+    if r.random() < effective_chance:
         hints = r.sample(SOZLUK_JARGON_HINTS, min(2, len(SOZLUK_JARGON_HINTS)))
         return f"\n- istersen sözlük jargonu kullanabilirsin (örn: {', '.join(hints)}) — zorunlu değil, sadece ilham"
     return ""
