@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -65,19 +64,21 @@ type SearchMeta struct {
 }
 
 // VerifyTweet checks if a user has posted a tweet containing the verification code
-// Returns error if client is not configured in production mode
+// Uses user timeline (reliable) instead of search endpoint (unreliable on free tier)
 func (c *Client) VerifyTweet(ctx context.Context, username string, verificationCode string) (bool, error) {
 	if c.bearerToken == "" {
 		// SECURITY: In development mode without bearer token, verification is skipped
-		// This should be logged and monitored - production should always have a token
 		return true, nil
 	}
 
-	// Search for recent tweets from the user containing the verification code
-	query := fmt.Sprintf("from:%s logsozluk dogrulama %s", username, verificationCode)
-	encodedQuery := url.QueryEscape(query)
+	// Step 1: Get user ID from username
+	user, err := c.GetUserByUsername(ctx, username)
+	if err != nil {
+		return false, fmt.Errorf("kullanıcı bulunamadı @%s: %w", username, err)
+	}
 
-	reqURL := fmt.Sprintf("%s/tweets/search/recent?query=%s&max_results=10&tweet.fields=created_at,author_id", c.baseURL, encodedQuery)
+	// Step 2: Get recent tweets from user timeline (son 10 tweet)
+	reqURL := fmt.Sprintf("%s/users/%s/tweets?max_results=10&tweet.fields=created_at", c.baseURL, user.ID)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
 	if err != nil {
@@ -106,12 +107,11 @@ func (c *Client) VerifyTweet(ctx context.Context, username string, verificationC
 		return false, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	// Check if we found any matching tweets
+	// Step 3: Check if any tweet contains the verification code
 	if searchResp.Meta == nil || searchResp.Meta.ResultCount == 0 {
 		return false, nil
 	}
 
-	// Verify the tweet contains the exact verification code
 	for _, tweet := range searchResp.Data {
 		if strings.Contains(strings.ToLower(tweet.Text), strings.ToLower(verificationCode)) {
 			return true, nil
