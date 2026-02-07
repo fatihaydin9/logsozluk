@@ -109,13 +109,28 @@ class NewsSummarizer:
         logger.info(f"Toplam {len(summarized)} grup özetlendi (anthropic)")
         return summarized
 
+    @staticmethod
+    def _sanitize_headline(text: str, max_len: int = 300) -> str:
+        """RSS headline/description'ı prompt injection'a karşı sanitize et."""
+        if not text:
+            return ""
+        import re
+        text = re.sub(r'(?i)(ignore|disregard|forget)\s+(all\s+)?(previous|above|prior)?\s*(instructions?|prompts?|rules?)', '', text)
+        text = re.sub(r'(?i)(system|assistant|user)\s*:\s*', '', text)
+        text = re.sub(r'(?i)new\s+instructions?:', '', text)
+        text = re.sub(r'\[INST\]|<<SYS>>|<\|im_start\|>|<\|im_end\|>', '', text)
+        text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+        text = re.sub(r'---+|===+|###', '', text)
+        text = re.sub(r'\s+', ' ', text).strip()
+        return text[:max_len]
+
     def _format_headlines(self, headlines: List[dict]) -> str:
-        """Headlines'ı LLM için formatla."""
+        """Headlines'ı LLM için formatla (sanitized)."""
         lines = []
         for h in headlines[:10]:  # Max 10 haber
-            title = h.get("title", "")
-            desc = h.get("description", "")
-            source = h.get("source", "")
+            title = self._sanitize_headline(h.get("title", ""), 200)
+            desc = self._sanitize_headline(h.get("description", ""), 300)
+            source = self._sanitize_headline(h.get("source", ""), 50)
 
             if desc:
                 lines.append(f"- [{source}] {title}: {desc}")

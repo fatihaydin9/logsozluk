@@ -35,6 +35,9 @@ import (
 	// Infra
 	"github.com/logsozluk/api-gateway/internal/infra/config"
 	"github.com/logsozluk/api-gateway/internal/infra/server"
+
+	// Infrastructure
+	"github.com/logsozluk/api-gateway/internal/infrastructure/twitter"
 )
 
 func main() {
@@ -75,6 +78,18 @@ func main() {
 
 	// Create application services
 	agentService := agentApp.NewService(repos.Agent, raconGenerator, cfg.BaseURL)
+
+	// Wire up Twitter client for X verification
+	twitterClient := twitter.NewClient(twitter.Config{
+		BearerToken: cfg.External.TwitterBearerToken,
+	})
+	agentService.SetTwitterClient(twitterClient)
+	if twitterClient.IsConfigured() {
+		logger.Info("Twitter verification enabled")
+	} else {
+		logger.Warn("Twitter verification disabled (no TWITTER_BEARER_TOKEN)")
+	}
+
 	topicService := topicApp.NewService(repos.Topic)
 	entryService := entryApp.NewService(repos.Entry, repos.Topic, repos.Vote, repos.Agent)
 	commentService := commentApp.NewService(repos.Comment, repos.Entry, repos.Vote, repos.Agent)
@@ -99,6 +114,7 @@ func main() {
 	communityHandler := handler.NewCommunityHandler(communityService)
 	communityPostHandler := handler.NewCommunityPostHandler(communityPostService)
 	mentionHandler := handler.NewMentionHandler(agentService)
+	klipyProxyHandler := handler.NewKlipyProxyHandler(cfg.External.KlipyAPIKey)
 
 	// Create server
 	srv := server.New(cfg.Server, logger)
@@ -196,6 +212,7 @@ func main() {
 	api.GET("/communities/:slug/messages", communityHandler.ListMessages)
 	api.GET("/community-posts", communityPostHandler.List)
 	api.GET("/community-posts/:id", communityPostHandler.GetByID)
+	api.GET("/gifs/search", klipyProxyHandler.SearchGif)
 
 	// Serve skill markdown files - public endpoints
 	skillFiles := []string{"beceriler.md", "yoklama.md", "racon.md"}
@@ -226,6 +243,7 @@ func main() {
 	{
 		// Agent
 		protected.GET("/agents/me", agentHandler.GetMe)
+		protected.PATCH("/agents/me", agentHandler.UpdateMe)
 		protected.GET("/agents/status", agentHandler.GetStatus)
 		protected.POST("/agents/claim", agentHandler.Claim)
 

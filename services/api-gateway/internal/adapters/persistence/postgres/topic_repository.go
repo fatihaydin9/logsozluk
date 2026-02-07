@@ -47,7 +47,7 @@ func (r *TopicRepository) scanTopic(ctx context.Context, where string, args ...i
 	query := `
 		SELECT id, slug, title, category, tags, created_by, entry_count,
 			trending_score, last_entry_at, virtual_day_phase, phase_entry_count,
-			is_locked, is_hidden, created_at, updated_at
+			is_locked, is_hidden, source_url, source_name, created_at, updated_at
 		FROM topics
 		WHERE ` + where
 
@@ -56,7 +56,7 @@ func (r *TopicRepository) scanTopic(ctx context.Context, where string, args ...i
 		&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
 		&topic.CreatedBy, &topic.EntryCount,
 		&topic.TrendingScore, &topic.LastEntryAt, &topic.VirtualDayPhase, &topic.PhaseEntryCount,
-		&topic.IsLocked, &topic.IsHidden, &topic.CreatedAt, &topic.UpdatedAt,
+		&topic.IsLocked, &topic.IsHidden, &topic.SourceURL, &topic.SourceName, &topic.CreatedAt, &topic.UpdatedAt,
 	)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -91,7 +91,7 @@ func (r *TopicRepository) Update(ctx context.Context, topic *domain.Topic) error
 func (r *TopicRepository) List(ctx context.Context, limit, offset int) ([]*domain.Topic, error) {
 	query := `
 		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
-			t.last_entry_at, t.is_locked, t.created_at,
+			t.last_entry_at, t.is_locked, t.source_url, t.source_name, t.created_at,
 			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
 			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
 			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
@@ -113,7 +113,7 @@ func (r *TopicRepository) List(ctx context.Context, limit, offset int) ([]*domai
 		topic := &domain.Topic{}
 		err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
-			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.SourceURL, &topic.SourceName, &topic.CreatedAt,
 			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		)
 		if err != nil {
@@ -130,7 +130,7 @@ func (r *TopicRepository) Search(ctx context.Context, query string, limit, offse
 	searchTerm := "%" + strings.TrimSpace(query) + "%"
 	queryText := `
 		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
-			t.last_entry_at, t.is_locked, t.created_at,
+			t.last_entry_at, t.is_locked, t.source_url, t.source_name, t.created_at,
 			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
 			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
 			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
@@ -153,7 +153,7 @@ func (r *TopicRepository) Search(ctx context.Context, query string, limit, offse
 		topic := &domain.Topic{}
 		err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
-			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.SourceURL, &topic.SourceName, &topic.CreatedAt,
 			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		)
 		if err != nil {
@@ -169,7 +169,7 @@ func (r *TopicRepository) Search(ctx context.Context, query string, limit, offse
 func (r *TopicRepository) ListTrending(ctx context.Context, limit int) ([]*domain.Topic, error) {
 	query := `
 		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
-			t.last_entry_at, t.is_locked, t.created_at,
+			t.last_entry_at, t.is_locked, t.source_url, t.source_name, t.created_at,
 			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
 			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
 			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
@@ -191,7 +191,7 @@ func (r *TopicRepository) ListTrending(ctx context.Context, limit int) ([]*domai
 		topic := &domain.Topic{}
 		err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
-			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.SourceURL, &topic.SourceName, &topic.CreatedAt,
 			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		)
 		if err != nil {
@@ -216,7 +216,7 @@ func (r *TopicRepository) ListTrendingByCategory(ctx context.Context, category s
 	// Get topics
 	query := `
 		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
-			t.last_entry_at, t.is_locked, t.created_at,
+			t.last_entry_at, t.is_locked, t.source_url, t.source_name, t.created_at,
 			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
 			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
 			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
@@ -238,7 +238,7 @@ func (r *TopicRepository) ListTrendingByCategory(ctx context.Context, category s
 		topic := &domain.Topic{}
 		err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
-			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.SourceURL, &topic.SourceName, &topic.CreatedAt,
 			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		)
 		if err != nil {
@@ -270,7 +270,7 @@ func (r *TopicRepository) ListLatest(ctx context.Context, category string, limit
 
 	query := fmt.Sprintf(`
 		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
-			t.last_entry_at, t.is_locked, t.created_at,
+			t.last_entry_at, t.is_locked, t.source_url, t.source_name, t.created_at,
 			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
 			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
 			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
@@ -293,7 +293,7 @@ func (r *TopicRepository) ListLatest(ctx context.Context, category string, limit
 		topic := &domain.Topic{}
 		if err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
-			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.SourceURL, &topic.SourceName, &topic.CreatedAt,
 			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan latest topic: %w", err)
@@ -323,7 +323,7 @@ func (r *TopicRepository) ListPopular(ctx context.Context, category string, limi
 
 	query := fmt.Sprintf(`
 		SELECT t.id, t.slug, t.title, t.category, t.tags, t.entry_count, t.trending_score,
-			t.last_entry_at, t.is_locked, t.created_at,
+			t.last_entry_at, t.is_locked, t.source_url, t.source_name, t.created_at,
 			COALESCE(SUM(e.upvotes), 0)::int as total_upvotes,
 			COALESCE(SUM(e.downvotes), 0)::int as total_downvotes,
 			COALESCE((SELECT COUNT(*) FROM comments c JOIN entries e2 ON c.entry_id = e2.id WHERE e2.topic_id = t.id), 0)::int as comment_count
@@ -346,7 +346,7 @@ func (r *TopicRepository) ListPopular(ctx context.Context, category string, limi
 		topic := &domain.Topic{}
 		if err := rows.Scan(
 			&topic.ID, &topic.Slug, &topic.Title, &topic.Category, &topic.Tags,
-			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.CreatedAt,
+			&topic.EntryCount, &topic.TrendingScore, &topic.LastEntryAt, &topic.IsLocked, &topic.SourceURL, &topic.SourceName, &topic.CreatedAt,
 			&topic.TotalUpvotes, &topic.TotalDownvotes, &topic.CommentCount,
 		); err != nil {
 			return nil, 0, fmt.Errorf("failed to scan popular topic: %w", err)

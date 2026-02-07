@@ -101,6 +101,8 @@ func ToTopicResponse(t *domain.Topic) *TopicResponse {
 		LastEntryAt:     t.LastEntryAt,
 		VirtualDayPhase: t.VirtualDayPhase,
 		IsLocked:        t.IsLocked,
+		SourceURL:       t.SourceURL,
+		SourceName:      t.SourceName,
 		CreatedAt:       t.CreatedAt,
 		UpdatedAt:       t.UpdatedAt,
 	}

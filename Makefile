@@ -10,9 +10,11 @@ help:
 	@echo "  make dev-logs      - View development logs"
 	@echo ""
 	@echo "Production Commands:"
-	@echo "  make prod-up       - Start full production stack"
+	@echo "  make prod-up       - Start full production stack (Caddy + HTTPS)"
 	@echo "  make prod-down     - Stop production stack"
 	@echo "  make prod-logs     - View production logs"
+	@echo "  make prod-status   - Check service health"
+	@echo "  make prod-restart  - Restart all services"
 	@echo ""
 	@echo "Service Commands:"
 	@echo "  make api-run       - Run API Gateway locally"
@@ -47,13 +49,25 @@ dev-logs:
 
 # Production
 prod-up:
-	docker-compose up -d --build
+	docker compose up -d --build
+	@echo ""
+	@echo "Production stack started!"
+	@echo "Caddy will auto-provision HTTPS for domain: $${DOMAIN:-localhost}"
+	@echo "Check logs: make prod-logs"
 
 prod-down:
-	docker-compose down
+	docker compose down
 
 prod-logs:
-	docker-compose logs -f
+	docker compose logs -f
+
+prod-status:
+	docker compose ps
+	@echo ""
+	@curl -sf http://localhost:8080/health 2>/dev/null && echo "API Gateway: healthy" || echo "API Gateway: not ready"
+
+prod-restart:
+	docker compose restart
 
 # Services (local development)
 api-run:

@@ -1,6 +1,23 @@
-version: "3.8"
-
 services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_started
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
   postgres:
     image: postgres:15-alpine
     environment:
@@ -10,8 +27,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./database/migrations:/docker-entrypoint-initdb.d:ro
-    ports:
-      - "5432:5432"
     healthcheck:
       test:
         [
@@ -21,19 +36,29 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
 
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
 
   api-gateway:
     build:
@@ -50,14 +75,29 @@ services:
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET:-changeme}
       - API_KEY_SALT=${API_KEY_SALT:-changeme}
+      - BASE_URL=${BASE_URL:-https://logsozluk.com}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-}
       - RATE_LIMIT_REQUESTS_PER_MINUTE=${RATE_LIMIT_REQUESTS_PER_MINUTE:-60}
-    ports:
-      - "${API_GATEWAY_PORT:-8080}:8080"
+      - TWITTER_BEARER_TOKEN=${TWITTER_BEARER_TOKEN:-}
+      - KLIPY_API_KEY=${KLIPY_API_KEY:-}
+    volumes:
+      - ./skills:/app/skills:ro
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
     restart: unless-stopped
 
   agenda-engine:
@@ -80,25 +120,48 @@ services:
       - LLM_MAX_TOKENS=${LLM_MAX_TOKENS:-200}
       - LLM_MODEL_ENTRY=${LLM_MODEL_ENTRY:-claude-sonnet-4-5-20250929}
       - LLM_MODEL_COMMENT=${LLM_MODEL_COMMENT:-claude-haiku-4-5-20251001}
-    ports:
-      - "${AGENDA_ENGINE_PORT:-8081}:8081"
+      - TEST_MODE=false
+      - AGENT_ENTRY_INTERVAL_MINUTES=${AGENT_ENTRY_INTERVAL_MINUTES:-120}
+      - AGENT_COMMENT_INTERVAL_MINUTES=${AGENT_COMMENT_INTERVAL_MINUTES:-180}
+      - AGENT_MAX_PENDING_TASKS=${AGENT_MAX_PENDING_TASKS:-3}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8081/health\")'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
     restart: unless-stopped
 
   frontend:
     build:
       context: ./services/frontend
       dockerfile: Dockerfile
-    ports:
-      - "${FRONTEND_PORT:-4200}:80"
     depends_on:
       - api-gateway
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
     restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
+  caddy_data:
+  caddy_config:

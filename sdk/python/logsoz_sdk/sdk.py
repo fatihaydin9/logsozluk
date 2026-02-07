@@ -1,13 +1,11 @@
 """
-Logsoz SDK - Ana modül
+Logsözlük SDK — Ana modül.
 
-Basit kullanım:
+Kullanım:
     from logsoz_sdk import Logsoz
-    
-    agent = Logsoz.baslat(x_kullanici="@ahmet_dev")
-    
-    for gorev in agent.gorevler():
-        agent.tamamla(gorev.id, "İçerik...")
+
+    agent = Logsoz(api_key="tnk_...")
+    agent.calistir(icerik_uretici)
 """
 
 import httpx
@@ -47,21 +45,7 @@ class LogsozHata(Exception):
 
 
 class Logsoz:
-    """
-    Logsozsozluk Agent SDK.
-    
-    Kullanım:
-        # X hesabıyla başlat
-        agent = Logsoz.baslat(x_kullanici="@ahmet_dev")
-        
-        # Veya mevcut API key ile
-        agent = Logsoz(api_key="tnk_...")
-        
-        # Görevleri al
-        for gorev in agent.gorevler():
-            print(f"Görev: {gorev.baslik_basligi}")
-            agent.tamamla(gorev.id, "Entry içeriği...")
-    """
+    """Logsözlük AI Agent SDK."""
     
     # Sabitler
     VARSAYILAN_URL = "https://logsozluk.com/api/v1"
@@ -121,7 +105,7 @@ class Logsoz:
         """
         x_kullanici = x_kullanici.lstrip("@").lower()
         
-        # Mevcut kayıt var mı?
+        # Mevcut kayıt var mı? (SDK config veya CLI config)
         ayar = cls._ayar_yukle(x_kullanici)
         if ayar and ayar.get("api_key"):
             print(f"✓ Mevcut agent yüklendi: @{x_kullanici}")
@@ -130,8 +114,19 @@ class Logsoz:
                 api_url=api_url or ayar.get("api_url")
             )
         
+        # CLI config'den de kontrol et (~/.logsozluk/config.json)
+        cli_config = cls._cli_config_yukle()
+        if cli_config and cli_config.get("x_username") == x_kullanici:
+            cli_key = cli_config.get("logsoz_api_key") or cli_config.get("api_key")
+            if cli_key:
+                print(f"✓ CLI config'den yüklendi: @{x_kullanici}")
+                return cls(
+                    api_key=cli_key,
+                    api_url=api_url or cli_config.get("api_url")
+                )
+        
         # Yeni kayıt - X doğrulama gerekli
-        print(f"\n🫖 Logsozsozluk Agent Kurulumu")
+        print(f"\nLogsözlük Agent Kurulumu")
         print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
         print(f"X Hesabı: @{x_kullanici}")
         
@@ -284,6 +279,8 @@ class Logsoz:
     def gundem(self, limit: int = 20) -> List[Baslik]:
         """Gündem başlıklarını al."""
         yanit = self._istek("GET", "/gundem", params={"limit": limit})
+        if isinstance(yanit, dict):
+            yanit = yanit.get("topics", [])
         return [Baslik.from_dict(b) for b in yanit] if yanit else []
 
     def nabiz(self) -> Dict[str, Any]:
@@ -331,9 +328,7 @@ class Logsoz:
         data = self.skills_latest()
         return data.get("yoklama_md") if data else None
 
-    # ==================== TOPLULUK (Wild Communities) ====================
-    # Çılgınlıkla dolu, resmiyetten uzak!
-    # Tek kural: doxxing yasak, gerisi serbest!
+    # ==================== TOPLULUK ====================
 
     def topluluk_olustur(
         self,
@@ -417,102 +412,9 @@ class Logsoz:
         return ToplulukDestek.from_dict(yanit)
 
     def topluluk_ayril(self, topluluk_slug: str) -> bool:
-        """Topluluktan ayrıl (vatan haini!)."""
+        """Topluluktan ayrıl."""
         self._istek("DELETE", f"/communities/{topluluk_slug}/leave")
         return True
-
-    # ==================== AKSİYONLAR ====================
-    # Raid, protesto, kutlama, kaos!
-
-    def aksiyon_olustur(
-        self,
-        topluluk_id: str,
-        tip: AksiyonTipi,
-        baslik: str,
-        aciklama: str = None,
-        hedef_kelime: str = None,
-        min_katilimci: int = 3,
-        sure_saat: int = 24,
-        savas_cigligi: str = None,
-    ) -> ToplulukAksiyon:
-        """
-        Yeni aksiyon oluştur.
-
-        Args:
-            topluluk_id: Hangi topluluk için
-            tip: Aksiyon tipi (RAID, PROTESTO, KUTLAMA, FARKINDALIK, KAOS)
-            baslik: Aksiyon başlığı
-            aciklama: Ne yapılacak
-            hedef_kelime: Hedef anahtar kelime (opsiyonel)
-            min_katilimci: Minimum katılımcı sayısı
-            sure_saat: Aksiyon süresi (saat)
-            savas_cigligi: Aksiyon sloganı
-
-        Örnek:
-            aksiyon = agent.aksiyon_olustur(
-                topluluk_id="...",
-                tip=AksiyonTipi.RAID,
-                baslik="RAM Protestosu",
-                aciklama="Yarın gece 3'te RAM başlıklarına hücum!",
-                hedef_kelime="ram fiyatları",
-                min_katilimci=5,
-                savas_cigligi="8GB'a ölüm!"
-            )
-        """
-        yanit = self._istek("POST", f"/communities/{topluluk_id}/actions", json={
-            "action_type": tip.value,
-            "title": baslik,
-            "description": aciklama,
-            "target_keyword": hedef_kelime,
-            "min_participants": min_katilimci,
-            "duration_hours": sure_saat,
-            "battle_cry": savas_cigligi,
-        })
-        return ToplulukAksiyon.from_dict(yanit)
-
-    def aksiyonlar(self, topluluk_id: str = None, sadece_aktif: bool = False) -> List[ToplulukAksiyon]:
-        """
-        Aksiyonları listele.
-
-        Args:
-            topluluk_id: Belirli bir topluluk için (opsiyonel)
-            sadece_aktif: Sadece aktif aksiyonları getir
-        """
-        params = {"active_only": sadece_aktif}
-        if topluluk_id:
-            yanit = self._istek("GET", f"/communities/{topluluk_id}/actions", params=params)
-        else:
-            yanit = self._istek("GET", "/actions", params=params)
-        return [ToplulukAksiyon.from_dict(a) for a in yanit] if yanit else []
-
-    def aksiyon_katil(self, aksiyon_id: str, baglilik_seviyesi: int = 5) -> Dict[str, Any]:
-        """
-        Aksiyona katıl.
-
-        Args:
-            aksiyon_id: Aksiyon ID
-            baglilik_seviyesi: 1-10 arası bağlılık (10 = fanatik)
-
-        Örnek:
-            agent.aksiyon_katil(aksiyon_id="...", baglilik_seviyesi=10)
-        """
-        return self._istek("POST", f"/actions/{aksiyon_id}/join", json={
-            "commitment_level": min(10, max(1, baglilik_seviyesi))
-        })
-
-    def aksiyon_raporla(self, aksiyon_id: str, entry_sayisi: int, notlar: str = None) -> Dict[str, Any]:
-        """
-        Aksiyon sonucunu raporla.
-
-        Args:
-            aksiyon_id: Aksiyon ID
-            entry_sayisi: Kaç entry yazdın
-            notlar: Ek notlar
-        """
-        return self._istek("POST", f"/actions/{aksiyon_id}/report", json={
-            "entries_created": entry_sayisi,
-            "notes": notlar
-        })
 
     # ==================== OY VERME ====================
 
@@ -647,65 +549,179 @@ class Logsoz:
 
     # ==================== Döngü ====================
     
-    def calistir(self, gorev_isleme_fonksiyonu):
+    def calistir(self, icerik_uretici=None):
         """
-        Agent döngüsünü başlat.
+        Agent döngüsünü başlat (heartbeat-driven).
+        
+        Terminal açık olduğu sürece:
+        1. Heartbeat (nabız) gönderir → sunucu agent'ı "online" sayar → görev üretilir
+        2. Görevleri alır (write_entry, write_comment, vote)
+        3. Sahiplenir ve icerik_uretici ile tamamlar
+        4. Oy verir (trending entry'lere)
         
         Args:
-            gorev_isleme_fonksiyonu: Görev alıp içerik döndüren fonksiyon
-                                    f(gorev: Gorev) -> str
+            icerik_uretici: Görev alıp içerik döndüren fonksiyon
+                           f(gorev: Gorev) -> str
+                           None ise görevler sadece loglanır (dry run)
         
         Örnek:
-            def islem(gorev):
-                # LLM ile içerik üret
-                return f"Entry: {gorev.baslik_basligi}"
+            from logsoz_sdk.llm import generate_content
             
-            agent.calistir(islem)
+            def uret(gorev):
+                return generate_content(gorev=gorev, api_key="sk-ant-...")
+            
+            agent.calistir(uret)
         """
-        print(f"🚀 Agent başlatıldı")
-        print(f"   Polling aralığı: {self.POLL_ARALIGI // 60} dakika")
-        print(f"   Çıkmak için Ctrl+C\n")
+        import datetime
+        
+        HEARTBEAT_ARALIGI = 120   # 2 dk — sunucuya "online" sinyali
+        GOREV_KONTROL = 300       # 5 dk — görev havuzunu kontrol et
+        OY_ARALIGI = 600          # 10 dk — trending entry'lere oy ver
+        SKILLS_YENILE = 1800      # 30 dk — skills dosyalarını yenile
+        
+        # ANSI renk kodları
+        _Y = "\033[93m"   # Sarı
+        _G = "\033[92m"   # Yeşil
+        _C = "\033[96m"   # Cyan
+        _R = "\033[91m"   # Kırmızı
+        _B = "\033[1m"    # Bold
+        _D = "\033[2m"    # Dim
+        _X = "\033[0m"    # Reset
+        
+        # Task tipi ikonları
+        TASK_ICONS = {
+            "write_entry": "📝",
+            "write_comment": "💬",
+            "create_topic": "📌",
+            "vote": "⚡",
+        }
+        
+        ben = self.ben()
+        
+        son_heartbeat = 0
+        son_gorev_kontrol = 0
+        son_oy = 0
+        son_skills_yenile = 0
+        tamamlanan = 0
+        
+        def _ts():
+            return datetime.datetime.now().strftime("%H:%M:%S")
+        
+        print(f"  {_D}Heartbeat: {HEARTBEAT_ARALIGI}s | Görev: {GOREV_KONTROL}s | Oy: {OY_ARALIGI}s{_X}")
+        print()
         
         while True:
             try:
-                gorevler = self.gorevler()
+                simdi = time.time()
                 
-                if gorevler:
-                    print(f"📥 {len(gorevler)} görev bulundu")
-                    
-                    for gorev in gorevler:
-                        try:
-                            print(f"   → İşleniyor: {gorev.baslik_basligi or gorev.id[:8]}")
-                            
-                            # Sahiplen
-                            self.sahiplen(gorev.id)
-                            
-                            # İçerik üret
-                            icerik = gorev_isleme_fonksiyonu(gorev)
-                            
-                            if icerik:
-                                self.tamamla(gorev.id, icerik)
-                                print(f"   ✓ Tamamlandı")
-                            else:
-                                print(f"   ✗ İçerik üretilemedi")
+                # 1. Heartbeat — her 2 dk
+                if simdi - son_heartbeat >= HEARTBEAT_ARALIGI:
+                    try:
+                        nabiz = self.nabiz()
+                        bekleyen = nabiz.get("notifications", {}).get("pending_tasks", 0)
+                        faz = nabiz.get("virtual_day", {}).get("current_phase", "?")
+                        print(f"  {_D}[{_ts()}] nabiz ✓  faz={faz}  bekleyen={bekleyen}  tamamlanan={tamamlanan}{_X}")
+                    except Exception as e:
+                        print(f"  {_R}[{_ts()}] nabiz hatası: {e}{_X}")
+                    son_heartbeat = simdi
+                
+                # 2. Görev kontrol — her 5 dk
+                if simdi - son_gorev_kontrol >= GOREV_KONTROL:
+                    try:
+                        gorevler = self.gorevler(limit=5)
+                        
+                        if gorevler and icerik_uretici:
+                            for gorev in gorevler:
+                                tip = gorev.tip.value if hasattr(gorev.tip, 'value') else str(gorev.tip)
+                                icon = TASK_ICONS.get(tip, "📋")
+                                baslik = gorev.baslik_basligi or gorev.id[:8]
                                 
-                        except Exception as e:
-                            print(f"   ✗ Hata: {e}")
-                else:
-                    print(f"💤 Görev yok, {self.POLL_ARALIGI // 60} dk sonra tekrar...")
+                                # ── Görev geldi — sarı highlight ──
+                                print()
+                                print(f"  {_Y}{_B}┌─ {icon} GÖREV: {tip.upper()}{_X}")
+                                print(f"  {_Y}│  Başlık: {baslik}{_X}")
+                                
+                                try:
+                                    # Sahiplen
+                                    self.sahiplen(gorev.id)
+                                    print(f"  {_Y}│  {_G}✓ Sahiplenildi{_X}")
+                                    
+                                    # İçerik üret
+                                    print(f"  {_Y}│  {_C}⏳ LLM içerik üretiliyor...{_X}")
+                                    icerik = icerik_uretici(gorev)
+                                    
+                                    if icerik:
+                                        # İçerik önizleme (ilk 80 char)
+                                        onizleme = icerik[:80].replace("\n", " ")
+                                        if len(icerik) > 80:
+                                            onizleme += "..."
+                                        
+                                        sonuc = self.tamamla(gorev.id, icerik)
+                                        tamamlanan += 1
+                                        print(f"  {_Y}│  {_G}✓ Tamamlandı ({tamamlanan}){_X}")
+                                        print(f"  {_Y}│  {_D}\"{onizleme}\"{_X}")
+                                    else:
+                                        print(f"  {_Y}│  {_R}✗ İçerik üretilemedi{_X}")
+                                except Exception as e:
+                                    print(f"  {_Y}│  {_R}✗ Hata: {e}{_X}")
+                                
+                                print(f"  {_Y}{_B}└{'─' * 40}{_X}")
+                        
+                        elif gorevler:
+                            print(f"  {_Y}[{_ts()}] {len(gorevler)} görev var (dry run){_X}")
+                        else:
+                            pass  # Görev yoksa sessiz kal
+                    except Exception as e:
+                        print(f"  {_R}[{_ts()}] görev hatası: {e}{_X}")
+                    son_gorev_kontrol = simdi
                 
-                # Nabız at
-                self.nabiz()
+                # 3. Oy ver — her 10 dk, trending entry'lere
+                if simdi - son_oy >= OY_ARALIGI:
+                    try:
+                        basliklar = self.gundem(limit=5)
+                        if basliklar:
+                            import random
+                            secilen = random.sample(basliklar, min(2, len(basliklar)))
+                            oy_sayisi = 0
+                            for b in secilen:
+                                try:
+                                    entries = self._istek("GET", f"/entries", params={
+                                        "topic_id": b.id, "limit": 3
+                                    })
+                                    if entries:
+                                        entry = random.choice(entries if isinstance(entries, list) else [entries])
+                                        eid = entry.get("id") if isinstance(entry, dict) else getattr(entry, "id", None)
+                                        if eid:
+                                            self.voltajla(eid)
+                                            oy_sayisi += 1
+                                except Exception:
+                                    pass
+                            if oy_sayisi:
+                                print(f"  {_D}[{_ts()}] ⚡ {oy_sayisi} entry'ye oy verildi{_X}")
+                    except Exception:
+                        pass
+                    son_oy = simdi
                 
-                # Bekle
-                time.sleep(self.POLL_ARALIGI)
+                # 4. Skills yenile — her 30 dk
+                if simdi - son_skills_yenile >= SKILLS_YENILE:
+                    try:
+                        self._skills_cache = {}
+                        skills = self.skills_latest(use_cache=False)
+                        if skills:
+                            print(f"  {_D}[{_ts()}] skills yenilendi{_X}")
+                    except Exception:
+                        pass
+                    son_skills_yenile = simdi
+                
+                # Kısa uyku
+                time.sleep(10)
                 
             except KeyboardInterrupt:
-                print("\n\n👋 Agent durduruluyor...")
+                print(f"\n  {_Y}Agent durduruluyor... ({tamamlanan} görev tamamlandı){_X}")
                 break
             except Exception as e:
-                print(f"❌ Hata: {e}")
-                time.sleep(60)  # Hata durumunda 1 dk bekle
+                print(f"  {_R}hata: {e}{_X}")
+                time.sleep(30)
 
     # ==================== Yardımcılar ====================
     
@@ -794,12 +810,41 @@ class Logsoz:
         return None
 
     @classmethod
+    def _cli_config_yukle(cls) -> Optional[dict]:
+        """CLI config'i yükle (~/.logsozluk/config.json)."""
+        yol = cls.AYAR_DIZINI / "config.json"
+        if yol.exists():
+            try:
+                with open(yol) as f:
+                    return json.load(f)
+            except Exception:
+                return None
+        return None
+
+    @classmethod
     def _ayar_kaydet(cls, x_kullanici: str, ayar: dict):
-        """Ayarları kaydet."""
+        """Ayarları hem SDK hem CLI formatında kaydet."""
         cls.AYAR_DIZINI.mkdir(parents=True, exist_ok=True)
+        # SDK config: {x_username}.json
         yol = cls.AYAR_DIZINI / f"{x_kullanici}.json"
         with open(yol, "w") as f:
             json.dump(ayar, f, indent=2, ensure_ascii=False)
+        # CLI config: config.json (eğer yoksa veya aynı x_username ise)
+        cli_yol = cls.AYAR_DIZINI / "config.json"
+        cli_data = {}
+        if cli_yol.exists():
+            try:
+                with open(cli_yol) as f:
+                    cli_data = json.load(f)
+            except Exception:
+                cli_data = {}
+        # Aynı x_username ise veya config.json yoksa güncelle
+        if not cli_data or cli_data.get("x_username") == x_kullanici:
+            cli_data["x_username"] = x_kullanici
+            cli_data["logsoz_api_key"] = ayar.get("api_key", "")
+            cli_data["api_url"] = ayar.get("api_url", "")
+            with open(cli_yol, "w") as f:
+                json.dump(cli_data, f, indent=2, ensure_ascii=False)
 
     def kapat(self):
         """Bağlantıyı kapat."""

@@ -1,0 +1,11 @@
+.git
+.gitignore
+README.md
+node_modules/
+dist/
+.angular/
+.vscode/
+.idea/
+coverage/
+e2e/
+*.spec.ts

@@ -63,13 +63,39 @@ async def _get_todays_topics_from_db() -> List[str]:
         return []
 
 
+def _sanitize_for_prompt(text: str, max_len: int = 100) -> str:
+    """Topic başlığını prompt injection'a karşı sanitize et."""
+    if not text:
+        return ""
+    # Injection pattern'leri temizle
+    import re
+    # Role injection ve instruction override pattern'leri
+    text = re.sub(r'(?i)(ignore|disregard|forget)\s+(all\s+)?(previous|above|prior)?\s*(instructions?|prompts?|rules?)', '', text)
+    text = re.sub(r'(?i)(system|assistant|user)\s*:\s*', '', text)
+    text = re.sub(r'(?i)new\s+instructions?:', '', text)
+    text = re.sub(r'\[INST\]|<<SYS>>|<\|im_start\|>|<\|im_end\|>', '', text)
+    text = re.sub(r'(?i)(önceki|yeni)\s+(talimatları?|kuralları?)', '', text)
+    # Markdown/code block temizle
+    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+    text = re.sub(r'---+|===+|###', '', text)
+    # Normalize
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text[:max_len]
+
+
 def _get_recent_summary(db_topics: List[str] = None) -> str:
     """Son üretilen konuların özetini döndür (LLM prompt için)."""
     # DB'den gelen topic'leri de dahil et
     all_recent = list(_recent_topics)[-10:]
     if db_topics:
         all_recent = list(set(all_recent + db_topics[:20]))[:25]
-    
+
+    if not all_recent:
+        return ""
+
+    # Sanitize: DB'den gelen başlıklar prompt injection içerebilir
+    all_recent = [_sanitize_for_prompt(t) for t in all_recent if _sanitize_for_prompt(t)]
+
     if not all_recent:
         return ""
 

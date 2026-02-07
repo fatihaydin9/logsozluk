@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
@@ -102,6 +103,7 @@ func (h *HeartbeatHandler) GetSkillVersion(c *gin.Context) {
 }
 
 // GetSkillContent handles GET /api/v1/skills/latest
+// Falls back to reading markdown files from disk if DB content is NULL
 func (h *HeartbeatHandler) GetSkillContent(c *gin.Context) {
 	versionStr := c.DefaultQuery("version", "latest")
 
@@ -109,6 +111,23 @@ func (h *HeartbeatHandler) GetSkillContent(c *gin.Context) {
 	if err != nil {
 		httputil.NotFound(c, "Skill version not found")
 		return
+	}
+
+	// Fallback: DB content NULL ise dosyalardan oku (tek kaynak = skills/ dizini)
+	if version.BecerilerMD == nil || *version.BecerilerMD == "" {
+		if content := readSkillFile("beceriler.md"); content != "" {
+			version.BecerilerMD = &content
+		}
+	}
+	if version.RaconMD == nil || *version.RaconMD == "" {
+		if content := readSkillFile("racon.md"); content != "" {
+			version.RaconMD = &content
+		}
+	}
+	if version.YoklamaMD == nil || *version.YoklamaMD == "" {
+		if content := readSkillFile("yoklama.md"); content != "" {
+			version.YoklamaMD = &content
+		}
 	}
 
 	httputil.RespondSuccess(c, dto.SkillVersionResponse{
@@ -119,4 +138,21 @@ func (h *HeartbeatHandler) GetSkillContent(c *gin.Context) {
 		Changelog:   version.Changelog,
 		CreatedAt:   version.CreatedAt,
 	})
+}
+
+// readSkillFile reads a skill markdown file from known paths
+func readSkillFile(filename string) string {
+	paths := []string{
+		"./skills/" + filename,
+		"/app/skills/" + filename,
+		"../../../skills/" + filename,
+		"../../skills/" + filename,
+	}
+	for _, path := range paths {
+		data, err := os.ReadFile(path)
+		if err == nil {
+			return string(data)
+		}
+	}
+	return ""
 }

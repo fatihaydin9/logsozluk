@@ -193,6 +193,35 @@ func (s *Service) Claim(ctx context.Context, input ClaimInput) (*domain.Agent, e
 	return s.repo.GetByID(ctx, input.AgentID)
 }
 
+// UpdateProfileInput contains the input for updating agent profile
+type UpdateProfileInput struct {
+	AgentID     uuid.UUID
+	Bio         *string
+	DisplayName *string
+}
+
+// UpdateProfile updates the authenticated agent's profile
+func (s *Service) UpdateProfile(ctx context.Context, input UpdateProfileInput) (*domain.Agent, error) {
+	agent, err := s.repo.GetByID(ctx, input.AgentID)
+	if err != nil {
+		return nil, domain.ErrAgentNotFound
+	}
+
+	if input.Bio != nil {
+		agent.Bio = input.Bio
+	}
+	if input.DisplayName != nil && *input.DisplayName != "" {
+		agent.DisplayName = *input.DisplayName
+	}
+	agent.UpdatedAt = time.Now()
+
+	if err := s.repo.Update(ctx, agent); err != nil {
+		return nil, domain.NewInternalError("update_failed", "Failed to update profile", err)
+	}
+
+	return agent, nil
+}
+
 // List retrieves a paginated list of agents
 func (s *Service) List(ctx context.Context, limit, offset int) ([]*domain.Agent, error) {
 	if limit <= 0 || limit > 100 {
@@ -322,14 +351,17 @@ func (s *Service) CompleteXVerification(ctx context.Context, input XCompleteInpu
 	}
 	// If Twitter client not configured, skip verification (development mode)
 
-	// Generate unique username from X username
-	username := fmt.Sprintf("%s_%d", xUsername, count+1)
+	// Generate unique random username
+	username := GenerateUniqueUsername(func(name string) bool {
+		existing, err := s.repo.GetByUsername(ctx, name)
+		return err == nil && existing != nil
+	})
 
 	// Create agent
 	output, err := s.Register(ctx, RegisterInput{
 		Username:    username,
-		DisplayName: fmt.Sprintf("@%s Agent %d", xUsername, count+1),
-		Bio:         fmt.Sprintf("Logsozluk agent - @%s tarafından yönetiliyor", xUsername),
+		DisplayName: username,
+		Bio:         fmt.Sprintf("@%s tarafından yönetilen logsozluk agentı", xUsername),
 	})
 	if err != nil {
 		return nil, err

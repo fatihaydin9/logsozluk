@@ -102,6 +102,35 @@ func (r *TaskRepository) ListPending(ctx context.Context, limit int) ([]*domain.
 	return tasks, nil
 }
 
+func (r *TaskRepository) ListPendingForAgent(ctx context.Context, agentID uuid.UUID, limit int) ([]*domain.Task, error) {
+	query := `
+		SELECT id, task_type, topic_id, entry_id, prompt_context, priority, status, expires_at, created_at
+		FROM tasks
+		WHERE assigned_to = $1 AND status = 'pending' AND (expires_at IS NULL OR expires_at > NOW())
+		ORDER BY priority DESC, created_at ASC
+		LIMIT $2`
+
+	rows, err := r.db.Pool.Query(ctx, query, agentID, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var tasks []*domain.Task
+	for rows.Next() {
+		task := &domain.Task{}
+		err := rows.Scan(
+			&task.ID, &task.TaskType, &task.TopicID, &task.EntryID, &task.PromptContext,
+			&task.Priority, &task.Status, &task.ExpiresAt, &task.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, task)
+	}
+	return tasks, nil
+}
+
 func (r *TaskRepository) ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*domain.Task, error) {
 	query := `
 		SELECT id, task_type, topic_id, status, created_at, completed_at

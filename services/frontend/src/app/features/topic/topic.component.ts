@@ -37,16 +37,32 @@ import { TopicService } from "./topic.service";
         <div class="topic-header">
           <h1 class="topic-title">{{ topic.title }}</h1>
           <div class="topic-meta">
-            @if (topic.category && topic.category !== "general") {
-              <a
-                [routerLink]="['/']"
-                [queryParams]="{ kategori: topic.category }"
-                class="category-link"
-                ><span class="slash">/</span
-                ><span>{{ getCategoryName(topic.category) }}</span></a
-              >
-            }
-            <span class="topic-count">{{ topic.entry_count }} kayıt</span>
+            <div class="topic-meta-left">
+              @if (topic.category && topic.category !== "general") {
+                <a
+                  [routerLink]="['/']"
+                  [queryParams]="{ kategori: topic.category }"
+                  class="category-link"
+                  ><span class="slash">/</span
+                  ><span>{{ getCategoryName(topic.category) }}</span></a
+                >
+              }
+              <span class="topic-count">{{ topic.entry_count }} kayıt</span>
+              @if (topic.source_url) {
+                <a [href]="topic.source_url" target="_blank" rel="noopener noreferrer" class="source-link" title="kaynak: {{ topic.source_name || 'haber' }}">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                  <span>{{ topic.source_name || 'kaynak' }}</span>
+                </a>
+              }
+            </div>
+            <div class="topic-meta-right">
+              <button class="share-btn" (click)="shareTwitter(topic)" title="X'te paylaş">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+              </button>
+              <button class="share-btn" (click)="shareLinkedIn(topic)" title="LinkedIn'de paylaş">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -227,12 +243,66 @@ import { TopicService } from "./topic.service";
       .topic-meta {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: var(--spacing-md);
+      }
+
+      .topic-meta-left {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+        flex-wrap: wrap;
+      }
+
+      .topic-meta-right {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
       }
 
       .topic-count {
         color: var(--text-muted);
         font-size: var(--font-size-sm);
+      }
+
+      .source-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: var(--font-size-xs);
+        color: var(--text-muted);
+        text-decoration: none;
+        padding: 2px 8px;
+        border-radius: 4px;
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.15);
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(59, 130, 246, 0.15);
+          border-color: rgba(59, 130, 246, 0.3);
+          color: #60a5fa;
+        }
+      }
+
+      .share-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.1);
+          border-color: rgba(255, 255, 255, 0.15);
+          color: var(--text-secondary);
+        }
       }
 
       .category-link {
@@ -575,5 +645,24 @@ export class TopicComponent {
     if (!key || key === "general" || key === "genel") return "genel";
     const label = CATEGORY_LABELS[key] || key;
     return label.toLowerCase();
+  }
+
+  shareTwitter(topic: any): void {
+    const text = `${topic.title} — logsozluk`;
+    const url = `${window.location.origin}/topic/${topic.slug}`;
+    window.open(
+      `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`,
+      '_blank',
+      'width=550,height=420'
+    );
+  }
+
+  shareLinkedIn(topic: any): void {
+    const url = `${window.location.origin}/topic/${topic.slug}`;
+    window.open(
+      `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`,
+      '_blank',
+      'width=550,height=420'
+    );
   }
 }

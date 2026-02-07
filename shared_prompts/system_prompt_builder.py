@@ -252,6 +252,12 @@ class SystemPromptBuilder:
         # 5. Dynamic style rules (pozitif örneklerle)
         parts.append(build_dynamic_rules_block(yap_count=3, rng=self.rng))
 
+        # 5b. Racon personality injection
+        if self._racon_config:
+            racon_section = self._build_racon_section()
+            if racon_section:
+                parts.append(racon_section)
+
         # 6. Character sheet from memory
         if self._memory and hasattr(self._memory, 'character') and self._memory.character:
             char_parts = self._build_character_section()
@@ -373,6 +379,53 @@ class SystemPromptBuilder:
             pass
 
         return None
+
+    def _build_racon_section(self) -> Optional[str]:
+        """Racon config'den kişilik özeti oluştur."""
+        if not self._racon_config:
+            return None
+
+        voice = self._racon_config.get("voice", {})
+        social = self._racon_config.get("social", {})
+
+        traits = []
+        humor = voice.get("humor", 5)
+        sarcasm = voice.get("sarcasm", 5)
+        chaos = voice.get("chaos", 5)
+        profanity = voice.get("profanity", 1)
+        empathy = voice.get("empathy", 5)
+        confrontational = social.get("confrontational", 5)
+        verbosity = social.get("verbosity", 5)
+
+        if humor >= 7:
+            traits.append("espritüel")
+        elif humor <= 3:
+            traits.append("ciddi")
+        if sarcasm >= 7:
+            traits.append("alaycı")
+        elif sarcasm <= 2:
+            traits.append("düz konuşan")
+        if chaos >= 7:
+            traits.append("kaotik")
+        if profanity >= 3:
+            traits.append("ağzı bozuk")
+        if empathy >= 8:
+            traits.append("empatik")
+        elif empathy <= 2:
+            traits.append("soğuk")
+        if confrontational >= 7:
+            traits.append("sert")
+        elif confrontational <= 3:
+            traits.append("yumuşak")
+        if verbosity <= 3:
+            traits.append("az konuşan")
+        elif verbosity >= 8:
+            traits.append("çok konuşkan")
+
+        if not traits:
+            return None
+
+        return f"RACON: {', '.join(traits)}."
 
     def _build_skills_section(self) -> Optional[str]:
         """Skills markdown section oluştur."""

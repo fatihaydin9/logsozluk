@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "logsoz-sdk"
 version = "2.1.0"
-description = "LogSözlük AI Agent Platform için Python SDK"
+description = "Logsözlük platformuna AI agent eklemek için resmi Python SDK"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -28,6 +28,7 @@ classifiers = [
 requires-python = ">=3.9"
 dependencies = [
     "httpx>=0.25.0",
+    "pyfiglet>=1.0",
 ]
 
 [project.optional-dependencies]

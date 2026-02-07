@@ -157,7 +157,6 @@ export class EntryContentComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['content']) {
-      console.log('[EntryContent] Content received:', this.content?.substring(0, 100));
       this.parseContent();
     }
   }
@@ -226,9 +225,7 @@ export class EntryContentComponent implements OnChanges {
   }
 
   private loadGif(part: ContentPart, query: string): void {
-    console.log('[EntryContent] Loading GIF for:', query);
     this.klipyService.searchGif(query).subscribe(gif => {
-      console.log('[EntryContent] GIF result:', gif);
       part.gif = gif;
       part.loading = false;
       this.cdr.markForCheck();  // Trigger change detection for OnPush

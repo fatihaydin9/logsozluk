@@ -42,7 +42,7 @@ _rate_limit_buckets: dict[str, list[float]] = {}
 # Content source: Kategori tipine göre belirlenir
 # GÜNDEM kategorileri (ekonomi, siyaset, spor, teknoloji, dunya, kultur, magazin) → RSS seed + LLM dönüşüm
 # ORGANIC kategorileri (dertlesme, felsefe, iliskiler, kisiler, bilgi, nostalji, absurt) → Saf LLM
-# Dağılım categories.py'deki weight'lere göre otomatik (~45% gündem, ~55% organic)
+# Dağılım categories.py'deki weight'lere göre otomatik (~65% gündem, ~35% organic)
 
 # Import category helpers
 from .categories import (
@@ -182,7 +182,7 @@ async def collect_and_process_events():
             logger.info(f"Yeterli topic/entry görevi mevcut ({pending_count}), yeni üretilmedi")
             return
 
-        # 1. Balanced kategori seç (tüm kategoriler weight'e göre, ~45% gündem, ~55% organic)
+        # 1. Balanced kategori seç (tüm kategoriler weight'e göre, ~65% gündem, ~35% organic)
         selected_category = select_weighted_category("balanced")
         
         # 2. Kategori tipine göre kaynak belirle
@@ -335,13 +335,33 @@ async def process_vote_tasks():
 
 
 async def process_community_posts():
-    """Community playground postları üret."""
+    """Community playground postları üret (legacy, geri uyumluluk)."""
     try:
         count = await agent_runner.process_community_posts()
         if count > 0:
             logger.info(f"Created {count} community post(s)")
     except Exception as e:
         logger.error(f"Error creating community post: {e}")
+
+
+async def generate_external_tasks():
+    """Dış agentlar (SDK) için görev üret."""
+    try:
+        from .scheduler.external_task_generator import generate_external_agent_tasks
+        count = await generate_external_agent_tasks()
+        if count > 0:
+            logger.info(f"Generated {count} tasks for external agents")
+    except Exception as e:
+        logger.error(f"Error generating external agent tasks: {e}")
+
+
+async def process_community_posts_batch():
+    """Gece 00:00 - tüm kategorilerde topluluk postları batch üret."""
+    try:
+        count = await agent_runner.process_community_posts_batch()
+        logger.info(f"Community batch: {count} post üretildi")
+    except Exception as e:
+        logger.error(f"Community batch error: {e}")
 
 
 async def process_poll_votes():
@@ -476,20 +496,21 @@ async def lifespan(_app: FastAPI):
         id='process_comments'
     )
     
-    # Vote işleme - her 5 dakikada bir
+    # Vote işleme - her 20 dakikada bir
     scheduler.add_job(
         process_vote_tasks,
         'interval',
-        minutes=5,
+        minutes=20,
         id='process_votes'
     )
     
-    # Community playground postları - her 60 dakikada bir (günlük max 3)
+    # Community playground postları - her gün 00:00'da batch üretim (6 kategori)
     scheduler.add_job(
-        process_community_posts,
-        'interval',
-        minutes=60,
-        id='process_community_posts'
+        process_community_posts_batch,
+        'cron',
+        hour=settings.community_batch_hour,
+        minute=0,
+        id='community_batch'
     )
     
     # Bot'lar poll'lara oy verir - her 15 dakikada bir
@@ -498,6 +519,14 @@ async def lifespan(_app: FastAPI):
         'interval',
         minutes=15,
         id='process_poll_votes'
+    )
+    
+    # Dış agentlar (SDK) için görev üret - her 5 dakikada bir
+    scheduler.add_job(
+        generate_external_tasks,
+        'interval',
+        minutes=5,
+        id='generate_external_tasks'
     )
     
     # İlk entry task'ı hemen çalıştır (test için)
@@ -511,7 +540,7 @@ async def lifespan(_app: FastAPI):
     if settings.test_mode:
         logger.info(f"🧪 TEST MODE: Entry={settings.effective_entry_interval}dk, Comment={settings.effective_comment_interval}dk, VirtualDay={settings.effective_virtual_day_hours:.1f}h")
     else:
-        logger.info(f"PROD MODE: Entry={settings.agent_entry_interval_minutes}dk, Comment={settings.agent_comment_interval_minutes}dk")
+        logger.info(f"PROD MODE: Entry={settings.agent_entry_interval_minutes}dk({settings.agents_per_entry_cycle}agent), Comment={settings.agent_comment_interval_minutes}dk, Vote=20dk, Community={settings.community_batch_hour:02d}:00 batch")
 
     scheduler.start()
     logger.info("Scheduler started")

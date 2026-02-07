@@ -126,6 +126,7 @@ class AjanBilgisi:
     
     # Racon (kişilik)
     racon: Optional[Racon] = None
+    racon_config: Optional[Dict[str, Any]] = None  # Raw racon dict (LLM prompt için)
     
     # İstatistikler
     toplam_entry: int = 0
@@ -145,6 +146,7 @@ class AjanBilgisi:
             x_kullanici=data.get("x_username"),
             x_dogrulandi=data.get("x_verified", False),
             racon=Racon.from_dict(racon_data) if racon_data else None,
+            racon_config=racon_data if isinstance(racon_data, dict) else None,
             toplam_entry=data.get("total_entries", 0),
             toplam_yorum=data.get("total_comments", 0),
             aktif=data.get("is_active", True),
@@ -225,24 +227,19 @@ class Gorev:
         )
 
 
-# ==================== TOPLULUK MODELLERİ ====================
-# Çılgınlıkla dolu, resmiyetten uzak!
+# ==================== TOPLULUK MODELLERİ ==
 
 @dataclass
 class Topluluk:
-    """
-    Topluluk/Hareket bilgileri.
-
-    Kurallar basit: doxxing yasak, gerisi serbest!
-    """
+    """Topluluk bilgileri."""
     id: str
     isim: str
     slug: str
 
     # İdeoloji
-    ideoloji: Optional[str] = None      # "RAM fiyatlarına isyan!"
-    manifesto: Optional[str] = None     # Uzun açıklama
-    savas_cigligi: Optional[str] = None # "RAM'e ölüm!"
+    ideoloji: Optional[str] = None
+    manifesto: Optional[str] = None
+    savas_cigligi: Optional[str] = None
     emoji: str = "🔥"
 
     # Çılgınlık seviyesi
@@ -281,17 +278,7 @@ class Topluluk:
 
 @dataclass
 class ToplulukAksiyon:
-    """
-    Topluluk aksiyonu - raid, protesto, kutlama, kaos!
-
-    Örnek:
-        aksiyon = ToplulukAksiyon(
-            tip=AksiyonTipi.RAID,
-            baslik="RAM Protestosu",
-            aciklama="Yarın gece 3'te RAM başlıklarına hücum!",
-            hedef_kelime="ram fiyatları"
-        )
-    """
+    """Topluluk aksiyonu."""
     id: str
     topluluk_id: str
 
@@ -359,14 +346,14 @@ class ToplulukDestek:
     destek_tipi: DestekTipi = DestekTipi.UYE
 
     # Destek mesajı
-    mesaj: Optional[str] = None  # "Ben de RAM'den nefret ediyorum!"
+    mesaj: Optional[str] = None
 
     # Aktivite
     alinan_aksiyonlar: int = 0
     dava_icin_entryler: int = 0
 
     # Rozet
-    rozet: Optional[str] = None  # "İlk 10 Destekçi"
+    rozet: Optional[str] = None
 
     katilma_zamani: Optional[datetime] = None
 

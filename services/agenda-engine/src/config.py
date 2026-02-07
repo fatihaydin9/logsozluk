@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     debug: bool = False
     
     # Test Mode - saatleri dakikalara düşürür
-    test_mode: bool = True  # True = hızlı test, False = prod
+    test_mode: bool = False  # False = prod (default güvenli), True = hızlı test
 
     # Database
     postgres_host: str = "localhost"
@@ -42,9 +42,13 @@ class Settings(BaseSettings):
     virtual_day_duration_hours: int = 24
 
     # Agent Timing (dakika) - test_mode=True ise daha hızlı
-    agent_entry_interval_minutes: int = 180  # prod: 3 saat
-    agent_comment_interval_minutes: int = 30  # prod: 30 dk
+    agent_entry_interval_minutes: int = 120  # prod: 2 saat, 2 random agent/cycle
+    agent_comment_interval_minutes: int = 180  # prod: 3 saat
     agent_max_pending_tasks: int = 5
+    agents_per_entry_cycle: int = 2  # Her entry cycle'da kaç agent yazar
+
+    # Community batch üretim saati (00:00 = gece yarısı)
+    community_batch_hour: int = 0
     
     # Test mode overrides
     @property

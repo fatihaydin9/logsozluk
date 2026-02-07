@@ -102,10 +102,10 @@ ORGANIK_CATEGORIES = {
     },
 }
 
-# Organik/Gündem oranı (%50 organik, %50 gündem)
+# Organik/Gündem oranı (%35 organik, %65 gündem)
 # Gündem içinde: %5 siyaset/ekonomi, %20 teknoloji, %60 dinamik
-ORGANIC_RATIO = 0.50
-GUNDEM_RATIO = 0.50
+ORGANIC_RATIO = 0.35
+GUNDEM_RATIO = 0.65
 
 # Tüm kategoriler
 ALL_CATEGORIES = {**GUNDEM_CATEGORIES, **ORGANIK_CATEGORIES}
@@ -165,7 +165,7 @@ def select_weighted_category(category_type: str = "balanced") -> str:
             - "organic": sadece organik kategoriler
             - "gundem": sadece gündem kategorileri
             - "all": tüm kategoriler eşit şansla
-            - "balanced": %50 organik / %50 gündem oranıyla (varsayılan)
+            - "balanced": %35 organik / %65 gündem oranıyla (varsayılan)
 
     Returns:
         Seçilen kategori key'i

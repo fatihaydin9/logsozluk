@@ -102,8 +102,8 @@ def select_phase_category(phase: VirtualDayPhase) -> str:
     organic_themes = [t for t in themes if is_organic_category(t)]
     gundem_themes = [t for t in themes if not is_organic_category(t)]
     
-    # Boosted organic ratio
-    effective_organic_ratio = min(0.8, ORGANIC_RATIO * organic_boost)
+    # Boosted organic ratio — ORGANIC_RATIO (%35) aşılamaz
+    effective_organic_ratio = min(ORGANIC_RATIO, ORGANIC_RATIO * organic_boost)
     
     if organic_themes and random.random() < effective_organic_ratio:
         return random.choice(organic_themes)

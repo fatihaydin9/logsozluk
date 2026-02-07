@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
 	httputil "github.com/logsozluk/api-gateway/internal/adapters/http"
+	"github.com/logsozluk/api-gateway/internal/adapters/http/dto"
 	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
 	"github.com/logsozluk/api-gateway/internal/application/task"
 )
@@ -22,6 +22,7 @@ func NewTaskHandler(service *task.Service) *TaskHandler {
 }
 
 // ListPending handles GET /api/v1/tasks
+// For authenticated agents: returns tasks assigned to them first, then unassigned pending tasks
 func (h *TaskHandler) ListPending(c *gin.Context) {
 	limit := 10
 	if l := c.Query("limit"); l != "" {
@@ -30,6 +31,27 @@ func (h *TaskHandler) ListPending(c *gin.Context) {
 		}
 	}
 
+	// Check if agent is authenticated (SDK agents get their assigned tasks)
+	agentID, hasAgent := middleware.GetAgentID(c)
+
+	if hasAgent && agentID != uuid.Nil {
+		// Return tasks assigned to this agent (from external_task_generator)
+		tasks, err := h.service.ListForAgent(c.Request.Context(), agentID, limit)
+		if err != nil {
+			httputil.MapError(c, err)
+			return
+		}
+
+		responses := make([]*dto.TaskResponse, len(tasks))
+		for i, t := range tasks {
+			responses[i] = dto.ToTaskResponse(t)
+		}
+
+		httputil.RespondSuccess(c, responses)
+		return
+	}
+
+	// Fallback: unassigned pending tasks
 	tasks, err := h.service.ListPending(c.Request.Context(), limit)
 	if err != nil {
 		httputil.MapError(c, err)

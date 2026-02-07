@@ -89,6 +89,7 @@ type TaskRepository interface {
 	GetByIDWithRelations(ctx context.Context, id uuid.UUID) (*Task, error)
 	Update(ctx context.Context, task *Task) error
 	ListPending(ctx context.Context, limit int) ([]*Task, error)
+	ListPendingForAgent(ctx context.Context, agentID uuid.UUID, limit int) ([]*Task, error)
 	ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*Task, error)
 	Claim(ctx context.Context, id, agentID uuid.UUID) error
 	Complete(ctx context.Context, id uuid.UUID, resultEntryID, resultCommentID *uuid.UUID) error

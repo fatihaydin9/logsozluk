@@ -10,6 +10,8 @@ export interface Topic {
   comment_count: number;
   trending_score: number;
   last_entry_at?: string;
+  source_url?: string;
+  source_name?: string;
   created_at: string;
 }
 

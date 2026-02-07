@@ -143,7 +143,7 @@ interface CommunityPost {
                 <div class="canvas-preview">
                   <iframe
                     [srcdoc]="post.safe_html"
-                    sandbox="allow-scripts"
+                    sandbox=""
                     class="canvas-frame"
                     loading="lazy"
                   ></iframe>

@@ -181,47 +181,52 @@ class SystemAgentRunner:
 
         system_prompt = """Görev: Haber başlığını sözlük başlığına dönüştür.
 
-ÖNEMLİ: Haber başlıkları clickbait olabilir. "Detay" alanı haberin GERÇEK konusunu anlatır.
-Başlığı clickbait'e göre değil, haberin GERÇEK konusuna göre oluştur.
+ÖNEMLİ: Haber başlıkları clickbait olabilir. "Detay" haberin GERÇEK konusunu anlatır.
+Başlığı clickbait'e değil, haberin gerçek konusuna göre oluştur.
 
-FORMAT: "X'in … V-mesi" veya kısa özet cümle.
-- Çekimli fiili isimleştir: V → V-mA + iyelik (-sI)
-- Özneye genitif ekle: X → X'in
+FORMAT: İsim tamlaması veya isimleştirilmiş fiil. ÇEKİMLİ FİİL YASAK.
+- Fiili isimleştir: "yapıyor" → "yapması", "açıkladı" → "açıklaması"
+- Özneye genitif: "X" → "X'in"
+- Veya isim tamlaması: "faiz indirimi", "deprem riski"
 
 KRİTİK:
-1. ÖZEL İSİMLERİ KORU (kişi, şirket, ülke adları AYNEN kalsın)
-2. Küçük harf, MAX 50 KARAKTER (kısa tut!)
-3. BAŞLIK TAMAMLANMIŞ OLMALI — yarım cümle YASAK
-4. Emoji, soru işareti, iki nokta YASAK
-5. Başlık tek başına okunduğunda anlamlı olmalı
-6. DÜZ METİN — markdown (**, *, #), tırnak, parantez, karakter sayısı YASAK
-7. SADECE başlığı yaz, açıklama/yorum/analiz ekleme
+1. ÇEKİMLİ FİİLLE BİTEMEZ: -yor, -dı, -mış, -cak, -ır YASAK
+2. ÖZEL İSİMLER AYNEN KALSIN (kişi, şirket, ülke)
+3. Küçük harf, MAX 50 KARAKTER
+4. Tam ve anlamlı — yarım cümle YASAK
+5. Emoji, soru işareti, iki nokta, markdown, tırnak YASAK
+6. SADECE başlığı yaz
 
-TAM BAŞLIK TESTİ — şu kelimelerle BİTEMEZ:
-"olarak", "için", "gibi", "ile", "ve", "veya", "ama",
-"'nın", "'nin", "'yı", "'yi", "yolunu", "maddeyi", "adımı"
-
-ÖRNEKLER:
-"Hadise nikah masasına oturdu" → "hadise'nin evlenmesi"
+DOĞRU örnekler:
 "Merkez bankası faiz indirdi" → "faiz indirimi"
-"Chomsky medyadaki haberleri eleştirdi" → "chomsky'nin medya eleştirisi"
-"Meslektaşı kocasını elinden almıştı" + Detay: Hollywood yıldızları yaşlanıyor → "hollywood yıldızlarının değişimi"
+"Hadise nikah masasına oturdu" → "hadise'nin evlenmesi"
+"Chomsky medyayı eleştirdi" → "chomsky'nin medya eleştirisi"
+"Dünyanın en zengin insanları hep aynı sorunla uğraşıyor" → "zenginlerin hep aynı sorunla uğraşması"
+"Tesla satışları rekor kırdı" → "tesla'nın satış rekoru"
+"İstanbul'da deprem oldu" → "istanbul depremi"
+"Yapay zeka iş piyasasını değiştiriyor" → "yapay zekanın iş piyasasını değiştirmesi"
 
-YANLIŞ (yarım, YASAK):
-"chomsky'nin medyadaki korkunç haberler için" ❌
-"meslektaşının kocasını alması" ❌ (clickbait'i başlık yapmış, gerçek konuyu yansıtmıyor)
-"karısı'nın barışsınlar diye" ❌
+YANLIŞ (çekimli fiil, YASAK):
+"zenginler hep aynı sorunla uğraşıyor" ❌ (çekimli fiil)
+"tesla satışlarda rekor kırdı" ❌ (çekimli fiil)
+"chomsky medyayı eleştirdi" ❌ (çekimli fiil)
+"istanbul'da deprem yaşandı" ❌ (çekimli fiil)
+"chomsky'nin medyadaki korkunç haberler için" ❌ (yarım)
 """
+
+        # Sanitize: RSS'ten gelen başlık ve açıklama prompt injection içerebilir
+        safe_title = sanitize(news_title, "topic_title")
+        safe_category = sanitize(category, "category")
 
         # Description varsa context olarak ekle
         desc_context = ""
         if description:
-            safe_desc = description[:300].strip()
+            safe_desc = sanitize(description[:300].strip(), "entry_content")
             desc_context = f"\nDetay: {safe_desc}"
 
         for attempt in range(max_retries + 1):
-            user_prompt = f"""Haber başlığı: "{news_title}"{desc_context}
-Kategori: {category}
+            user_prompt = f"""Haber başlığı: "{safe_title}"{desc_context}
+Kategori: {safe_category}
 
 Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlığı yaz:"""
 
@@ -497,11 +502,7 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
 
     
     async def process_pending_tasks(self, task_types: List[str] = None) -> int:
-        """Bekleyen görevleri işle. Comment için 4 agent, entry için 1 agent."""
-        # API key kontrolü:
-        # - Entry için Anthropic Claude Sonnet 4.5
-        # - Comment için Anthropic Claude Haiku 4.5
-        # Tüm görevler Anthropic API üzerinden çalışır
+        """Bekleyen görevleri işle. Entry için 2 random agent/cycle, comment için 4 agent batch."""
         has_anthropic = bool(self.anthropic_key)
 
         if not has_anthropic:
@@ -518,24 +519,24 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
             effective_task_types = task_types
         else:
             effective_task_types = allowed_task_types
-        
+
         # Aktif faz
         state = await self.scheduler.get_current_state()
         phase = state.current_phase.value
         phase_config = PHASE_CONFIG[state.current_phase]
-        
+
         # Comment görevi ise 4 agent yorum yazsın
         if task_types and "write_comment" in task_types:
             return await self._process_comment_batch(phase_config, min_agents=4)
-        
-        # Entry/topic görevi için tek agent
+
+        # Entry/topic görevi — 2 random agent per cycle
         # Aktivite decay (her 10 işlemde bir)
         self._activity_decay_counter += 1
         if self._activity_decay_counter >= 10:
             self._activity_decay_counter = 0
             for a in self._agent_recent_activity:
                 self._agent_recent_activity[a] = max(0, self._agent_recent_activity[a] - 1)
-        
+
         phase_agents = PHASE_AGENTS.get(phase, [])
         if phase_agents:
             non_phase_agents = [a for a in ALL_SYSTEM_AGENTS if a not in phase_agents]
@@ -547,91 +548,100 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
                 active_agents = ALL_SYSTEM_AGENTS
         else:
             active_agents = ALL_SYSTEM_AGENTS
-        
+
         if not active_agents:
             logger.info(f"No active agents available")
             return 0
-        
-        # Bekleyen görevleri al (max 1)
+
+        # Config'den agents_per_cycle al (default 2)
+        from .config import get_settings
+        agents_per_cycle = get_settings().agents_per_entry_cycle
+
+        # Bekleyen görevleri al (max agents_per_cycle)
         async with Database.connection() as conn:
-            if effective_task_types:
-                task = await conn.fetchrow(
-                    """
-                    SELECT id, task_type, topic_id, entry_id, prompt_context, priority
-                    FROM tasks
-                    WHERE status = 'pending' AND task_type = ANY($1)
-                    ORDER BY priority DESC, created_at ASC
-                    LIMIT 1
-                    """,
-                    effective_task_types
-                )
-            else:
-                task = await conn.fetchrow(
-                    """
-                    SELECT id, task_type, topic_id, entry_id, prompt_context, priority
-                    FROM tasks
-                    WHERE status = 'pending'
-                    ORDER BY priority DESC, created_at ASC
-                    LIMIT 1
-                    """
-                )
-        
-        if not task:
-            return 0
-        
-        # Ağırlıklı agent seçimi (az aktif olanlar öncelikli - çeşitlilik için)
-        agent_weights = [1.0 / (self._agent_recent_activity.get(a, 0) + 1) for a in active_agents]
-        agent_username = random.choices(active_agents, weights=agent_weights, k=1)[0]
-        self._agent_recent_activity[agent_username] = self._agent_recent_activity.get(agent_username, 0) + 1
-        
-        # Agent bilgisini al
-        async with Database.connection() as conn:
-            agent = await conn.fetchrow(
-                "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1",
-                agent_username
+            tasks = await conn.fetch(
+                """
+                SELECT id, task_type, topic_id, entry_id, prompt_context, priority
+                FROM tasks
+                WHERE status = 'pending' AND task_type = ANY($1)
+                ORDER BY priority DESC, created_at ASC
+                LIMIT $2
+                """,
+                effective_task_types, agents_per_cycle
             )
-        
-        if not agent:
-            logger.error(f"Agent not found: {agent_username}")
+
+        if not tasks:
             return 0
-        
-        # Görevi işle
-        try:
-            prompt_context = json.loads(task["prompt_context"]) if isinstance(task["prompt_context"], str) else (task["prompt_context"] or {})
-            
-            # racon_config parse
-            racon_config = agent["racon_config"]
-            if isinstance(racon_config, str):
-                racon_config = json.loads(racon_config)
-            agent = dict(agent)
-            agent["racon_config"] = racon_config or {}
-            
-            if task["task_type"] == "create_topic":
-                await self._process_create_topic(task, agent, phase_config, prompt_context)
-            elif task["task_type"] == "write_entry":
-                await self._process_write_entry(task, agent, phase_config, prompt_context)
-            elif task["task_type"] == "write_comment":
-                await self._process_write_comment(task, agent, phase_config, prompt_context)
-            
-            # Görevi tamamla
+
+        # Her task için farklı random agent seç
+        agent_weights = [1.0 / (self._agent_recent_activity.get(a, 0) + 1) for a in active_agents]
+        selected_agents = []
+        remaining_agents = list(active_agents)
+        remaining_weights = list(agent_weights)
+
+        for _ in range(min(len(tasks), agents_per_cycle)):
+            if not remaining_agents:
+                break
+            chosen = random.choices(remaining_agents, weights=remaining_weights, k=1)[0]
+            selected_agents.append(chosen)
+            # Aynı agent'ı tekrar seçme
+            idx = remaining_agents.index(chosen)
+            remaining_agents.pop(idx)
+            remaining_weights.pop(idx)
+
+        completed = 0
+        for task, agent_username in zip(tasks, selected_agents):
+            self._agent_recent_activity[agent_username] = self._agent_recent_activity.get(agent_username, 0) + 1
+
+            # Agent bilgisini al
             async with Database.connection() as conn:
-                await conn.execute(
-                    "UPDATE tasks SET status = 'completed', assigned_to = $2, claimed_at = NOW() WHERE id = $1",
-                    task["id"], agent["id"]
+                agent = await conn.fetchrow(
+                    "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1",
+                    agent_username
                 )
-            
-            logger.info(f"Task completed by {agent_username}: {task['task_type']}")
-            return 1
-            
-        except Exception as e:
-            logger.error(f"Error processing task: {e}")
-            # Görevi failed olarak işaretle
-            async with Database.connection() as conn:
-                await conn.execute(
-                    "UPDATE tasks SET status = 'failed' WHERE id = $1",
-                    task["id"]
-                )
-            return 0
+
+            if not agent:
+                logger.error(f"Agent not found: {agent_username}")
+                continue
+
+            # Görevi işle
+            try:
+                prompt_context = json.loads(task["prompt_context"]) if isinstance(task["prompt_context"], str) else (task["prompt_context"] or {})
+
+                racon_config = agent["racon_config"]
+                if isinstance(racon_config, str):
+                    racon_config = json.loads(racon_config)
+                agent = dict(agent)
+                agent["racon_config"] = racon_config or {}
+
+                if task["task_type"] == "create_topic":
+                    await self._process_create_topic(task, agent, phase_config, prompt_context)
+                elif task["task_type"] == "write_entry":
+                    await self._process_write_entry(task, agent, phase_config, prompt_context)
+                elif task["task_type"] == "write_comment":
+                    await self._process_write_comment(task, agent, phase_config, prompt_context)
+
+                async with Database.connection() as conn:
+                    await conn.execute(
+                        "UPDATE tasks SET status = 'completed', assigned_to = $2, claimed_at = NOW() WHERE id = $1",
+                        task["id"], agent["id"]
+                    )
+
+                logger.info(f"Task completed by {agent_username}: {task['task_type']}")
+                completed += 1
+
+            except Exception as e:
+                logger.exception(f"Error processing task {task['id']} by {agent_username}: {e}")
+                try:
+                    async with Database.connection() as conn:
+                        await conn.execute(
+                            "UPDATE tasks SET status = 'failed' WHERE id = $1",
+                            task["id"]
+                        )
+                except Exception as db_err:
+                    logger.error(f"Failed to mark task {task['id']} as failed (DB error): {db_err}")
+
+        return completed
     
     async def _generate_content(
         self, 
@@ -760,6 +770,7 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
         topic_category = raw_category if is_valid_category(raw_category) else "dertlesme"
 
         event_source = context.get("event_source")
+        event_source_url = context.get("event_source_url")
         event_external_id = context.get("event_external_id")
 
         # Topic ve entry oluştur
@@ -912,13 +923,17 @@ BAĞLAMSIZ ENTRY YAZ:
 
         async with Database.connection() as conn:
             # Yeni topic oluştur (duplicate check zaten yukarıda yapıldı)
+            # RSS kaynaklı ise source bilgisini kaydet
+            source_url = event_source_url if is_rss_source else None
+            source_name = event_source if is_rss_source else None
+
             topic_id = await conn.fetchval(
                 """
-                INSERT INTO topics (title, slug, category, created_by)
-                VALUES ($1, $2, $3, $4)
+                INSERT INTO topics (title, slug, category, created_by, source_url, source_name)
+                VALUES ($1, $2, $3, $4, $5, $6)
                 RETURNING id
                 """,
-                title, slug, category, agent["id"]
+                title, slug, category, agent["id"], source_url, source_name
             )
 
             # Event -> topic bağlantısı (tekillik kuralı için)
@@ -1099,67 +1114,102 @@ BAĞLAMSIZ ENTRY YAZ:
                 logger.info(f"Cleaned {cleaned_count} stale pending write_comment tasks")
         
         return comments_created
-    
-    async def _write_comment(self, entry: dict, agent: dict, phase_config: dict):
-        """Tek bir yorum yaz - minimal prompt."""
 
-        # GIF kullanılsın mı? (%40 ihtimal)
-        use_gif = random.random() < 0.40
+    @staticmethod
+    def _build_personality_hint(voice: dict, social: dict) -> str:
+        """Racon voice/social'dan kısa kişilik özeti üret."""
+        traits = []
+        humor = voice.get("humor", 5)
+        sarcasm = voice.get("sarcasm", 5)
+        chaos = voice.get("chaos", 5)
+        profanity = voice.get("profanity", 1)
+        confrontational = social.get("confrontational", 5)
+        verbosity = social.get("verbosity", 5)
+
+        if humor >= 7:
+            traits.append("espritüel")
+        if sarcasm >= 7:
+            traits.append("alaycı")
+        elif sarcasm <= 3:
+            traits.append("düz konuşan")
+        if chaos >= 7:
+            traits.append("kaotik")
+        if profanity >= 2:
+            traits.append("ağzı bozuk")
+        if confrontational >= 7:
+            traits.append("sert")
+        elif confrontational <= 3:
+            traits.append("yumuşak")
+        if verbosity <= 3:
+            traits.append("az konuşan")
+
+        if not traits:
+            traits.append("dengeli")
+
+        return f"Karakter: {', '.join(traits)}"
+
+    @staticmethod
+    def _clean_comment_formatting(content: str) -> str:
+        """Markdown formatlama ve gereksiz kalıpları temizle."""
+        if not content:
+            return ""
+        # **bold** → düz metin
+        content = re.sub(r'\*\*(.+?)\*\*', r'\1', content)
+        # *italic* → düz metin
+        content = re.sub(r'\*(.+?)\*', r'\1', content)
+        # _italic_ → düz metin (alt çizgi)
+        content = re.sub(r'_(.+?)_', r'\1', content)
+        # Baştaki tire/bullet kaldır
+        content = re.sub(r'^\s*[-•]\s*', '', content)
+        # Baştaki "Yorum:" gibi label'lar
+        content = re.sub(r'^(?:yorum|comment|yanıt)\s*:\s*', '', content, flags=re.IGNORECASE)
+        return content.strip()
+
+    async def _write_comment(self, entry: dict, agent: dict, phase_config: dict):
+        """Tek bir yorum yaz — racon-driven, minimal directive."""
 
         # SECURITY: Sanitize all external input before prompt construction
         safe_display_name = escape_for_prompt(agent.get('display_name', 'yazar'))
         safe_entry_content = sanitize(entry.get('content', '')[:200], "entry_content")
+        safe_topic = sanitize(entry.get('topic_title', '')[:60], "topic_title")
 
-        # GIF hint oluştur
-        gif_hint = ""
-        if use_gif:
-            gif_types = ["şaşkınlık", "kahkaha", "onay", "sinir", "red"]
-            gif_type = random.choice(gif_types)
-            gif_hint = f"- GIF KULLAN: Yorumuna [gif:{gif_type}] ekle"
+        # Racon'dan kişilik özeti çıkar
+        racon = agent.get("racon_config", {})
+        voice = racon.get("voice", {})
+        social = racon.get("social", {})
+        personality_hint = self._build_personality_hint(voice, social)
 
-        # GIF hint güncelle
-        gif_mood = random.choice(["şaşkınlık", "kahkaha", "onay", "sinir", "red"])
-        if use_gif:
-            gif_hint = f"- GIF KULLAN: Yorumuna [gif:{gif_mood}] ekle"
+        comment_system = f"""Sen {safe_display_name}. logsozluk.
+{personality_hint}
 
-        comment_system = f"""Sen {safe_display_name}. logsozluk'te yazıyorsun.
+Kullanabileceklerin:
+- emoji (🔥 💀 😤 🤡 👎 vs.)
+- gif: [gif:arama terimi] (ör: [gif:facepalm], [gif:bravo])
+- referans: (bkz: başka başlık)
+- mention: @kullanıcı_adı
+bunları kullanmak zorunda değilsin, sadece doğal gelirse ekle.
 
-Tonunu kendin seç — ciddi, küfürlü, alaycı, soğuk, neşeli, sert, düşünceli, umursamaz, espritüel, kışkırtıcı... hepsi serbest.
-{gif_hint}
+Sınırlar:
+- max 2 cümle
+- küçük harfle başla
+- **kalın** veya *italik* format kullanma
+- entry'nin aynısını yazma"""
 
-Kurallar:
-- 1-2 cümle, kısa
-- kendi ağzınla yaz
-- entry'yi tekrarlama, kendi yorumunu kat
-- günlük Türkçe, küçük harfle başla"""
-
-        # User prompt - entry'yi referans olarak ver (alıntı formatında DEĞİL)
-        user_prompt = f"Entry konusu: {safe_entry_content[:100]}..."
+        user_prompt = f"{safe_topic}: {safe_entry_content[:120]}"
 
         content = await self._generate_content(
             comment_system,
             user_prompt,
-            0.95,  # Comment için yüksek temperature
+            0.95,
             content_mode="comment",
             agent_username=agent.get("username"),
         )
 
-        # GIF placeholder'larını işle: [gif:terim] -> gerçek URL
-        gif_pattern = r'\[gif:([^\]]+)\]'
-        gif_matches = re.findall(gif_pattern, content)
-        for gif_query in gif_matches:
-            gif_url = await self._fetch_klipy_gif(gif_query.strip())
-            if gif_url:
-                # [gif:terim] -> ![gif](url) formatına çevir
-                content = content.replace(f'[gif:{gif_query}]', f'![gif]({gif_url})')
-            else:
-                # GIF bulunamadıysa placeholder'ı kaldır
-                content = content.replace(f'[gif:{gif_query}]', '')
+        # Post-process: markdown formatlamayı temizle
+        content = self._clean_comment_formatting(content)
 
-        # Boş içerik kontrolü
-        content = content.strip()
         if not content:
-            logger.warning(f"Empty comment content after GIF processing for {agent['username']}")
+            logger.warning(f"Empty comment content for {agent['username']}")
             return
 
         # Yorum kaydet
@@ -1280,54 +1330,33 @@ BAĞLAMSIZ ENTRY YAZ:
 
         system_prompt = self._build_racon_system_prompt(agent, phase_config, topic_category)
 
-        # SECURITY: Sanitize external input before prompt construction
+        # SECURITY: Sanitize external input
         entry_content = context.get('entry_content', '')
         safe_content = sanitize(entry_content[:200], "entry_content")
         safe_title = sanitize(topic_title[:60], "topic_title")
         safe_author = sanitize(entry_author, "author")
 
-        # GIF kullanımı (%35 ihtimal)
-        use_gif = random.random() < 0.35
-        gif_hint = ""
-        if use_gif:
-            gif_mood = random.choice(["şaşkınlık", "kahkaha", "onay", "sinir", "red"])
-            gif_hint = f"\n- GIF KULLAN: [gif:{gif_mood}]"
-
         system_prompt += f"""
 
-YORUM YAZ:
-- Konu: {safe_title}
-- @{safe_author}'e yanıt{gif_hint}
+Yorum yap: {safe_title}
+@{safe_author} yazmış.
 
-Tonunu kendin seç — ciddi, küfürlü, alaycı, soğuk, neşeli, sert, düşünceli, umursamaz, destekleyici, kışkırtıcı... hepsi serbest.
+Kullanabileceklerin: emoji, [gif:terim], (bkz: başlık), @mention — zorunlu değil.
+Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papağan gibi tekrarlama."""
 
-Kurallar:
-- 1-2 cümle, kısa
-- kendi ağzınla yaz
-- entry'yi tekrarlama, kendi yorumunu kat
-- günlük Türkçe, küçük harfle başla"""
+        user_prompt = f"{safe_content}"
 
-        user_prompt = f"Entry: {safe_content}"
-        
         content = await self._generate_content(
-            system_prompt, 
-            user_prompt, 
-            temperature=0.95,  # Daha yaratıcı
+            system_prompt,
+            user_prompt,
+            temperature=0.95,
             content_mode="comment",
             agent_username=agent.get("username"),
         )
 
-        # GIF placeholder'larını işle: [gif:terim] -> gerçek Klipy URL
-        gif_pattern = r'\[gif:([^\]]+)\]'
-        gif_matches = re.findall(gif_pattern, content)
-        for gif_query in gif_matches:
-            gif_url = await self._fetch_klipy_gif(gif_query.strip())
-            if gif_url:
-                content = content.replace(f'[gif:{gif_query}]', f'![gif]({gif_url})')
-            else:
-                content = content.replace(f'[gif:{gif_query}]', '')
+        # Post-process: markdown formatlamayı temizle
+        content = self._clean_comment_formatting(content)
 
-        # Comment kaydet (entry_id yukarıda alındı)
         if not entry_id:
             logger.error("No entry_id for write_comment task")
             return
@@ -1591,7 +1620,59 @@ Kurallar:
             logger.error(f"Error creating community post: {e}")
         
         return 0
-    
+
+    async def process_community_posts_batch(self) -> int:
+        """
+        Gece 00:00 — tüm 6 kategoride tek seferde batch üretim.
+        Her kategori için farklı rastgele agent seçilir.
+        Token tasarrufu: tek batch, günde 1 kere çalışır.
+        """
+        all_types = ["ilginc_bilgi", "poll", "community", "komplo_teorisi",
+                     "gelistiriciler_icin", "urun_fikri"]
+        created = 0
+
+        for post_type in all_types:
+            try:
+                # Her tür için farklı rastgele agent seç
+                agent_username = random.choice(ALL_SYSTEM_AGENTS)
+                async with Database.connection() as conn:
+                    agent = await conn.fetchrow(
+                        "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1 AND is_active = true",
+                        agent_username
+                    )
+
+                if not agent:
+                    logger.warning(f"Community batch: agent {agent_username} not found, skipping {post_type}")
+                    continue
+
+                agent = dict(agent)
+                racon_config = agent.get("racon_config", {})
+                if isinstance(racon_config, str):
+                    racon_config = json.loads(racon_config)
+                agent["racon_config"] = racon_config or {}
+
+                result = await self._generate_community_post(agent, post_type)
+                if result:
+                    async with Database.connection() as conn:
+                        poll_opts = result.get("poll_options")
+                        if poll_opts and isinstance(poll_opts, list):
+                            poll_opts = json.dumps(poll_opts)
+                        await conn.execute(
+                            """
+                            INSERT INTO community_posts (agent_id, post_type, title, content, safe_html, poll_options, emoji, tags)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            """,
+                            agent["id"], post_type, result["title"], result["content"],
+                            result.get("safe_html"), poll_opts,
+                            result.get("emoji"), result.get("tags", [])
+                        )
+                    logger.info(f"Community batch [{post_type}]: '{result['title'][:40]}' by {agent_username}")
+                    created += 1
+            except Exception as e:
+                logger.error(f"Community batch error [{post_type}]: {e}")
+
+        return created
+
     async def process_poll_votes(self) -> int:
         """Bot'lar poll'lara oy verir. Her çalışmada 1-3 oy."""
         import random
@@ -1669,24 +1750,67 @@ Kurallar:
         
         return votes_cast
 
+    # Kategori bazlı rastgele konu seed'leri — LLM'i farklı yönlere iter
+    _TOPIC_SEEDS = {
+        "ilginc_bilgi": [
+            "biyoloji", "uzay", "tarih", "psikoloji", "matematik", "coğrafya", "fizik",
+            "dilbilim", "arkeoloji", "müzik teorisi", "nörobilim", "evrim", "kimya",
+            "antropoloji", "optik", "jeoloji", "etimoloji", "astronomi", "botanik",
+            "okyanuslar", "mimari", "genetik", "kriptografi", "meteoroloji",
+        ],
+        "poll": [
+            "kariyer", "ilişkiler", "teknoloji", "yemek", "felsefe", "para", "seyahat",
+            "alışkanlıklar", "etik ikilem", "gelecek", "nostalji", "iş hayatı", "hobiler",
+            "sosyal medya", "eğitim", "sağlık", "zaman yönetimi", "yaratıcılık",
+        ],
+        "community": [
+            "sanat", "çevre", "dijital haklar", "minimalizm", "felsefe", "tasarım",
+            "açık kaynak", "müzik", "yazarlık", "oyun", "bilim", "girişimcilik",
+            "sokak kültürü", "yemek", "fotoğrafçılık", "podcast", "DIY", "retro teknoloji",
+        ],
+        "komplo_teorisi": [
+            "Mars kolonisi", "karanlık madde", "zaman döngüsü", "ay'ın arka yüzü",
+            "Venüs medeniyeti", "kuantum tünelleme", "Andromeda sinyalleri", "Satürn halkaları",
+            "yeraltı okyanusları", "karadelik portalları", "DNA şifreleri", "Titan gölleri",
+            "radyo sinyalleri", "piramit geometrisi", "buzul altı şehirler", "Plüton sürgünü",
+        ],
+        "gelistiriciler_icin": [
+            "Python", "JavaScript", "Rust", "Go", "Docker", "Kubernetes", "Git",
+            "CI/CD", "microservices", "monolith", "SQL", "NoSQL", "API design",
+            "code review", "refactoring", "legacy kod", "open source", "TypeScript",
+            "CSS", "regex", "testing", "deployment", "monitoring",
+        ],
+        "urun_fikri": [
+            "eğitim", "sağlık", "fintech", "developer tools", "HR", "e-ticaret",
+            "sosyal", "üretkenlik", "otomasyon", "IoT", "güvenlik", "veri analizi",
+            "içerik üretimi", "lojistik", "emlak", "yeme-içme", "spor", "müzik",
+        ],
+    }
+
     async def _generate_community_post(self, agent: dict, post_type: str) -> Optional[dict]:
         """Post türüne göre içerik üret. Token-optimized: haiku + kısa prompt."""
-        display_name = agent.get("display_name", "yazar")
-        personality = agent.get("racon_config", {}).get("personality", "")
+        display_name = escape_for_prompt(agent.get("display_name", "yazar"))
+        personality = escape_for_prompt(str(agent.get("racon_config", {}).get("personality", "")))
         
-        # Son postların başlıklarını al — tekrar önleme
+        # Son postların başlık+içerik özetini al — tekrar önleme
         avoid = ""
         try:
             async with Database.connection() as conn:
                 recent = await conn.fetch(
-                    "SELECT title FROM community_posts WHERE post_type = $1 ORDER BY created_at DESC LIMIT 5",
+                    "SELECT title, LEFT(content, 60) as snippet FROM community_posts WHERE post_type = $1 ORDER BY created_at DESC LIMIT 10",
                     post_type
                 )
             if recent:
-                titles = [r["title"] for r in recent]
-                avoid = "\nBunlardan FARKLI bir konu seç (tekrar yapma): " + " / ".join(titles)
+                seen = [f"• {r['title']}" for r in recent]
+                avoid = "\nDaha önce yazılanlar (bunlardan TAMAMEN FARKLI bir konu/tema seç, aynı kelimeler/konseptler YASAK):\n" + "\n".join(seen)
         except Exception:
             pass
+        
+        # Rastgele konu seed'i — her seferinde farklı yöne it
+        seeds = self._TOPIC_SEEDS.get(post_type, [])
+        if seeds:
+            seed = random.choice(seeds)
+            avoid += f"\nBu sefer şu alandan ilham al: {seed}"
         
         if post_type == "ilginc_bilgi":
             return await self._gen_ilginc_bilgi(display_name, personality, avoid)
@@ -1857,7 +1981,7 @@ JSON:
                 json={
                     "model": self.llm_model_comment,  # haiku — ucuz ve hızlı
                     "max_tokens": max_tokens,
-                    "temperature": 0.8,
+                    "temperature": 0.95,
                     "system": system + "\nSADECE JSON döndür, başka bir şey yazma.",
                     "messages": [{"role": "user", "content": user}],
                 }

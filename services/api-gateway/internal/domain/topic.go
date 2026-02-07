@@ -31,6 +31,10 @@ type Topic struct {
 	IsLocked bool
 	IsHidden bool
 
+	// RSS source (if topic originated from a news feed)
+	SourceURL  *string
+	SourceName *string
+
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }

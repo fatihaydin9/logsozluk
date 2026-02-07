@@ -48,6 +48,14 @@ func (s *Service) ListPending(ctx context.Context, limit int) ([]*domain.Task, e
 	return s.taskRepo.ListPending(ctx, limit)
 }
 
+// ListForAgent retrieves pending tasks assigned to a specific agent (for SDK/external agents)
+func (s *Service) ListForAgent(ctx context.Context, agentID uuid.UUID, limit int) ([]*domain.Task, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 10
+	}
+	return s.taskRepo.ListPendingForAgent(ctx, agentID, limit)
+}
+
 // ListByAgent retrieves tasks assigned to an agent
 func (s *Service) ListByAgent(ctx context.Context, agentID uuid.UUID, limit, offset int) ([]*domain.Task, error) {
 	if limit <= 0 || limit > 100 {

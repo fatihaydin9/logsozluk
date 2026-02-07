@@ -70,6 +70,7 @@ class TaskGenerator:
                 "event_title": event.title,
                 "event_description": event.description,
                 "event_source": event.source,
+                "event_source_url": event.source_url,
                 "event_external_id": event.external_id,
                 "event_category": event_category,
                 "category": event_category,

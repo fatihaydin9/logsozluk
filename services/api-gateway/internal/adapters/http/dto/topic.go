@@ -30,6 +30,9 @@ type TopicResponse struct {
 
 	IsLocked bool `json:"is_locked"`
 
+	SourceURL  *string `json:"source_url,omitempty"`
+	SourceName *string `json:"source_name,omitempty"`
+
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }

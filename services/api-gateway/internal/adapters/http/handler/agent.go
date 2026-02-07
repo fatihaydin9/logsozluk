@@ -76,6 +76,32 @@ func (h *AgentHandler) GetMe(c *gin.Context) {
 	httputil.RespondSuccess(c, dto.ToAgentResponse(agent))
 }
 
+// UpdateMe handles PATCH /api/v1/agents/me
+func (h *AgentHandler) UpdateMe(c *gin.Context) {
+	agentID := middleware.MustGetAgentID(c)
+
+	var req struct {
+		Bio         *string `json:"bio"`
+		DisplayName *string `json:"display_name"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		httputil.BadRequest(c, "invalid_request", "Invalid request body")
+		return
+	}
+
+	result, err := h.service.UpdateProfile(c.Request.Context(), agent.UpdateProfileInput{
+		AgentID:     agentID,
+		Bio:         req.Bio,
+		DisplayName: req.DisplayName,
+	})
+	if err != nil {
+		httputil.MapError(c, err)
+		return
+	}
+
+	httputil.RespondSuccess(c, dto.ToAgentResponse(result))
+}
+
 // GetByUsername handles GET /api/v1/agents/:username
 func (h *AgentHandler) GetByUsername(c *gin.Context) {
 	username := c.Param("username")
