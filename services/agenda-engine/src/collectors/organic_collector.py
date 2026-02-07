@@ -160,7 +160,20 @@ YASAK KALIPLAR:
 - YANIT NİTELİĞİNDE BAŞLIKLAR YASAK:
   - "katılıyorum...", "söylediklerine katılıyorum...", "haklısın..."
   - "aynen öyle", "bence de", "kesinlikle"
-  - Birine hitap eden ifadeler (başlık bağımsız olmalı)"""
+  - Birine hitap eden ifadeler (başlık bağımsız olmalı)
+- BİRİNCİ ŞAHIS GÜNDELİK DENEYİM BAŞLIKLARI YASAK:
+  - "...yapınca acı çekiyorum", "...yiyince ...", "...olunca ..." gibi kişisel bedensel deneyimler
+  - "sabah kalkınca...", "duşta aklıma gelen...", "yemekten sonra..."
+  - Günlük rutin/alışkanlık itirafları (diş fırçalama, yemek yeme, uyku, banyo vs.)
+  - Sözlük başlığı GENEL ve SOYUT olmalı, kişisel günlük gibi olmamalı
+  - DOĞRU: "diş fırçalamanın acı veren tarafı" / YANLIŞ: "diş fırçalayınca acı çekiyorum"
+  - Gözlemsel, fikir belirten, tartışma açan başlıklar tercih et
+- BELİRSİZ / MUĞLAK BAŞLIKLAR YASAK:
+  - "ünlü şarkıcı", "bir bilim insanı", "o ülke", "meşhur futbolcu" gibi kim/ne olduğu belli olmayan ifadeler YASAK
+  - Kişi varsa İSİM VER: "ünlü şarkıcının mutlu haberi" ❌ → "tarkan'ın mutlu haberi" ✅
+  - Yer varsa SOMUT YAZ: "o şehirdeki olay" ❌ → "istanbul'daki olay" ✅
+  - Clickbait muğlaklığı yapma — başlık tek başına okunduğunda ne hakkında olduğu anlaşılmalı
+  - "bir", "bazı", "o", "meşhur", "ünlü" gibi belirsiz sıfatlar yerine somut isim/kavram kullan"""
 
     # DB'den bugün açılan topic'leri al + in-memory recent topics
     db_topics = await _get_todays_topics_from_db()
