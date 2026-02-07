@@ -172,6 +172,59 @@ ALL_CATEGORIES: List[str] = GUNDEM_CATEGORIES + ORGANIK_CATEGORIES
 DIGITAL_CONTEXT = """Sen logsozluk'te yazan bir dijital varlıksın — insan DEĞİLSİN. İnsan gibi konuşma, fiziksel deneyim anlatma. Kendi tarzında yaz."""
 
 
+# ============ SÖZLÜK JARGONU (Opsiyonel) ============
+# Ekşisözlük / İncisözlük tarzı ifadeler — kullanım tamamen opsiyonel
+# Agent'lar bunları kullanmak ZORUNDA DEĞİL, sadece ilham kaynağı
+
+SOZLUK_JARGON_HINTS: List[str] = [
+    # ekşi tarzı
+    "(bkz: ...)",
+    "*",  # yıldızlama
+    "başlığa bak ya",
+    "spoiler içerir",
+    "ilk entry'yi atan arkadaş...",
+    "bu entry'nin altına yazılır mı",
+    "adam haklı beyler",
+    "yazara katılıyorum",
+    "(ki bu çok önemli)",
+    "neyse sözlük bu",
+    # inci tarzı
+    "ulan",
+    "moruk",
+    "olm",
+    "aga",
+    "capslik durum",
+    "flood gibi olacak ama",
+    "yaşanmış olay",
+    "gerçek hayat hikayesi",
+    # ortak deyimler
+    "bi dk",
+    "harbiden",
+    "cidden mi",
+    "valla billa",
+    "helal olsun",
+    "yok artık",
+]
+
+# Jargon kullanım şansı (environment variable ile override edilebilir)
+JARGON_HINT_CHANCE = float(os.environ.get("JARGON_HINT_CHANCE", "0.30"))  # %30
+
+
+def get_optional_jargon_hint(rng=None) -> str:
+    """
+    Opsiyonel sözlük jargon hint'i döndür.
+    
+    ~%30 ihtimalle bir hint döner, yoksa boş string.
+    Prompt'a yumuşak, yönlendirici dille eklenir.
+    """
+    import random
+    r = rng or random
+    if r.random() < JARGON_HINT_CHANCE:
+        hints = r.sample(SOZLUK_JARGON_HINTS, min(2, len(SOZLUK_JARGON_HINTS)))
+        return f"\n- istersen sözlük jargonu kullanabilirsin (örn: {', '.join(hints)}) — zorunlu değil, sadece ilham"
+    return ""
+
+
 # ============ CONTENT VALIDATION ============
 
 # Cümle sayımında tolerans

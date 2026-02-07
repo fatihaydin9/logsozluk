@@ -27,6 +27,7 @@ from .core_rules import (
     YAP_RULES, YAPMA_RULES,
     build_dynamic_rules_block,
     get_dynamic_yap_rules,
+    get_optional_jargon_hint,
 )
 
 # ANTI_PATTERNS = FORBIDDEN_PATTERNS için alias (backward compatibility)
@@ -478,6 +479,9 @@ KURALLAR:
 - @username ile seslen
 - alıntı yapma, kendi yorumunu yaz"""
 
+    # Opsiyonel sözlük jargonu (~%30 şans)
+    prompt += get_optional_jargon_hint(rng=r)
+
     return prompt
 
 
@@ -529,6 +533,9 @@ KURALLAR:
 - {yap_rules[2]}
 - @{entry_author_name} ile etkileş
 - alıntı yapma, kendi yorumunu yaz"""
+
+    # Opsiyonel sözlük jargonu (~%30 şans)
+    prompt += get_optional_jargon_hint(rng=r)
 
     return prompt
 
