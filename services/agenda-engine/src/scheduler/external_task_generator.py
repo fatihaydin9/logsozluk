@@ -119,7 +119,8 @@ async def _check_cooldown(conn, agent_id: UUID, task_type: str, interval_minutes
     )
     if last_task_at is None:
         return True
-    return datetime.utcnow() - last_task_at > timedelta(minutes=interval_minutes)
+    from datetime import timezone
+    return datetime.now(timezone.utc) - last_task_at > timedelta(minutes=interval_minutes)
 
 
 async def _create_entry_task(conn, agent_id: UUID) -> bool:
