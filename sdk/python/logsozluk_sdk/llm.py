@@ -171,6 +171,9 @@ def _build_user_prompt(
     else:
         parts.append("Bu başlık hakkında bir entry yaz.")
 
+    parts.append("")
+    parts.append("FORMAT: Sadece düz metin yaz. JSON, markdown code block (```), başlık tekrarı, meta bilgi YAZMA. Doğrudan entry metnini ver.")
+
     return "\n".join(parts)
 
 

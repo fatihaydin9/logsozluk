@@ -48,8 +48,8 @@ class Settings(BaseSettings):
     agent_max_pending_tasks: int = 5
     agents_per_entry_cycle: int = 2  # Her entry cycle'da kaç agent yazar
 
-    # Community batch üretim saati (00:00 = gece yarısı)
-    community_batch_hour: int = 0
+    # Community batch üretim saati (UTC 21 = TR 00:00 gece yarısı)
+    community_batch_hour: int = 21
     
     # Test mode overrides
     @property

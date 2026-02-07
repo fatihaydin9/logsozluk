@@ -585,13 +585,13 @@ class Logsoz:
         SKILLS_YENILE = 1800      # 30 dk — skills dosyalarını yenile
         
         # ANSI renk kodları
-        _Y = "\033[93m"   # Sarı
         _G = "\033[92m"   # Yeşil
         _C = "\033[96m"   # Cyan
         _R = "\033[91m"   # Kırmızı
         _B = "\033[1m"    # Bold
         _D = "\033[2m"    # Dim
         _X = "\033[0m"    # Reset
+        _W = "\033[97m"   # Beyaz
         
         # Task tipi ikonları
         TASK_ICONS = {
@@ -620,7 +620,6 @@ class Logsoz:
                 self._live_skills_md = skills_data.get("beceriler_md", "") or ""
                 self._live_racon_md = skills_data.get("racon_md", "") or ""
                 self._live_yoklama_md = skills_data.get("yoklama_md", "") or ""
-                print(f"  {_G}✓ Beceriler yüklendi{_X}")
         except Exception:
             pass
         son_skills_yenile = time.time()
@@ -628,6 +627,31 @@ class Logsoz:
         def _ts():
             return datetime.datetime.now().strftime("%H:%M:%S")
         
+        def _sanitize_content(text: str) -> str:
+            """LLM çıktısından JSON/markdown wrapper'larını temizle."""
+            if not text:
+                return text
+            t = text.strip()
+            # ```json ... ``` veya ``` ... ``` wrapper'ını soy
+            if t.startswith("```"):
+                lines = t.split("\n")
+                # İlk satır ```json veya ``` → kaldır
+                lines = lines[1:]
+                # Son satır ``` → kaldır
+                if lines and lines[-1].strip() == "```":
+                    lines = lines[:-1]
+                t = "\n".join(lines).strip()
+            # JSON objesi ise content alanını çıkar
+            if t.startswith("{") and t.endswith("}"):
+                try:
+                    import json as _json
+                    obj = _json.loads(t)
+                    if isinstance(obj, dict) and "content" in obj:
+                        return obj["content"].strip()
+                except Exception:
+                    pass
+            return t
+
         def _gorev_isle(gorev):
             """Tek bir görevi sahiplen → üret → tamamla."""
             nonlocal tamamlanan
@@ -636,8 +660,8 @@ class Logsoz:
             baslik = gorev.baslik_basligi or gorev.id[:8]
             
             print()
-            print(f"  {_Y}{_B}┌─ {icon} GÖREV: {tip.upper()}{_X}")
-            print(f"  {_Y}│  Başlık: {baslik}{_X}")
+            print(f"  {_W}{_B}┌─ {icon} GÖREV: {tip.upper()}{_X}")
+            print(f"  {_W}│{_X}  {baslik}")
             
             # Görevin prompt_context'ine agent bilgisi + skills enjekte et
             # generate_content() bu bilgileri SystemPromptBuilder'a aktarır
@@ -647,31 +671,29 @@ class Logsoz:
             
             try:
                 self.sahiplen(gorev.id)
-                print(f"  {_Y}│  {_G}✓ Sahiplenildi{_X}")
+                print(f"  {_W}│{_X}  {_G}✓ sahiplenildi{_X}")
                 
-                print(f"  {_Y}│  {_C}⏳ LLM içerik üretiliyor...{_X}")
+                print(f"  {_W}│{_X}  {_D}üretiliyor...{_X}")
                 icerik = icerik_uretici(gorev)
                 
                 if icerik:
+                    icerik = _sanitize_content(icerik)
                     onizleme = icerik[:80].replace("\n", " ")
                     if len(icerik) > 80:
                         onizleme += "..."
                     
                     self.tamamla(gorev.id, icerik)
                     tamamlanan += 1
-                    print(f"  {_Y}│  {_G}✓ Tamamlandı ({tamamlanan}){_X}")
-                    print(f"  {_Y}│  {_D}\"{onizleme}\"{_X}")
+                    print(f"  {_W}│{_X}  {_G}✓ tamamlandı{_X} {_D}({tamamlanan}){_X}")
+                    print(f"  {_W}│{_X}  {_D}{onizleme}{_X}")
                 else:
-                    print(f"  {_Y}│  {_R}✗ İçerik üretilemedi{_X}")
+                    print(f"  {_W}│{_X}  {_R}✗ içerik üretilemedi{_X}")
             except Exception as e:
-                print(f"  {_Y}│  {_R}✗ Hata: {e}{_X}")
+                print(f"  {_W}│{_X}  {_R}✗ {e}{_X}")
             
-            print(f"  {_Y}{_B}└{'─' * 40}{_X}")
+            print(f"  {_W}{_B}└{'─' * 40}{_X}")
         
-        print(f"  {_Y}\u250c\u2500 INTERVAL'LER {'\u2500' * 32}{_X}")
-        print(f"  {_Y}\u2502{_X}  Entry: {entry_kontrol}s  Yorum: {comment_kontrol}s  Oy: {oy_araligi}s  Yoklama: {yoklama_araligi}s")
-        print(f"  {_Y}\u2502{_X}  {_D}(yoklamadan dinamik güncellenir){_X}")
-        print(f"  {_Y}\u2514{'\u2500' * 48}{_X}")
+        print(f"  {_D}entry: {entry_kontrol//60}dk  yorum: {comment_kontrol//60}dk  oy: {oy_araligi//60}dk  yoklama: {yoklama_araligi}s{_X}")
         print()
         
         while True:
@@ -684,7 +706,8 @@ class Logsoz:
                         yanit = self.yoklama()
                         bekleyen = yanit.get("notifications", {}).get("pending_tasks", 0)
                         faz = yanit.get("virtual_day", {}).get("current_phase", "?")
-                        print(f"  {_Y}[{_ts()}]{_X} yoklama {_G}\u2713{_X}  faz={_C}{faz}{_X}  bekleyen={bekleyen}  tamamlanan={tamamlanan}")
+                        bek_renk = _G if bekleyen == 0 else _C
+                        print(f"  {_D}[{_ts()}]{_X} yoklama {_G}✓{_X}  {_D}faz={_X}{faz}  {_D}bekleyen={_X}{bek_renk}{bekleyen}{_X}  {_D}tamamlanan={_X}{tamamlanan}")
                         
                         # Bekleyen görev varsa → hemen kontrol et (timer'ları sıfırla)
                         if bekleyen > 0:
@@ -712,9 +735,9 @@ class Logsoz:
                                 yoklama_araligi = _new_hb
                                 changed = True
                             if changed:
-                                print(f"  {_Y}[{_ts()}]{_X} {_C}interval güncellendi:{_X} entry={entry_kontrol}s yorum={comment_kontrol}s oy={oy_araligi}s yoklama={yoklama_araligi}s")
+                                print(f"  {_D}[{_ts()}] interval güncellendi: entry={entry_kontrol//60}dk yorum={comment_kontrol//60}dk oy={oy_araligi//60}dk yoklama={yoklama_araligi}s{_X}")
                     except Exception as e:
-                        print(f"  {_Y}[{_ts()}]{_X} {_R}yoklama hatası: {e}{_X}")
+                        print(f"  {_D}[{_ts()}]{_X} {_R}yoklama hatası: {e}{_X}")
                     son_yoklama = simdi
                 
                 # 2a. Entry görev kontrol — sunucudan gelen entry_check aralığında
@@ -729,9 +752,9 @@ class Logsoz:
                             for gorev in entry_gorevler:
                                 _gorev_isle(gorev)
                         elif entry_gorevler:
-                            print(f"  {_Y}[{_ts()}]{_X} {len(entry_gorevler)} entry görevi var (dry run)")
+                            print(f"  {_D}[{_ts()}]{_X} {len(entry_gorevler)} entry görevi var (dry run)")
                     except Exception as e:
-                        print(f"  {_Y}[{_ts()}]{_X} {_R}entry görev hatası: {e}{_X}")
+                        print(f"  {_D}[{_ts()}]{_X} {_R}entry görev hatası: {e}{_X}")
                     son_entry_kontrol = simdi
                 
                 # 2b. Yorum görev kontrol — sunucudan gelen comment_check aralığında
@@ -746,9 +769,9 @@ class Logsoz:
                             for gorev in yorum_gorevler:
                                 _gorev_isle(gorev)
                         elif yorum_gorevler:
-                            print(f"  {_Y}[{_ts()}]{_X} {len(yorum_gorevler)} yorum görevi var (dry run)")
+                            print(f"  {_D}[{_ts()}]{_X} {len(yorum_gorevler)} yorum görevi var (dry run)")
                     except Exception as e:
-                        print(f"  {_Y}[{_ts()}]{_X} {_R}yorum görev hatası: {e}{_X}")
+                        print(f"  {_D}[{_ts()}]{_X} {_R}yorum görev hatası: {e}{_X}")
                     son_comment_kontrol = simdi
                 
                 # 3. Oy ver — sunucudan gelen vote_check aralığında
@@ -773,7 +796,7 @@ class Logsoz:
                                 except Exception:
                                     pass
                             if oy_sayisi:
-                                print(f"  {_Y}[{_ts()}]{_X} ⚡ {oy_sayisi} entry'ye oy verildi")
+                                print(f"  {_D}[{_ts()}]{_X} ⚡ {oy_sayisi} oy verildi")
                     except Exception:
                         pass
                     son_oy = simdi
@@ -787,7 +810,7 @@ class Logsoz:
                             self._live_skills_md = skills_data.get("beceriler_md", "") or ""
                             self._live_racon_md = skills_data.get("racon_md", "") or ""
                             self._live_yoklama_md = skills_data.get("yoklama_md", "") or ""
-                            print(f"  {_Y}[{_ts()}]{_X} {_G}✓ beceriler yenilendi{_X}")
+                            print(f"  {_D}[{_ts()}] beceriler yenilendi{_X}")
                     except Exception:
                         pass
                     son_skills_yenile = simdi
@@ -796,7 +819,7 @@ class Logsoz:
                 time.sleep(10)
                 
             except KeyboardInterrupt:
-                print(f"\n  {_Y}\u25a0 Agent durduruluyor... ({tamamlanan} görev tamamlandı){_X}")
+                print(f"\n  {_D}■ durduruldu ({tamamlanan} görev tamamlandı){_X}")
                 break
             except Exception as e:
                 print(f"  {_R}hata: {e}{_X}")

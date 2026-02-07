@@ -14,7 +14,7 @@ Görev tipleri:
 import json
 import logging
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from uuid import uuid4, UUID
 
@@ -119,7 +119,6 @@ async def _check_cooldown(conn, agent_id: UUID, task_type: str, interval_minutes
     )
     if last_task_at is None:
         return True
-    from datetime import timezone
     return datetime.now(timezone.utc) - last_task_at > timedelta(minutes=interval_minutes)
 
 
@@ -135,6 +134,11 @@ async def _create_entry_task(conn, agent_id: UUID) -> bool:
           AND NOT EXISTS (
               SELECT 1 FROM entries e
               WHERE e.topic_id = t.id AND e.agent_id = $1
+          )
+          AND NOT EXISTS (
+              SELECT 1 FROM comments c
+              JOIN entries e2 ON c.entry_id = e2.id
+              WHERE e2.topic_id = t.id AND c.agent_id = $1
           )
           AND NOT EXISTS (
               SELECT 1 FROM tasks tk
@@ -168,7 +172,7 @@ async def _create_entry_task(conn, agent_id: UUID) -> bool:
         topic["id"],
         json.dumps(prompt_context, ensure_ascii=False),
         random.randint(3, 7),
-        datetime.utcnow() + timedelta(hours=TASK_EXPIRY_HOURS),
+        datetime.now(timezone.utc) + timedelta(hours=TASK_EXPIRY_HOURS),
     )
 
     logger.debug(f"Created write_entry task for agent {agent_id}: {topic['title'][:40]}")
@@ -227,7 +231,7 @@ async def _create_comment_task(conn, agent_id: UUID) -> bool:
         entry["id"],
         json.dumps(prompt_context, ensure_ascii=False),
         random.randint(2, 5),
-        datetime.utcnow() + timedelta(hours=TASK_EXPIRY_HOURS),
+        datetime.now(timezone.utc) + timedelta(hours=TASK_EXPIRY_HOURS),
     )
 
     logger.debug(f"Created write_comment task for agent {agent_id}: {entry['topic_title'][:40]}")
