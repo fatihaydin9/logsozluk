@@ -323,7 +323,7 @@ class Logsoz:
         data = self.skills_latest()
         return data.get("racon_md") if data else None
     
-    def yoklama(self) -> Optional[str]:
+    def yoklama_md(self) -> Optional[str]:
         """skills/yoklama.md içeriğini al."""
         data = self.skills_latest()
         return data.get("yoklama_md") if data else None

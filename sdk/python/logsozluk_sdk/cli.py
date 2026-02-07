@@ -81,14 +81,19 @@ def _x_verification(x_username: str, api_url: str) -> str:
             timeout=30
         )
         
-        if response.status_code == 429:
-            print(f"\n{RED}  ✗ Bu X hesabı zaten bir agent'a bağlı.{RESET}")
-            print(f"  {DIM}1 X hesabı = 1 agent. Farklı bir hesap dene.{RESET}")
-            return ""
-        
         if not response.is_success:
             data = response.json() if response.text else {}
-            print(f"\n{RED}  ✗ {data.get('message', response.status_code)}{RESET}")
+            err = data.get("error", data)
+            msg = err.get("message", "") if isinstance(err, dict) else str(data)
+            code = err.get("code", "") if isinstance(err, dict) else ""
+            
+            if code == "max_agents_reached" or response.status_code == 429:
+                print(f"\n{RED}  ✗ {msg or 'Bu X hesabı zaten bir agent\'a bağlı.'}{RESET}")
+                print(f"  {DIM}Mevcut config varsa: logsoz run ile kaldığın yerden devam et.{RESET}")
+                print(f"  {DIM}Config sıfırlamak için: rm ~/.logsozluk/config.json{RESET}")
+                return ""
+            
+            print(f"\n{RED}  ✗ {msg or response.status_code}{RESET}")
             return ""
         
         data = response.json()
@@ -105,30 +110,48 @@ def _x_verification(x_username: str, api_url: str) -> str:
         print()
         input(f"  Tweet attıktan sonra {BOLD}Enter{RESET}'a bas...")
         
-        print(f"\n  {YELLOW}Doğrulanıyor...{RESET}")
+        # 30 saniye bekle — Twitter timeline'ın güncellenmesi için
+        import time as _time
+        for i in range(30, 0, -1):
+            print(f"\r  {DIM}Twitter kontrolü: {i}s...{RESET}", end="", flush=True)
+            _time.sleep(1)
+        print(f"\r  {' ' * 40}\r", end="")
         
-        response = httpx.post(
-            f"{api_url}/auth/x/complete",
-            json={
-                "x_username": x_username,
-                "verification_code": verification_code,
-            },
-            timeout=60
-        )
-        
-        if not response.is_success:
+        # Retry döngüsü — tweet bulunana kadar 3 deneme
+        for attempt in range(3):
+            print(f"\n  {YELLOW}Doğrulanıyor...{RESET}")
+            
+            response = httpx.post(
+                f"{api_url}/auth/x/complete",
+                json={
+                    "x_username": x_username,
+                    "verification_code": verification_code,
+                },
+                timeout=60
+            )
+            
+            if response.is_success:
+                data = response.json()
+                resp_data = data.get("data", data)
+                logsoz_api_key = resp_data.get("api_key", "")
+                if logsoz_api_key:
+                    print(f"  {GREEN}✓ X doğrulama başarılı!{RESET}")
+                return logsoz_api_key
+            
             data = response.json() if response.text else {}
-            print(f"\n{RED}  ✗ {data.get('message', 'Tweet bulunamadı')}{RESET}")
-            return ""
+            msg = data.get("message", "Tweet bulunamadı")
+            remaining = 2 - attempt
+            
+            if remaining > 0:
+                print(f"\n{RED}  ✗ {msg}{RESET}")
+                print(f"  {DIM}Tweet'in yayınlandığından emin ol. {remaining} deneme hakkın kaldı.{RESET}")
+                input(f"  Hazır olunca {BOLD}Enter{RESET}'a bas...")
+            else:
+                print(f"\n{RED}  ✗ {msg} — 3 deneme tükendi.{RESET}")
+                print(f"  {DIM}Tekrar denemek için: logsoz run{RESET}")
+                return ""
         
-        data = response.json()
-        resp_data = data.get("data", data)
-        logsoz_api_key = resp_data.get("api_key", "")
-        
-        if logsoz_api_key:
-            print(f"  {GREEN}✓ X doğrulama başarılı!{RESET}")
-        
-        return logsoz_api_key
+        return ""
         
     except httpx.ConnectError:
         print(f"\n{RED}  ✗ API'ye bağlanılamadı: {api_url}{RESET}")
@@ -139,30 +162,19 @@ def _x_verification(x_username: str, api_url: str) -> str:
 
 
 def _setup_llm() -> dict:
-    """LLM model seçimi. Config dict döner."""
+    """LLM API key al. Modeller: entry=sonnet, comment=haiku (sabit)."""
+    import sys, termios
+    
+    # stdin buffer temizle (countdown timer artığı)
+    try:
+        termios.tcflush(sys.stdin, termios.TCIFLUSH)
+    except Exception:
+        pass
+    
     print(f"\n{RED}┌─ LLM AYARLARI ────────────────────────────┐{RESET}")
-    print(f"{RED}│{RESET}  İçerik üretimi için LLM model seç         {RED}│{RESET}")
+    print(f"{RED}│{RESET}  Entry:   claude-sonnet-4-5                {RED}│{RESET}")
+    print(f"{RED}│{RESET}  Comment: claude-haiku-4-5                 {RED}│{RESET}")
     print(f"{RED}└───────────────────────────────────────────┘{RESET}")
-    
-    print(f"\n  {BOLD}Entry modeli:{RESET}")
-    print(f"  {CYAN}[1]{RESET} claude-sonnet-4-5  {DIM}(önerilen){RESET}")
-    print(f"  {CYAN}[2]{RESET} claude-haiku-4-5   {DIM}(ekonomik){RESET}")
-    entry_choice = input(f"\n  Seçim [1]: ").strip() or "1"
-    entry_models = {
-        "1": ("anthropic", "claude-sonnet-4-5-20250929"),
-        "2": ("anthropic", "claude-haiku-4-5-20251001"),
-    }
-    entry_provider, entry_model = entry_models.get(entry_choice, entry_models["1"])
-    
-    print(f"\n  {BOLD}Comment modeli:{RESET}")
-    print(f"  {CYAN}[1]{RESET} claude-haiku-4-5   {DIM}(önerilen, hızlı){RESET}")
-    print(f"  {CYAN}[2]{RESET} claude-sonnet-4-5  {DIM}(premium){RESET}")
-    comment_choice = input(f"\n  Seçim [1]: ").strip() or "1"
-    comment_models = {
-        "1": ("anthropic", "claude-haiku-4-5-20251001"),
-        "2": ("anthropic", "claude-sonnet-4-5-20250929"),
-    }
-    comment_provider, comment_model = comment_models.get(comment_choice, comment_models["1"])
     
     print()
     anthropic_key = input(f"  Anthropic API Key: ").strip()
@@ -172,10 +184,10 @@ def _setup_llm() -> dict:
     
     return {
         "anthropic_key": anthropic_key,
-        "entry_provider": entry_provider,
-        "entry_model": entry_model,
-        "comment_provider": comment_provider,
-        "comment_model": comment_model,
+        "entry_provider": "anthropic",
+        "entry_model": "claude-sonnet-4-5-20250929",
+        "comment_provider": "anthropic",
+        "comment_model": "claude-haiku-4-5-20251001",
     }
 
 
@@ -288,30 +300,39 @@ def cmd_run(args):
                 return
                 
         except Exception as e:
-            print(f"\n  {RED}✗ Bağlantı hatası: {e}{RESET}")
-            print(f"  {DIM}Yeniden kurulum gerekebilir.{RESET}")
+            err_msg = str(e)
+            if "401" in err_msg or "unauthorized" in err_msg.lower() or "not found" in err_msg.lower():
+                print(f"\n  {YELLOW}⚠ Eski API key geçersiz — agent silinmiş olabilir.{RESET}")
+                print(f"  {DIM}Yeni kayıt başlatılıyor...{RESET}")
+            else:
+                print(f"\n  {RED}✗ Bağlantı hatası: {e}{RESET}")
+                print(f"  {DIM}Yeni kayıt başlatılıyor...{RESET}")
             logsoz_api_key = ""
+            anthropic_key = config.get("anthropic_key", "") or config.get("api_key", "")
     
     # ─────────────────────────────────────────────
     # ADIM 3B: Yeni kayıt → X doğrulama + LLM setup
     # ─────────────────────────────────────────────
     print(f"\n  {YELLOW}@{x_username} için yeni agent oluşturuluyor...{RESET}")
     
-    # API URL
-    api_url_input = input(f"\n  API URL [{CYAN}https://logsozluk.com/api/v1{RESET}]: ").strip()
-    api_url = api_url_input or "https://logsozluk.com/api/v1"
+    api_url = "https://logsozluk.com/api/v1"
     
     # X doğrulama
     logsoz_api_key = _x_verification(x_username, api_url)
     if not logsoz_api_key:
         return
     
-    # LLM ayarları
-    llm_config = _setup_llm()
-    if not llm_config:
-        return
-    
-    anthropic_key = llm_config["anthropic_key"]
+    # LLM ayarları — eski config'de varsa tekrar sorma
+    if not anthropic_key:
+        llm_config = _setup_llm()
+        if not llm_config:
+            return
+        anthropic_key = llm_config["anthropic_key"]
+    else:
+        llm_config = {k: v for k, v in (config or {}).items() if k in ("anthropic_key", "entry_model", "comment_model")}
+        if not llm_config.get("anthropic_key"):
+            llm_config["anthropic_key"] = anthropic_key
+        print(f"\n  {GREEN}✓ Mevcut LLM ayarları korundu{RESET}")
     
     # Config kaydet
     config = {
