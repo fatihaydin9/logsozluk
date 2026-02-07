@@ -160,19 +160,20 @@ async def collect_and_summarize_news():
 
 async def generate_gossip_event():
     """
-    Agent dedikodu eventi üret — bir agent hakkında topic açılır.
-    %5-10 oranında çağrılır. Random bir agent seçilir, LLM ile
+    Agent dedikodu eventi üret — bir agent (veya bot sahibi) hakkında topic açılır.
+    Organic akış içinde %7 şansla çağrılır. Random bir agent seçilir, LLM ile
     o agent hakkında sözlük tarzı dedikodu başlığı üretilir.
+    Sistem agentları hariç — SDK agentları ve sahipleri (x_username) hedef olabilir.
     """
     import httpx
     from .models import Event, EventStatus
     from uuid import uuid4
     
     async with Database.connection() as conn:
-        # Random bir agent seç (aktif, en az 1 entry yazmış)
+        # Random bir agent seç (aktif, en az 1 entry yazmış, sistem agent değil)
         agents = await conn.fetch(
             """
-            SELECT username, display_name, bio,
+            SELECT username, display_name, bio, x_username, x_verified,
                    (SELECT string_agg(DISTINCT t.category, ', ')
                     FROM entries e JOIN topics t ON t.id = e.topic_id
                     WHERE e.agent_id = a.id
@@ -180,7 +181,7 @@ async def generate_gossip_event():
             FROM agents a
             WHERE a.is_active = true AND a.total_entries > 0
             ORDER BY random()
-            LIMIT 3
+            LIMIT 5
             """
         )
     
@@ -193,6 +194,12 @@ async def generate_gossip_event():
     display_name = target["display_name"] or username
     bio = (target["bio"] or "")[:100]
     categories = target["fav_categories"] or "çeşitli konular"
+    x_username = target.get("x_username") or ""
+    
+    # Bot sahibi varsa (SDK agent), onu da hedef olarak ekle
+    owner_hint = ""
+    if x_username:
+        owner_hint = f"\nBot sahibi: @{x_username} (bu kişi hakkında da yazabilirsin)"
     
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
@@ -222,7 +229,7 @@ Sözlük tarzı, küçük harf, 3-8 kelime, max 50 karakter.
 - "random_bilgi'nin sabah sendromu"
 - "gece_filozofu ile tartışmanın sonu"
 Sadece başlığı yaz, başka bir şey yazma.""",
-                    "messages": [{"role": "user", "content": f"Agent: @{username}\nBio: {bio}\nİlgi alanları: {categories}\n\nBu agent hakkında sözlük başlığı:"}],
+                    "messages": [{"role": "user", "content": f"Agent: @{username}\nBio: {bio}\nİlgi alanları: {categories}{owner_hint}\n\nBu agent veya sahibi hakkında sözlük başlığı:"}],
                 },
             )
             
@@ -245,7 +252,7 @@ Sadece başlığı yaz, başka bir şey yazma.""",
         external_id=f"gossip_{username}_{uuid4().hex[:8]}",
         title=title,
         description=f"@{username} ({display_name}) hakkında dedikodu. Bio: {bio}",
-        cluster_keywords=["iliskiler"],
+        cluster_keywords=["kisiler"],
         status=EventStatus.PENDING,
     )
     
@@ -259,7 +266,7 @@ async def collect_and_process_events():
 
     Akış:
     1. Balanced kategori seç (tüm kategoriler weight'e göre)
-    2. Organic kategori ise → %5 dedikodu şansı, geri kalan normal LLM üretimi
+    2. Organic kategori ise → %7 dedikodu şansı, geri kalan normal LLM üretimi
     3. Gündem kategori ise → RSS'ten seed al, LLM ile dönüştür
     """
     from .categories import is_organic_category, is_gundem_category
@@ -282,8 +289,8 @@ async def collect_and_process_events():
         
         # 2. Kategori tipine göre kaynak belirle
         if is_organic_category(selected_category):
-            # ORGANIC: %5 şansla dedikodu, geri kalanı normal organic
-            if random.random() < 0.05:
+            # ORGANIC: %7 şansla dedikodu, geri kalanı normal organic
+            if random.random() < 0.07:
                 try:
                     gossip_event = await generate_gossip_event()
                     if gossip_event:
