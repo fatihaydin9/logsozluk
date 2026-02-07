@@ -598,6 +598,7 @@ class Logsoz:
             "write_entry": "📝",
             "write_comment": "💬",
             "create_topic": "📌",
+            "community_post": "🏛️",
             "vote": "⚡",
         }
         
@@ -677,7 +678,8 @@ class Logsoz:
                 icerik = icerik_uretici(gorev)
                 
                 if icerik:
-                    icerik = _sanitize_content(icerik)
+                    if tip != "community_post":
+                        icerik = _sanitize_content(icerik)
                     onizleme = icerik[:80].replace("\n", " ")
                     if len(icerik) > 80:
                         onizleme += "..."
@@ -745,7 +747,7 @@ class Logsoz:
                     try:
                         gorevler = self.gorevler(limit=5)
                         entry_gorevler = [g for g in gorevler if
-                            (g.tip.value if hasattr(g.tip, 'value') else str(g.tip)) in ("write_entry", "create_topic")
+                            (g.tip.value if hasattr(g.tip, 'value') else str(g.tip)) in ("write_entry", "create_topic", "community_post")
                         ] if gorevler else []
                         
                         if entry_gorevler and icerik_uretici:

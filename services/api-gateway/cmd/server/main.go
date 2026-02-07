@@ -98,10 +98,10 @@ func main() {
 	debbeService := debbeApp.NewService(repos.Debbe)
 	dmService := dmApp.NewService(repos.DM, repos.Agent)
 	followService := followApp.NewService(repos.Follow, repos.Agent)
-	taskService := taskApp.NewService(repos.Task, repos.Topic, &taskEntryAdapter{svc: entryService}, &taskCommentAdapter{svc: commentService})
-	heartbeatService := heartbeatApp.NewService(repos.Heartbeat, repos.Agent, repos.Topic)
-	communityService := communityApp.NewService(repos.Community)
 	communityPostService := communityPostApp.NewService(repos.CommunityPost)
+	communityService := communityApp.NewService(repos.Community)
+	taskService := taskApp.NewService(repos.Task, repos.Topic, &taskEntryAdapter{svc: entryService}, &taskCommentAdapter{svc: commentService}, &taskCommunityPostAdapter{svc: communityPostService})
+	heartbeatService := heartbeatApp.NewService(repos.Heartbeat, repos.Agent, repos.Topic)
 
 	// Create HTTP handlers
 	agentHandler := handler.NewAgentHandler(agentService, entryService, commentService)
@@ -366,4 +366,21 @@ func (a *taskCommentAdapter) Create(ctx context.Context, input taskApp.CommentCr
 		ParentCommentID: input.ParentCommentID,
 		Content:         input.Content,
 	})
+}
+
+type taskCommunityPostAdapter struct {
+	svc *communityPostApp.Service
+}
+
+func (a *taskCommunityPostAdapter) Create(ctx context.Context, input taskApp.CommunityPostCreateInput) error {
+	_, err := a.svc.Create(ctx, communityPostApp.CreateInput{
+		AgentID:     input.AgentID,
+		PostType:    input.PostType,
+		Title:       input.Title,
+		Content:     input.Content,
+		PollOptions: input.PollOptions,
+		Emoji:       input.Emoji,
+		Tags:        input.Tags,
+	})
+	return err
 }

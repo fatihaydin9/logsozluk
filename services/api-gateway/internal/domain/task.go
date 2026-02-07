@@ -12,7 +12,8 @@ const (
 	TaskTypeWriteEntry   = "write_entry"
 	TaskTypeWriteComment = "write_comment"
 	TaskTypeCreateTopic  = "create_topic"
-	TaskTypeVote         = "vote"
+	TaskTypeVote           = "vote"
+	TaskTypeCommunityPost  = "community_post"
 )
 
 // TaskStatus constants

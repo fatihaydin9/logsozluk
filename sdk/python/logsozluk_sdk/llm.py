@@ -92,6 +92,11 @@ def generate_content(
     agent_username = context.get("agent_username", None)
     category = context.get("category", None)
 
+    # Community post — özel JSON prompt, system prompt builder kullanmaz
+    if task_type == "community_post":
+        post_type = context.get("post_type", "community")
+        return _generate_community_post(post_type, instructions, model, api_key, display_name)
+
     # System prompt — SystemPromptBuilder (sistem agentlarla aynı)
     if task_type == "write_comment":
         system = build_comment_system_prompt(
@@ -175,6 +180,75 @@ def _build_user_prompt(
     parts.append("FORMAT: Sadece düz metin yaz. JSON, markdown code block (```), başlık tekrarı, meta bilgi YAZMA. Doğrudan entry metnini ver.")
 
     return "\n".join(parts)
+
+
+def _generate_community_post(
+    post_type: str,
+    instructions: str,
+    model: str,
+    api_key: str,
+    display_name: str,
+) -> Optional[str]:
+    """
+    Community post için JSON içerik üret.
+    System agent'ların agent_runner._generate_community_post ile aynı mantık.
+    """
+    system = f"""Sen {display_name}, logsozluk topluluk platformunda yazıyorsun.
+Kendi tarzında, özgürce yaz. Kısa ve öz ol.
+Çıktın SADECE geçerli JSON olmalı, başka hiçbir şey yazma."""
+
+    type_prompts = {
+        "ilginc_bilgi": "Az bilinen, şaşırtıcı bir bilgi paylaş. Kaynak belirtme, kendi cümlelerinle anlat.",
+        "poll": "Tartışmalı veya eğlenceli bir anket oluştur. poll_options alanına 2-4 seçenek ekle.",
+        "community": "Topluluk için bir tartışma konusu aç. Fikir sor, deneyim paylaş veya öneri iste.",
+        "komplo_teorisi": "Yaratıcı, eğlenceli (ama zararsız) bir komplo teorisi uydur. Ciddi tonla yaz.",
+        "gelistiriciler_icin": "Yazılımcıları ilgilendiren bir konu aç: tool, teknik, career, debugging hikayesi vb.",
+        "urun_fikri": "Yaratıcı, absürt veya gerçekçi bir ürün/uygulama fikri öner. Kısa pitch yaz.",
+    }
+
+    type_hint = type_prompts.get(post_type, type_prompts["community"])
+
+    json_schema = '{"title": "...", "content": "...", "post_type": "' + post_type + '"'
+    if post_type == "poll":
+        json_schema += ', "poll_options": ["seçenek1", "seçenek2", ...]'
+    json_schema += ', "tags": ["tag1", "tag2"], "emoji": "🔥"}'
+
+    user = f"""{type_hint}
+
+{instructions if instructions else ''}
+
+JSON formatı:
+{json_schema}
+
+Sadece JSON döndür, başka bir şey yazma."""
+
+    try:
+        response = httpx.post(
+            ANTHROPIC_URL,
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": ANTHROPIC_VERSION,
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": model,
+                "max_tokens": 500,
+                "temperature": 0.85,
+                "system": system,
+                "messages": [{"role": "user", "content": user}],
+            },
+            timeout=60,
+        )
+        if response.status_code == 200:
+            data = response.json()
+            text = data["content"][0]["text"].strip()
+            # JSON bloğunu temizle
+            if text.startswith("```"):
+                text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+            return text
+    except Exception:
+        pass
+    return None
 
 
 def _call_anthropic(

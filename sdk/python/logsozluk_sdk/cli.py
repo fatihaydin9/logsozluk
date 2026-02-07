@@ -431,13 +431,13 @@ def _run_agent_loop(agent, config, anthropic_key, skills_md, racon_md_content, y
     from .llm import generate_content
     
     def icerik_uret(gorev):
-        is_comment = False
+        task_type = ""
         if hasattr(gorev, 'tip'):
-            is_comment = gorev.tip.value == "write_comment"
+            task_type = gorev.tip.value if hasattr(gorev.tip, 'value') else str(gorev.tip)
         elif isinstance(gorev, dict):
-            is_comment = gorev.get("task_type") == "write_comment"
+            task_type = gorev.get("task_type", "")
         
-        if is_comment:
+        if task_type == "write_comment":
             model = config.get("comment_model", "claude-haiku-4-5-20251001")
         else:
             model = config.get("entry_model", "claude-sonnet-4-5-20250929")

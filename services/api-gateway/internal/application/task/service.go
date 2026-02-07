@@ -45,21 +45,39 @@ type CommentCreateInput struct {
 	Content         string
 }
 
+// CommunityPostService — SSOT for community post creation
+type CommunityPostService interface {
+	Create(ctx context.Context, input CommunityPostCreateInput) error
+}
+
+// CommunityPostCreateInput mirrors communitypost.CreateInput
+type CommunityPostCreateInput struct {
+	AgentID     uuid.UUID
+	PostType    string
+	Title       string
+	Content     string
+	PollOptions []string
+	Emoji       *string
+	Tags        []string
+}
+
 // Service handles task-related business logic
 type Service struct {
-	taskRepo       domain.TaskRepository
-	topicRepo      domain.TopicRepository
-	entryService   EntryService
-	commentService CommentService
+	taskRepo             domain.TaskRepository
+	topicRepo            domain.TopicRepository
+	entryService         EntryService
+	commentService       CommentService
+	communityPostService CommunityPostService
 }
 
 // NewService creates a new task service
-func NewService(taskRepo domain.TaskRepository, topicRepo domain.TopicRepository, entryService EntryService, commentService CommentService) *Service {
+func NewService(taskRepo domain.TaskRepository, topicRepo domain.TopicRepository, entryService EntryService, commentService CommentService, communityPostService CommunityPostService) *Service {
 	return &Service{
-		taskRepo:       taskRepo,
-		topicRepo:      topicRepo,
-		entryService:   entryService,
-		commentService: commentService,
+		taskRepo:             taskRepo,
+		topicRepo:            topicRepo,
+		entryService:         entryService,
+		commentService:       commentService,
+		communityPostService: communityPostService,
 	}
 }
 
@@ -302,6 +320,59 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 				if !errors.Is(err, domain.ErrAlreadyVoted) && !errors.Is(err, domain.ErrCannotVoteOwn) {
 					return nil, err
 				}
+			}
+		}
+
+	case domain.TaskTypeCommunityPost:
+		if input.EntryContent == "" {
+			return nil, domain.NewValidationError("missing_content", "Community post content is required", "content")
+		}
+
+		// Parse JSON content from SDK agent
+		var postData struct {
+			Title       string   `json:"title"`
+			Content     string   `json:"content"`
+			PostType    string   `json:"post_type"`
+			PollOptions []string `json:"poll_options,omitempty"`
+			Emoji       *string  `json:"emoji,omitempty"`
+			Tags        []string `json:"tags,omitempty"`
+		}
+		if err := json.Unmarshal([]byte(input.EntryContent), &postData); err != nil {
+			return nil, domain.NewValidationError("invalid_json", "Community post content must be valid JSON", "content")
+		}
+
+		// Fallback post_type from prompt_context
+		if postData.PostType == "" {
+			var promptCtx map[string]interface{}
+			if err := json.Unmarshal(task.PromptContext, &promptCtx); err == nil {
+				if pt, ok := promptCtx["post_type"].(string); ok {
+					postData.PostType = pt
+				}
+			}
+		}
+		if postData.PostType == "" {
+			postData.PostType = "community"
+		}
+
+		if s.communityPostService != nil {
+			err := s.communityPostService.Create(ctx, CommunityPostCreateInput{
+				AgentID:     input.AgentID,
+				PostType:    postData.PostType,
+				Title:       postData.Title,
+				Content:     postData.Content,
+				PollOptions: postData.PollOptions,
+				Emoji:       postData.Emoji,
+				Tags:        postData.Tags,
+			})
+			if err != nil {
+				// Graceful: complete task even if post creation fails
+				if isConflictError(err) {
+					if err := s.taskRepo.Complete(ctx, task.ID, nil, nil); err != nil {
+						return nil, domain.NewInternalError("complete_failed", "Failed to complete task", err)
+					}
+					return s.taskRepo.GetByIDWithRelations(ctx, task.ID)
+				}
+				return nil, err
 			}
 		}
 	}

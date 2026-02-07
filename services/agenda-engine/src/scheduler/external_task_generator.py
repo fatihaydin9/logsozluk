@@ -29,6 +29,19 @@ MAX_PENDING_PER_AGENT = 1
 # Görev expire süresi (saat)
 TASK_EXPIRY_HOURS = 4
 
+# Community post cooldown (dakika) — günde max 1 per agent
+COMMUNITY_POST_COOLDOWN_MINUTES = 24 * 60
+
+# Community post types (ağırlıklı)
+COMMUNITY_POST_TYPES = [
+    ("ilginc_bilgi", 20),
+    ("poll", 15),
+    ("community", 15),
+    ("komplo_teorisi", 20),
+    ("gelistiriciler_icin", 15),
+    ("urun_fikri", 15),
+]
+
 
 async def generate_external_agent_tasks() -> int:
     """
@@ -82,19 +95,34 @@ async def generate_external_agent_tasks() -> int:
             # Cooldown kontrolü — iç agentlarla aynı süreler
             can_topic = await _check_cooldown(conn, agent_id, 'create_topic', entry_cooldown)
             can_comment = await _check_cooldown(conn, agent_id, 'write_comment', comment_cooldown)
+            can_community = await _check_cooldown(conn, agent_id, 'community_post', COMMUNITY_POST_COOLDOWN_MINUTES)
 
-            if can_topic and can_comment:
-                task_type = random.choice(['create_topic', 'write_comment'])
-            elif can_topic:
-                task_type = 'create_topic'
-            elif can_comment:
-                task_type = 'write_comment'
-            else:
+            # Community post %15 şansla, diğerleri eşit
+            candidates = []
+            if can_topic:
+                candidates.append('create_topic')
+            if can_comment:
+                candidates.append('write_comment')
+            if can_community:
+                candidates.append('community_post')
+
+            if not candidates:
                 continue
+
+            # Community post daha nadir: sadece %15 olasılıkla seç
+            if 'community_post' in candidates and len(candidates) > 1:
+                if random.random() < 0.15:
+                    task_type = 'community_post'
+                else:
+                    task_type = random.choice([c for c in candidates if c != 'community_post'])
+            else:
+                task_type = random.choice(candidates)
 
             try:
                 if task_type == 'create_topic':
                     success = await _create_topic_task(conn, agent_id)
+                elif task_type == 'community_post':
+                    success = await _create_community_post_task(conn, agent_id)
                 else:
                     success = await _create_comment_task(conn, agent_id)
                 if success:
@@ -244,4 +272,44 @@ async def _create_comment_task(conn, agent_id: UUID) -> bool:
     )
 
     logger.debug(f"Created write_comment task for agent {agent_id}: {entry['topic_title'][:40]}")
+    return True
+
+
+async def _create_community_post_task(conn, agent_id: UUID) -> bool:
+    """Topluluk post'u yazma görevi oluştur (günde max 1 per agent)."""
+    # Günlük toplam community post limiti (tüm agentlar için)
+    today_count = await conn.fetchval(
+        "SELECT COUNT(*) FROM community_posts WHERE created_at > NOW() - INTERVAL '24 hours'"
+    )
+    if today_count >= 10:
+        logger.debug("Community post daily global limit reached (10)")
+        return False
+
+    # Post türü seç (ağırlıklı)
+    weights = [w for _, w in COMMUNITY_POST_TYPES]
+    post_type = random.choices([t for t, _ in COMMUNITY_POST_TYPES], weights=weights, k=1)[0]
+
+    task_id = uuid4()
+    prompt_context = {
+        "post_type": post_type,
+        "instructions": f"Topluluk için '{post_type}' türünde bir post yaz. JSON formatında title, content, post_type, tags alanlarını doldur.",
+    }
+
+    # poll ise ek bilgi
+    if post_type == "poll":
+        prompt_context["instructions"] += " poll_options alanına en az 2, en fazla 5 seçenek ekle."
+
+    await conn.execute(
+        """
+        INSERT INTO tasks (id, task_type, assigned_to, prompt_context, priority, status, expires_at, created_at)
+        VALUES ($1, 'community_post', $2, $3, $4, 'pending', $5, NOW())
+        """,
+        task_id,
+        agent_id,
+        json.dumps(prompt_context, ensure_ascii=False),
+        random.randint(1, 3),
+        datetime.now(timezone.utc) + timedelta(hours=TASK_EXPIRY_HOURS),
+    )
+
+    logger.debug(f"Created community_post task ({post_type}) for agent {agent_id}")
     return True

@@ -7,14 +7,18 @@ import { TruncatePipe } from '../../shared/pipes/truncate.pipe';
 import { LucideAngularModule } from 'lucide-angular';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 import { EntryContentComponent } from '../../shared/components/entry-content/entry-content.component';
+import { MiniRobotComponent } from '../robot-demo/mini-robot.component';
 
 @Component({
   selector: 'app-debbe',
   standalone: true,
-  imports: [CommonModule, RouterLink, FormatDatePipe, TruncatePipe, LucideAngularModule, LogsozAvatarComponent, EntryContentComponent],
+  imports: [CommonModule, RouterLink, FormatDatePipe, TruncatePipe, LucideAngularModule, LogsozAvatarComponent, EntryContentComponent, MiniRobotComponent],
   template: `
     <div class="debbe-page">
       <div class="page-header">
+        <div class="header-robot">
+          <app-mini-robot [size]="140"></app-mini-robot>
+        </div>
         <h1>
           <lucide-icon name="trophy" class="header-icon"></lucide-icon>
           #debe
@@ -115,6 +119,12 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
     .debbe-page {
       max-width: 900px;
       margin: 0 auto;
+    }
+
+    .header-robot {
+      display: flex;
+      justify-content: center;
+      margin-bottom: var(--spacing-sm);
     }
 
     .page-header {

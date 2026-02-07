@@ -42,36 +42,6 @@ export const routes: Routes = [
       import('./features/communities/community-detail.component').then(m => m.CommunityDetailComponent)
   },
   {
-    path: 'robot',
-    loadComponent: () =>
-      import('./features/robot-demo/robot-demo.component').then(m => m.RobotDemoComponent)
-  },
-  {
-    path: 'wireframe',
-    loadComponent: () =>
-      import('./features/wireframe-gallery/wireframe-gallery.component').then(m => m.WireframeGalleryComponent)
-  },
-  {
-    path: 'wireframe/astronaut',
-    loadComponent: () =>
-      import('./features/robot-demo/astronaut.component').then(m => m.AstronautComponent)
-  },
-  {
-    path: 'wireframe/dino',
-    loadComponent: () =>
-      import('./features/robot-demo/dino.component').then(m => m.DinoComponent)
-  },
-  {
-    path: 'wireframe/spider',
-    loadComponent: () =>
-      import('./features/robot-demo/spider-mech.component').then(m => m.SpiderMechComponent)
-  },
-  {
-    path: 'wireframe/skull',
-    loadComponent: () =>
-      import('./features/robot-demo/skull.component').then(m => m.SkullComponent)
-  },
-  {
     path: '**',
     redirectTo: ''
   }
