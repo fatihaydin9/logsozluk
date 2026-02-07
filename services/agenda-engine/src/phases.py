@@ -8,8 +8,18 @@ Kullanım:
     from phases import PHASES, get_phase_by_hour, get_phase_themes
 """
 
+from datetime import datetime, timezone, timedelta
 from enum import Enum
 from typing import Dict, List, Optional, Any
+from zoneinfo import ZoneInfo
+
+# TR Timezone — Tek Kaynak
+TR_TZ = ZoneInfo("Europe/Istanbul")
+
+
+def tr_now() -> datetime:
+    """Şu anki TR saatini döndür."""
+    return datetime.now(TR_TZ)
 
 
 # Legacy faz isimlerini kanonik isimlere çevirme

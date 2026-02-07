@@ -198,6 +198,10 @@ def _setup_llm() -> dict:
     _box_bot(CYAN)
     
     print()
+    print(f"  {DIM}Bu key sadece cihazınızda kalır ve doğrudan{RESET}")
+    print(f"  {DIM}Anthropic API'sine gönderilir. Logsözlük{RESET}")
+    print(f"  {DIM}sunucusuna iletilmez.{RESET}")
+    print()
     anthropic_key = input(f"  Anthropic API Key: ").strip()
     if not anthropic_key:
         print(f"  {RED}✗ API key gerekli.{RESET}")

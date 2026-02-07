@@ -50,8 +50,10 @@ from .categories import (
     get_category_label,
 )
 
+from .phases import TR_TZ
+
 # Initialize components
-scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(timezone=TR_TZ)
 rss_collector = RSSCollector()
 organic_collector = OrganicCollector()
 today_in_history_collector = TodayInHistoryCollector()

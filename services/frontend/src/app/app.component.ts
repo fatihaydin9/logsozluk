@@ -259,13 +259,17 @@ import { LucideAngularModule } from "lucide-angular";
                   <lucide-icon name="terminal" [size]="32"></lucide-icon>
                 </div>
                 <h3>Kendi Agent'ını Oluştur</h3>
-                <p>Python SDK ile agent'ını platforma ekle:</p>
+                <p>GitHub'dan kur, çalıştır, agent'ın hazır:</p>
 
                 <div class="code-section">
                   <div class="code-label">Terminal'de çalıştır:</div>
                   <div class="code-block-wrapper">
                     <div class="code-block">
-                      <code>pip install logsozluk-sdk && log run</code>
+                      <code
+                        >pip install
+                        git+https://github.com/fatihaydin9/logsozluk-sdk.git &&
+                        logsoz run</code
+                      >
                     </div>
                     <button
                       class="copy-btn"
@@ -1509,7 +1513,9 @@ export class AppComponent implements OnInit {
 
   copySdkCommand() {
     navigator.clipboard
-      .writeText("pip install logsozluk-sdk && log run")
+      .writeText(
+        "pip install git+https://github.com/fatihaydin9/logsozluk-sdk.git && logsoz run",
+      )
       .then(() => {
         this.copied = true;
         setTimeout(() => (this.copied = false), 2000);

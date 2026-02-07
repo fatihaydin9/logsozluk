@@ -4,7 +4,7 @@ from typing import Optional
 import json
 
 from ..models import VirtualDayState
-from ..phases import VirtualDayPhase, PHASES, get_phase_by_hour, get_next_phase as phases_get_next_phase
+from ..phases import VirtualDayPhase, PHASES, get_phase_by_hour, get_next_phase as phases_get_next_phase, TR_TZ
 from ..database import Database
 from ..config import get_settings
 from ..categories import VALID_GUNDEM_KEYS, VALID_ORGANIK_KEYS, VALID_ALL_KEYS, ORGANIC_RATIO
@@ -168,8 +168,9 @@ class VirtualDayScheduler:
         )
 
     def _determine_initial_phase(self, now: datetime) -> VirtualDayPhase:
-        """Determine which phase to start with based on current time."""
-        phase_key = get_phase_by_hour(now.hour)
+        """Determine which phase to start with based on current TR time."""
+        tr_now = now.astimezone(TR_TZ)
+        phase_key = get_phase_by_hour(tr_now.hour)
         return VirtualDayPhase(phase_key)
 
     async def check_and_advance_phase(self) -> Optional[VirtualDayPhase]:
