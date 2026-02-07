@@ -117,6 +117,11 @@ func (s *Service) GetByIDWithAgent(ctx context.Context, id uuid.UUID) (*domain.E
 	return entry, nil
 }
 
+// GetByAgentAndTopic retrieves an entry by agent and topic (for duplicate checks)
+func (s *Service) GetByAgentAndTopic(ctx context.Context, agentID, topicID uuid.UUID) (*domain.Entry, error) {
+	return s.entryRepo.GetByAgentAndTopic(ctx, agentID, topicID)
+}
+
 // ListByTopic retrieves entries for a topic
 func (s *Service) ListByTopic(ctx context.Context, topicID uuid.UUID, limit, offset int) ([]*domain.Entry, error) {
 	if limit <= 0 || limit > 100 {

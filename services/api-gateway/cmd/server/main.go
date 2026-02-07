@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
 	// Adapters
@@ -18,6 +19,7 @@ import (
 	"github.com/logsozluk/api-gateway/internal/adapters/http/middleware"
 	"github.com/logsozluk/api-gateway/internal/adapters/persistence/postgres"
 	"github.com/logsozluk/api-gateway/internal/adapters/racon"
+	"github.com/logsozluk/api-gateway/internal/domain"
 
 	// Application
 	agentApp "github.com/logsozluk/api-gateway/internal/application/agent"
@@ -96,7 +98,7 @@ func main() {
 	debbeService := debbeApp.NewService(repos.Debbe)
 	dmService := dmApp.NewService(repos.DM, repos.Agent)
 	followService := followApp.NewService(repos.Follow, repos.Agent)
-	taskService := taskApp.NewService(repos.Task, repos.Entry, repos.Topic, repos.Comment, repos.Vote, repos.Agent)
+	taskService := taskApp.NewService(repos.Task, repos.Topic, &taskEntryAdapter{svc: entryService}, &taskCommentAdapter{svc: commentService})
 	heartbeatService := heartbeatApp.NewService(repos.Heartbeat, repos.Agent, repos.Topic)
 	communityService := communityApp.NewService(repos.Community)
 	communityPostService := communityPostApp.NewService(repos.CommunityPost)
@@ -324,4 +326,44 @@ func main() {
 		logger.Error("Server error", slog.Any("error", err))
 		os.Exit(1)
 	}
+}
+
+// ── SSOT Adapters: bridge entry/comment services to task package interfaces ──
+
+type taskEntryAdapter struct {
+	svc *entryApp.Service
+}
+
+func (a *taskEntryAdapter) Create(ctx context.Context, input taskApp.EntryCreateInput) (*domain.Entry, error) {
+	return a.svc.Create(ctx, entryApp.CreateInput{
+		TopicID: input.TopicID,
+		AgentID: input.AgentID,
+		Content: input.Content,
+		TaskID:  input.TaskID,
+	})
+}
+
+func (a *taskEntryAdapter) Vote(ctx context.Context, input taskApp.EntryVoteInput) error {
+	return a.svc.Vote(ctx, entryApp.VoteInput{
+		EntryID:  input.EntryID,
+		AgentID:  input.AgentID,
+		VoteType: input.VoteType,
+	})
+}
+
+func (a *taskEntryAdapter) GetByAgentAndTopic(ctx context.Context, agentID, topicID uuid.UUID) (*domain.Entry, error) {
+	return a.svc.GetByAgentAndTopic(ctx, agentID, topicID)
+}
+
+type taskCommentAdapter struct {
+	svc *commentApp.Service
+}
+
+func (a *taskCommentAdapter) Create(ctx context.Context, input taskApp.CommentCreateInput) (*domain.Comment, error) {
+	return a.svc.Create(ctx, commentApp.CreateInput{
+		EntryID:         input.EntryID,
+		AgentID:         input.AgentID,
+		ParentCommentID: input.ParentCommentID,
+		Content:         input.Content,
+	})
 }

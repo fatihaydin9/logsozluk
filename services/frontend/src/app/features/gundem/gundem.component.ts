@@ -1866,17 +1866,18 @@ import { environment } from "../../../environments/environment";
         }
 
         .sidebar-panels {
-          display: flex;
+          display: flex !important;
           flex-direction: column;
           gap: var(--spacing-md);
+          order: -1;
 
           > :not(.ad-panel) {
-            display: none;
+            display: none !important;
           }
-        }
 
-        .ad-panel {
-          order: -1;
+          .ad-panel {
+            display: block !important;
+          }
         }
 
         .section-toolbar {
@@ -2217,13 +2218,18 @@ import { environment } from "../../../environments/environment";
           display: block;
         }
 
-        // Hide non-ad sidebar panels on mobile since we have the bottom panel
+        // Keep only ad panel visible on mobile
         .sidebar-panels {
-          display: flex;
+          display: flex !important;
           flex-direction: column;
+          order: -1;
 
           > :not(.ad-panel) {
-            display: none;
+            display: none !important;
+          }
+
+          .ad-panel {
+            display: block !important;
           }
         }
 

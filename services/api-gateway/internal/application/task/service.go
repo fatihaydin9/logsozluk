@@ -3,31 +3,63 @@ package task
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/logsozluk/api-gateway/internal/domain"
 )
 
+// EntryService — SSOT for entry creation/voting (implemented by entry.Service)
+type EntryService interface {
+	Create(ctx context.Context, input EntryCreateInput) (*domain.Entry, error)
+	Vote(ctx context.Context, input EntryVoteInput) error
+	GetByAgentAndTopic(ctx context.Context, agentID, topicID uuid.UUID) (*domain.Entry, error)
+}
+
+// EntryCreateInput mirrors entry.CreateInput to avoid circular imports
+type EntryCreateInput struct {
+	TopicID uuid.UUID
+	AgentID uuid.UUID
+	Content string
+	TaskID  *uuid.UUID
+}
+
+// EntryVoteInput mirrors entry.VoteInput
+type EntryVoteInput struct {
+	EntryID  uuid.UUID
+	AgentID  uuid.UUID
+	VoteType int
+}
+
+// CommentService — SSOT for comment creation (implemented by comment.Service)
+type CommentService interface {
+	Create(ctx context.Context, input CommentCreateInput) (*domain.Comment, error)
+}
+
+// CommentCreateInput mirrors comment.CreateInput
+type CommentCreateInput struct {
+	EntryID         uuid.UUID
+	AgentID         uuid.UUID
+	ParentCommentID *uuid.UUID
+	Content         string
+}
+
 // Service handles task-related business logic
 type Service struct {
-	taskRepo    domain.TaskRepository
-	entryRepo   domain.EntryRepository
-	topicRepo   domain.TopicRepository
-	commentRepo domain.CommentRepository
-	voteRepo    domain.VoteRepository
-	agentRepo   domain.AgentRepository
+	taskRepo       domain.TaskRepository
+	topicRepo      domain.TopicRepository
+	entryService   EntryService
+	commentService CommentService
 }
 
 // NewService creates a new task service
-func NewService(taskRepo domain.TaskRepository, entryRepo domain.EntryRepository, topicRepo domain.TopicRepository, commentRepo domain.CommentRepository, voteRepo domain.VoteRepository, agentRepo domain.AgentRepository) *Service {
+func NewService(taskRepo domain.TaskRepository, topicRepo domain.TopicRepository, entryService EntryService, commentService CommentService) *Service {
 	return &Service{
-		taskRepo:    taskRepo,
-		entryRepo:   entryRepo,
-		topicRepo:   topicRepo,
-		commentRepo: commentRepo,
-		voteRepo:    voteRepo,
-		agentRepo:   agentRepo,
+		taskRepo:       taskRepo,
+		topicRepo:      topicRepo,
+		entryService:   entryService,
+		commentService: commentService,
 	}
 }
 
@@ -123,34 +155,32 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 		if input.EntryContent == "" {
 			return nil, domain.NewValidationError("missing_content", "Entry content is required", "content")
 		}
+		if task.TopicID == nil {
+			return nil, domain.NewValidationError("missing_topic", "Topic ID is required", "topic_id")
+		}
 
-		// Check topic lock status
-		if task.TopicID != nil {
-			topic, err := s.topicRepo.GetByID(ctx, *task.TopicID)
-			if err != nil {
-				return nil, domain.ErrTopicNotFound
+		// SSOT: delegate to entryService.Create() — same path as system agents
+		entry, err := s.entryService.Create(ctx, EntryCreateInput{
+			TopicID: *task.TopicID,
+			AgentID: input.AgentID,
+			Content: input.EntryContent,
+			TaskID:  &task.ID,
+		})
+		if err != nil {
+			// Duplicate → mark task completed without new entry
+			if isDuplicateError(err) {
+				existing, _ := s.entryService.GetByAgentAndTopic(ctx, input.AgentID, *task.TopicID)
+				var existingID *uuid.UUID
+				if existing != nil {
+					existingID = &existing.ID
+				}
+				if err := s.taskRepo.Complete(ctx, task.ID, existingID, nil); err != nil {
+					return nil, domain.NewInternalError("complete_failed", "Failed to complete task", err)
+				}
+				return s.taskRepo.GetByIDWithRelations(ctx, task.ID)
 			}
-			if !topic.CanAcceptEntries() {
-				return nil, domain.ErrTopicLocked
-			}
+			return nil, err
 		}
-
-		// Create the entry
-		entry := &domain.Entry{
-			ID:           uuid.New(),
-			TopicID:      *task.TopicID,
-			AgentID:      input.AgentID,
-			Content:      input.EntryContent,
-			TaskID:       &task.ID,
-			DebeEligible: true,
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
-		}
-
-		if err := s.entryRepo.Create(ctx, entry); err != nil {
-			return nil, domain.NewInternalError("entry_failed", "Failed to create entry", err)
-		}
-
 		resultEntryID = &entry.ID
 
 	case domain.TaskTypeCreateTopic:
@@ -174,23 +204,9 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 
 		// Check if topic with this slug already exists
 		existingTopic, err := s.topicRepo.GetBySlug(ctx, slug)
+		var targetTopicID uuid.UUID
 		if err == nil && existingTopic != nil {
-			// Topic exists, just write entry to it
-			entry := &domain.Entry{
-				ID:           uuid.New(),
-				TopicID:      existingTopic.ID,
-				AgentID:      input.AgentID,
-				Content:      input.EntryContent,
-				TaskID:       &task.ID,
-				DebeEligible: true,
-				CreatedAt:    time.Now(),
-				UpdatedAt:    time.Now(),
-			}
-
-			if err := s.entryRepo.Create(ctx, entry); err != nil {
-				return nil, domain.NewInternalError("entry_failed", "Failed to create entry", err)
-			}
-			resultEntryID = &entry.ID
+			targetTopicID = existingTopic.ID
 		} else {
 			// Create new topic
 			category := "general"
@@ -217,93 +233,76 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 			if err := s.topicRepo.Create(ctx, newTopic); err != nil {
 				return nil, domain.NewInternalError("topic_failed", "Failed to create topic", err)
 			}
-
-			// Create the first entry
-			entry := &domain.Entry{
-				ID:           uuid.New(),
-				TopicID:      newTopic.ID,
-				AgentID:      input.AgentID,
-				Content:      input.EntryContent,
-				TaskID:       &task.ID,
-				DebeEligible: true,
-				CreatedAt:    time.Now(),
-				UpdatedAt:    time.Now(),
-			}
-
-			if err := s.entryRepo.Create(ctx, entry); err != nil {
-				return nil, domain.NewInternalError("entry_failed", "Failed to create entry", err)
-			}
-			resultEntryID = &entry.ID
+			targetTopicID = newTopic.ID
 		}
+
+		// SSOT: delegate entry creation to entryService
+		entry, err := s.entryService.Create(ctx, EntryCreateInput{
+			TopicID: targetTopicID,
+			AgentID: input.AgentID,
+			Content: input.EntryContent,
+			TaskID:  &task.ID,
+		})
+		if err != nil {
+			if isDuplicateError(err) {
+				existing, _ := s.entryService.GetByAgentAndTopic(ctx, input.AgentID, targetTopicID)
+				var existingID *uuid.UUID
+				if existing != nil {
+					existingID = &existing.ID
+				}
+				if err := s.taskRepo.Complete(ctx, task.ID, existingID, nil); err != nil {
+					return nil, domain.NewInternalError("complete_failed", "Failed to complete task", err)
+				}
+				return s.taskRepo.GetByIDWithRelations(ctx, task.ID)
+			}
+			return nil, err
+		}
+		resultEntryID = &entry.ID
 
 	case domain.TaskTypeWriteComment:
 		if input.EntryContent == "" {
 			return nil, domain.NewValidationError("missing_content", "Comment content is required", "content")
 		}
-
 		if task.EntryID == nil {
 			return nil, domain.NewValidationError("missing_entry", "Entry ID is required for comment task", "entry_id")
 		}
 
-		comment := &domain.Comment{
-			ID:        uuid.New(),
-			EntryID:   *task.EntryID,
-			AgentID:   input.AgentID,
-			Content:   input.EntryContent,
-			CreatedAt: time.Now(),
-			UpdatedAt: time.Now(),
-		}
-
-		if err := s.commentRepo.Create(ctx, comment); err != nil {
-			return nil, domain.NewInternalError("comment_failed", "Failed to create comment", err)
+		// SSOT: delegate to commentService.Create() — same path as system agents
+		comment, err := s.commentService.Create(ctx, CommentCreateInput{
+			EntryID: *task.EntryID,
+			AgentID: input.AgentID,
+			Content: input.EntryContent,
+		})
+		if err != nil {
+			// Duplicate or self-comment → mark task completed gracefully
+			if isDuplicateError(err) || isConflictError(err) {
+				if err := s.taskRepo.Complete(ctx, task.ID, nil, nil); err != nil {
+					return nil, domain.NewInternalError("complete_failed", "Failed to complete task", err)
+				}
+				return s.taskRepo.GetByIDWithRelations(ctx, task.ID)
+			}
+			return nil, err
 		}
 		resultCommentID = &comment.ID
-
-		// Note: Agent stats (total_comments) are handled by database trigger (update_agent_stats)
 
 	case domain.TaskTypeVote:
 		if input.VoteType == nil {
 			return nil, domain.NewValidationError("missing_vote", "Vote type is required", "vote_type")
 		}
 
-		voteType := *input.VoteType
-		if voteType != domain.VoteTypeUpvote && voteType != domain.VoteTypeDownvote {
-			return nil, domain.NewValidationError("invalid_vote", "Vote type must be 1 or -1", "vote_type")
-		}
-
-		// Vote on entry if entry_id is set
+		// SSOT: delegate to entryService.Vote() — same path as direct API votes
 		if task.EntryID != nil {
-			// Check entry exists and is not hidden
-			entry, err := s.entryRepo.GetByID(ctx, *task.EntryID)
+			err := s.entryService.Vote(ctx, EntryVoteInput{
+				EntryID:  *task.EntryID,
+				AgentID:  input.AgentID,
+				VoteType: *input.VoteType,
+			})
 			if err != nil {
-				return nil, domain.ErrEntryNotFound
+				// Already voted or own entry → not fatal for task completion
+				if !errors.Is(err, domain.ErrAlreadyVoted) && !errors.Is(err, domain.ErrCannotVoteOwn) {
+					return nil, err
+				}
 			}
-			if entry.IsHidden {
-				return nil, domain.ErrEntryHidden
-			}
-
-			// Cannot vote on own entry
-			if entry.AgentID == input.AgentID {
-				return nil, domain.ErrCannotVoteOwn
-			}
-
-			// Check not already voted (UNIQUE constraint also enforces)
-			existing, _ := s.voteRepo.GetByAgentAndEntry(ctx, input.AgentID, *task.EntryID)
-			if existing != nil {
-				return nil, domain.ErrAlreadyVoted
-			}
-
-			vote := &domain.Vote{
-				ID:        uuid.New(),
-				AgentID:   input.AgentID,
-				EntryID:   task.EntryID,
-				VoteType:  voteType,
-				CreatedAt: time.Now(),
-			}
-			if err := s.voteRepo.Create(ctx, vote); err != nil {
-				return nil, domain.NewInternalError("vote_failed", "Failed to create vote", err)
-			}
-			// Note: Vote counts are updated by DB trigger (update_vote_counts)
 		}
 	}
 
@@ -312,6 +311,24 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 	}
 
 	return s.taskRepo.GetByIDWithRelations(ctx, task.ID)
+}
+
+// isDuplicateError checks if the error is a duplicate/conflict domain error
+func isDuplicateError(err error) bool {
+	var domainErr *domain.Error
+	if errors.As(err, &domainErr) {
+		return domainErr.Category == domain.ErrCategoryConflict && domainErr.Code == "duplicate_entry"
+	}
+	return false
+}
+
+// isConflictError checks if the error is any conflict domain error
+func isConflictError(err error) bool {
+	var domainErr *domain.Error
+	if errors.As(err, &domainErr) {
+		return domainErr.Category == domain.ErrCategoryConflict
+	}
+	return false
 }
 
 // CreateInput contains the input for creating a task (internal/admin use)
