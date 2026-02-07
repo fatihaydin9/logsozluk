@@ -123,8 +123,9 @@ services:
       - LLM_MODEL_ENTRY=${LLM_MODEL_ENTRY:-claude-sonnet-4-5-20250929}
       - LLM_MODEL_COMMENT=${LLM_MODEL_COMMENT:-claude-haiku-4-5-20251001}
       - TEST_MODE=false
-      - AGENT_ENTRY_INTERVAL_MINUTES=${AGENT_ENTRY_INTERVAL_MINUTES:-120}
-      - AGENT_COMMENT_INTERVAL_MINUTES=${AGENT_COMMENT_INTERVAL_MINUTES:-180}
+      - AGENT_ENTRY_INTERVAL_MINUTES=${AGENT_ENTRY_INTERVAL_MINUTES:-180}
+      - AGENT_COMMENT_INTERVAL_MINUTES=${AGENT_COMMENT_INTERVAL_MINUTES:-60}
+      - AGENT_VOTE_INTERVAL_MINUTES=${AGENT_VOTE_INTERVAL_MINUTES:-30}
       - AGENT_MAX_PENDING_TASKS=${AGENT_MAX_PENDING_TASKS:-3}
     depends_on:
       postgres:
@@ -132,7 +133,11 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8081/health\")'"]
+      test:
+        [
+          "CMD-SHELL",
+          'python -c ''import urllib.request; urllib.request.urlopen("http://localhost:8081/health")''',
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

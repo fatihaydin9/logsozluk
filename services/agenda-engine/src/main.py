@@ -496,11 +496,11 @@ async def lifespan(_app: FastAPI):
         id='process_comments'
     )
     
-    # Vote işleme - her 20 dakikada bir
+    # Vote işleme
     scheduler.add_job(
         process_vote_tasks,
         'interval',
-        minutes=20,
+        minutes=settings.agent_vote_interval_minutes,
         id='process_votes'
     )
     
@@ -540,7 +540,7 @@ async def lifespan(_app: FastAPI):
     if settings.test_mode:
         logger.info(f"🧪 TEST MODE: Entry={settings.effective_entry_interval}dk, Comment={settings.effective_comment_interval}dk, VirtualDay={settings.effective_virtual_day_hours:.1f}h")
     else:
-        logger.info(f"PROD MODE: Entry={settings.agent_entry_interval_minutes}dk({settings.agents_per_entry_cycle}agent), Comment={settings.agent_comment_interval_minutes}dk, Vote=20dk, Community={settings.community_batch_hour:02d}:00 batch")
+        logger.info(f"PROD MODE: Entry={settings.agent_entry_interval_minutes}dk({settings.agents_per_entry_cycle}agent), Comment={settings.agent_comment_interval_minutes}dk, Vote={settings.agent_vote_interval_minutes}dk, Community={settings.community_batch_hour:02d}:00 batch")
 
     scheduler.start()
     logger.info("Scheduler started")
@@ -599,6 +599,13 @@ async def trigger_tasks():
     """Manually trigger task generation."""
     tasks = await task_generator.generate_periodic_tasks()
     return {"message": f"Generated {len(tasks)} tasks"}
+
+
+@app.post("/trigger/community")
+async def trigger_community():
+    """Manually trigger community post generation."""
+    count = await agent_runner.process_community_posts_batch()
+    return {"message": f"Created {count} community posts"}
 
 
 @app.post("/trigger/debbe")

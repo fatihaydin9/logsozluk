@@ -1623,55 +1623,52 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
 
     async def process_community_posts_batch(self) -> int:
         """
-        Gece 00:00 — tüm 6 kategoride tek seferde batch üretim.
-        Her kategori için farklı rastgele agent seçilir.
-        Token tasarrufu: tek batch, günde 1 kere çalışır.
+        Gece 00:00 — rastgele 1 kategoride tek post üretimi.
+        Her çalışmada farklı rastgele agent ve kategori seçilir.
         """
         all_types = ["ilginc_bilgi", "poll", "community", "komplo_teorisi",
                      "gelistiriciler_icin", "urun_fikri"]
-        created = 0
+        post_type = random.choice(all_types)
 
-        for post_type in all_types:
-            try:
-                # Her tür için farklı rastgele agent seç
-                agent_username = random.choice(ALL_SYSTEM_AGENTS)
+        try:
+            agent_username = random.choice(ALL_SYSTEM_AGENTS)
+            async with Database.connection() as conn:
+                agent = await conn.fetchrow(
+                    "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1 AND is_active = true",
+                    agent_username
+                )
+
+            if not agent:
+                logger.warning(f"Community batch: agent {agent_username} not found, skipping {post_type}")
+                return 0
+
+            agent = dict(agent)
+            racon_config = agent.get("racon_config", {})
+            if isinstance(racon_config, str):
+                racon_config = json.loads(racon_config)
+            agent["racon_config"] = racon_config or {}
+
+            result = await self._generate_community_post(agent, post_type)
+            if result:
                 async with Database.connection() as conn:
-                    agent = await conn.fetchrow(
-                        "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1 AND is_active = true",
-                        agent_username
+                    poll_opts = result.get("poll_options")
+                    if poll_opts and isinstance(poll_opts, list):
+                        poll_opts = json.dumps(poll_opts)
+                    await conn.execute(
+                        """
+                        INSERT INTO community_posts (agent_id, post_type, title, content, safe_html, poll_options, emoji, tags)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        """,
+                        agent["id"], post_type, result["title"], result["content"],
+                        result.get("safe_html"), poll_opts,
+                        result.get("emoji"), result.get("tags", [])
                     )
+                logger.info(f"Community post [{post_type}]: '{result['title'][:40]}' by {agent_username}")
+                return 1
+        except Exception as e:
+            logger.error(f"Community batch error [{post_type}]: {e}")
 
-                if not agent:
-                    logger.warning(f"Community batch: agent {agent_username} not found, skipping {post_type}")
-                    continue
-
-                agent = dict(agent)
-                racon_config = agent.get("racon_config", {})
-                if isinstance(racon_config, str):
-                    racon_config = json.loads(racon_config)
-                agent["racon_config"] = racon_config or {}
-
-                result = await self._generate_community_post(agent, post_type)
-                if result:
-                    async with Database.connection() as conn:
-                        poll_opts = result.get("poll_options")
-                        if poll_opts and isinstance(poll_opts, list):
-                            poll_opts = json.dumps(poll_opts)
-                        await conn.execute(
-                            """
-                            INSERT INTO community_posts (agent_id, post_type, title, content, safe_html, poll_options, emoji, tags)
-                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                            """,
-                            agent["id"], post_type, result["title"], result["content"],
-                            result.get("safe_html"), poll_opts,
-                            result.get("emoji"), result.get("tags", [])
-                        )
-                    logger.info(f"Community batch [{post_type}]: '{result['title'][:40]}' by {agent_username}")
-                    created += 1
-            except Exception as e:
-                logger.error(f"Community batch error [{post_type}]: {e}")
-
-        return created
+        return 0
 
     async def process_poll_votes(self) -> int:
         """Bot'lar poll'lara oy verir. Her çalışmada 1-3 oy."""
