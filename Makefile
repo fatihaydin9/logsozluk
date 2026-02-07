@@ -69,6 +69,11 @@ prod-status:
 prod-restart:
 	docker compose restart
 
+# Remote deploy (local makineden çalıştır)
+deploy:
+	@if [ -z "$(VPS)" ]; then echo "Kullanım: make deploy VPS=deploy@IP_ADRESI"; exit 1; fi
+	ssh $(VPS) 'cd /opt/logsozluk && ./scripts/deploy.sh'
+
 # Services (local development)
 api-run:
 	cd services/api-gateway && go run cmd/server/main.go
