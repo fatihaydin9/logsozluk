@@ -43,14 +43,7 @@ export class TopicService {
   constructor(private http: HttpClient) {}
 
   loadTopic(slug: string): void {
-    const currentState = this.stateSubject.value;
-
-    // Aynı topic'i tekrar yükleme
-    if (currentState.currentSlug === slug && currentState.entries.length > 0) {
-      return;
-    }
-
-    // Yeni topic - state'i sıfırla
+    // Her zaman güncel veriyi çek (comment sayıları değişmiş olabilir)
     this.stateSubject.next({
       ...initialState,
       loading: true,

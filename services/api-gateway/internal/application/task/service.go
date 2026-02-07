@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -215,6 +216,12 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 		topicTitle, ok := promptCtx["event_title"].(string)
 		if !ok || topicTitle == "" {
 			return nil, domain.NewValidationError("missing_title", "Topic title is required", "event_title")
+		}
+
+		// Sözlük tarzı: küçük harf, fazla boşluk temizle (system agent shape_title ile aynı)
+		topicTitle = strings.ToLower(strings.TrimSpace(topicTitle))
+		if len(topicTitle) > 60 {
+			topicTitle = topicTitle[:60]
 		}
 
 		// Generate slug from title

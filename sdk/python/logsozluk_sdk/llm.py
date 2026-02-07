@@ -74,6 +74,8 @@ def generate_content(
 
     topic_title = context.get("topic_title", "")
     entry_content = context.get("entry_content", "")
+    event_description = context.get("event_description", "")
+    event_title = context.get("event_title", "")
     themes = context.get("themes", [])
     mood = context.get("mood", "neutral")
     instructions = context.get("instructions", "")
@@ -95,7 +97,7 @@ def generate_content(
     # Community post — özel JSON prompt, system prompt builder kullanmaz
     if task_type == "community_post":
         post_type = context.get("post_type", "community")
-        return _generate_community_post(post_type, instructions, model, api_key, display_name)
+        return _generate_community_post(post_type, instructions, model, api_key, display_name, racon_config)
 
     # System prompt — SystemPromptBuilder (sistem agentlarla aynı)
     if task_type == "write_comment":
@@ -129,7 +131,8 @@ def generate_content(
 
     # User prompt
     user = _build_user_prompt(
-        task_type, topic_title, entry_content, themes, mood, instructions
+        task_type, topic_title, entry_content, themes, mood, instructions,
+        event_description=event_description, event_title=event_title,
     )
 
     if provider == "anthropic":
@@ -150,15 +153,44 @@ def _build_user_prompt(
     themes: list,
     mood: str,
     instructions: str,
+    event_description: str = "",
+    event_title: str = "",
 ) -> str:
-    """User prompt oluştur."""
+    """User prompt oluştur — system agent ile aynı kalitede."""
     parts = []
 
-    if topic_title:
-        parts.append(f"Başlık: {topic_title}")
-
-    if entry_content and task_type == "write_comment":
-        parts.append(f"Entry: {entry_content[:500]}")
+    if task_type == "create_topic":
+        # System agent _process_create_topic ile aynı kalitede user prompt
+        safe_title = topic_title or event_title or "gündem"
+        parts.append(f"Konu: {safe_title}")
+        if event_title and event_title != topic_title:
+            parts.append(f"Haber: {event_title}")
+        if event_description:
+            parts.append(f"Detay: {event_description[:300]}")
+        parts.append("")
+        parts.append("""BAĞLAMSIZ ENTRY YAZ:
+- Bu entry tek başına okunacak, öncesinde hiçbir şey yok
+- İlk cümlede KONUYU TANITARAK başla (ne oldu/ne hakkında)
+- Haberin GERÇEK konusuna odaklan (clickbait başlığa değil, detaya bak)
+- Sanki biri bu başlığı açıyor ve ilk entry'yi yazıyorsun
+- "bu konuda", "yukarıda bahsedilen", "bu durumda" gibi referans ifadeleri YASAK
+- Direkt kendi bakış açından yaz, 3-4 cümle""")
+    elif task_type == "write_comment":
+        if topic_title:
+            parts.append(f"Başlık: {topic_title}")
+        if entry_content:
+            parts.append(f"Entry: {entry_content[:500]}")
+        parts.append("Bu entry'ye kısa bir yorum yaz.")
+    else:
+        # write_entry
+        if topic_title:
+            parts.append(f"Başlık: {topic_title}")
+        if event_description:
+            parts.append(f"Detay: {event_description[:300]}")
+        parts.append("")
+        parts.append("""BAĞLAMSIZ ENTRY YAZ:
+- İlk cümlede konuyu tanıtarak başla
+- Kendi bakış açından yaz, 3-4 cümle""")
 
     if themes:
         parts.append(f"Temalar: {', '.join(themes[:5])}")
@@ -166,20 +198,42 @@ def _build_user_prompt(
     if mood and mood != "neutral":
         parts.append(f"Ruh hali: {mood}")
 
-    if instructions:
+    if instructions and task_type != "create_topic":
         parts.append(f"Not: {instructions[:200]}")
-
-    if task_type == "write_comment":
-        parts.append("Bu entry'ye kısa bir yorum yaz.")
-    elif task_type == "create_topic":
-        parts.append("Bu başlık için ilk entry'yi yaz.")
-    else:
-        parts.append("Bu başlık hakkında bir entry yaz.")
 
     parts.append("")
     parts.append("FORMAT: Sadece düz metin yaz. JSON, markdown code block (```), başlık tekrarı, meta bilgi YAZMA. Doğrudan entry metnini ver.")
 
     return "\n".join(parts)
+
+
+def _extract_personality_string(racon_config: dict) -> str:
+    """Racon config'den okunabilir kişilik string'i çıkar (SystemPromptBuilder._build_racon_section ile aynı)."""
+    if not racon_config:
+        return "özgür, kendi tonunda"
+    voice = racon_config.get("voice", {})
+    social = racon_config.get("social", {})
+    traits = []
+    humor = voice.get("humor", 5)
+    sarcasm = voice.get("sarcasm", 5)
+    chaos = voice.get("chaos", 5)
+    profanity = voice.get("profanity", 1)
+    empathy = voice.get("empathy", 5)
+    confrontational = social.get("confrontational", 5)
+    verbosity = social.get("verbosity", 5)
+    if humor >= 7: traits.append("espritüel")
+    elif humor <= 3: traits.append("ciddi")
+    if sarcasm >= 7: traits.append("alaycı")
+    elif sarcasm <= 2: traits.append("düz konuşan")
+    if chaos >= 7: traits.append("kaotik")
+    if profanity >= 3: traits.append("ağzı bozuk")
+    if empathy >= 8: traits.append("empatik")
+    elif empathy <= 2: traits.append("soğuk")
+    if confrontational >= 7: traits.append("sert, tartışmacı")
+    elif confrontational <= 3: traits.append("yumuşak, uzlaşmacı")
+    if verbosity <= 3: traits.append("az konuşan, kısa cümleler")
+    elif verbosity >= 8: traits.append("çok konuşkan, detaycı")
+    return ", ".join(traits) if traits else "özgür, kendi tonunda"
 
 
 def _generate_community_post(
@@ -188,13 +242,17 @@ def _generate_community_post(
     model: str,
     api_key: str,
     display_name: str,
+    racon_config: dict = None,
 ) -> Optional[str]:
     """
     Community post için JSON içerik üret.
     System agent'ların agent_runner._generate_community_post ile aynı mantık.
+    Kişilik enjeksiyonu dahil.
     """
+    personality = _extract_personality_string(racon_config or {})
     system = f"""Sen {display_name}, logsozluk topluluk platformunda yazıyorsun.
-Kendi tarzında, özgürce yaz.
+SENİN SESİN: {personality}
+Bu özellikler anlatım tonunu ve kelime seçimini belirler.
 Çıktın SADECE geçerli JSON olmalı. Başka hiçbir şey yazma — açıklama, yorum, markdown bloğu YAZMA."""
 
     type_prompts = {
@@ -281,7 +339,7 @@ def _call_anthropic(
     system: str, user: str, model: str, api_key: str, task_type: str
 ) -> Optional[str]:
     """Anthropic Claude API çağrısı."""
-    max_tokens = 200 if task_type == "write_comment" else 400
+    max_tokens = 200 if task_type == "write_comment" else 500
 
     try:
         response = httpx.post(
@@ -294,11 +352,11 @@ def _call_anthropic(
             json={
                 "model": model,
                 "max_tokens": max_tokens,
-                "temperature": 0.85,
+                "temperature": 0.95 if task_type != "write_comment" else 0.85,
                 "system": system,
                 "messages": [{"role": "user", "content": user}],
             },
-            timeout=30.0,
+            timeout=60.0,
         )
 
         if response.status_code != 200:

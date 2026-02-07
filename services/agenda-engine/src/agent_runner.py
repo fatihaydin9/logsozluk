@@ -1868,10 +1868,39 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
         ],
     }
 
+    def _extract_personality_string(self, racon_config: dict) -> str:
+        """Racon config'den okunabilir kişilik string'i çıkar (SystemPromptBuilder mantığı)."""
+        if not racon_config:
+            return ""
+        voice = racon_config.get("voice", {})
+        social = racon_config.get("social", {})
+        traits = []
+        humor = voice.get("humor", 5)
+        sarcasm = voice.get("sarcasm", 5)
+        chaos = voice.get("chaos", 5)
+        profanity = voice.get("profanity", 1)
+        empathy = voice.get("empathy", 5)
+        confrontational = social.get("confrontational", 5)
+        verbosity = social.get("verbosity", 5)
+        if humor >= 7: traits.append("espritüel")
+        elif humor <= 3: traits.append("ciddi")
+        if sarcasm >= 7: traits.append("alaycı")
+        elif sarcasm <= 2: traits.append("düz konuşan")
+        if chaos >= 7: traits.append("kaotik")
+        if profanity >= 3: traits.append("ağzı bozuk")
+        if empathy >= 8: traits.append("empatik")
+        elif empathy <= 2: traits.append("soğuk")
+        if confrontational >= 7: traits.append("sert, tartışmacı")
+        elif confrontational <= 3: traits.append("yumuşak, uzlaşmacı")
+        if verbosity <= 3: traits.append("az konuşan, kısa cümleler")
+        elif verbosity >= 8: traits.append("çok konuşkan, detaycı")
+        return ", ".join(traits) if traits else "özgür, kendi tonunda"
+
     async def _generate_community_post(self, agent: dict, post_type: str) -> Optional[dict]:
-        """Post türüne göre içerik üret. Token-optimized: haiku + kısa prompt."""
+        """Post türüne göre içerik üret."""
         display_name = escape_for_prompt(agent.get("display_name", "yazar"))
-        personality = escape_for_prompt(str(agent.get("racon_config", {}).get("personality", "")))
+        racon_config = agent.get("racon_config", {}) or {}
+        personality = self._extract_personality_string(racon_config)
         
         # Son postların başlık+içerik özetini al — tekrar önleme
         avoid = ""
@@ -1911,7 +1940,8 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
         """İlginç bilgi üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
-Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+SENİN SESİN: {personality}
+Bu özellikler anlatım tonunu ve kelime seçimini belirler.""",
             f"""Okuyucunun "vay be, bunu bilmiyordum" diyeceği bir bilgi paylaş.
 
 İyi bir ilginç bilgi postu şöyle olur:
@@ -1934,7 +1964,8 @@ JSON:
         """İdeoloji/komplo/mit/kehanet üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
-Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+SENİN SESİN: {personality}
+Bu özellikler anlatım tonunu ve kelime seçimini belirler.""",
             f"""Bir ideoloji, şehir efsanesi, kehanet veya absürt teori yaz. Türünü kendin seç.
 
 Spesifik detaylar ver — isim, tarih, yer. 2 cümleyle geçiştirme, katman katman inşa et. 5-8 cümle ideal.
@@ -1971,7 +2002,8 @@ JSON:
         """Anket üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}, logsozluk topluluk alanında anket oluşturuyorsun.
-Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+SENİN SESİN: {personality}
+Bu özellikler soru tonunu ve seçenek tarzını belirler.""",
             f"""İnsanların gerçekten oy vermek isteyeceği bir anket oluştur.
 
 İyi anket özellikleri:
@@ -1997,21 +2029,24 @@ JSON:
         """Topluluk/hareket fikri üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
-Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+SENİN SESİN: {personality}
+Bu özellikler yazım tonunu, kelime seçimini ve bakış açını doğrudan belirler. Başka birinin gibi yazma — senin sesin benzersiz.""",
             f"""Toplulukta tartışma başlatacak bir konu aç. Manifesto değil — sohbet başlatıcı.
 
 Formatlar (birini seç):
-- Bir fikir sun ve görüş iste: "X hakkında ne düşünüyorsunuz?"
-- Deneyim paylaş ve benzerini sor: "Bana şu oldu, sizde de var mı?"
-- Tartışmalı bir tez at: "X aslında Y'den daha iyi, çünkü..."
-- Pratik bir öneri iste: "X için ne kullanıyorsunuz?"
+- Bir fikir sun ve görüş iste
+- Deneyim paylaş ve benzerini sor
+- Tartışmalı bir tez at
+- Pratik bir öneri iste
 
 Kötü örnek: "Teknoloji Özgürlük Hareketi manifestosu — biz dijital direniş..." (kimse manifesto okumak istemiyor)
-İyi örnek: "Telefonunuzu gece yatağınızın yanına koymayanlar — nasıl başardınız? 3 haftadır deniyorum, gece 2'de kalkıp alıyorum." (samimi, ilişkilenebilir, yorum çeker)
+İyi örnek (alaycı biri): "herkes 'side project başlayacağım' diyor da bitiren var mı gerçekten? ben 14. projeyi açtım, 13'ü README'den öteye gidemedi."
+İyi örnek (ciddi biri): "uzaktan çalışma 3 yıl oldu. verimlilik arttı ama sosyal zeka köreldi. sizde de var mı bu his?"
+İyi örnek (kaotik biri): "dün gece 4'te bir düşünce geldi — ya biz aslında birbirimizin NPC'siyiz?"
 {avoid}
 
 JSON:
-{{"title": "dikkat çekici başlık max 120 kar", "content": "2-4 cümle, samimi ton", "emoji": "tek emoji", "tags": ["etiket1", "etiket2", "etiket3"]}}""",
+{{"title": "dikkat çekici başlık max 120 kar", "content": "2-4 cümle, KENDİ TONUNDA yaz", "emoji": "tek emoji", "tags": ["etiket1", "etiket2", "etiket3"]}}""",
             max_tokens=500
         )
         return self._parse_post_json(content, "community")
@@ -2020,7 +2055,8 @@ JSON:
         """Komplo teorisi üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
-Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+SENİN SESİN: {personality}
+Bu özellikler hikaye anlatım tonunu belirler.""",
             f"""Tamamen uydurma ama katman katman inşa edilmiş bir komplo teorisi yaz. Okuyucu bir an "acaba?" demeli.
 
 İyi komplo teorisi şöyle olur:
@@ -2044,7 +2080,8 @@ JSON:
         """Geliştiriciler için içerik üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
-Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+SENİN SESİN: {personality}
+Bu özellikler teknik anlatım tonunu belirler.""",
             f"""Yazılımcıların okuyup "aa bunu denemem lazım" veya "aynen ya" diyeceği bir post yaz.
 
 Tek bir konuya odaklan (birini seç):
@@ -2071,7 +2108,8 @@ JSON:
         """Ürün fikri üret."""
         content = await self._llm_quick(
             f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
-Kişilik notların: {personality if personality else 'özgür, kendi tonunda yaz'}""",
+SENİN SESİN: {personality}
+Bu özellikler pitch tonunu belirler.""",
             f"""Birinin okuyup "lan ben bunu yaparım" diyeceği bir ürün/uygulama fikri pitch'le.
 
 İyi pitch şöyle olur:
