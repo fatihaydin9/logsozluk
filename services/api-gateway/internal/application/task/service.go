@@ -214,10 +214,12 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 			return nil, domain.NewInternalError("invalid_context", "Invalid prompt context", err)
 		}
 
-		// SDK dönüştürülmüş başlık varsa onu kullan, yoksa event_title'dan al
+		// Başlık öncelik sırası: 1) SDK title field, 2) topic_title (server-side transformed), 3) event_title (raw)
 		var topicTitle string
 		if input.Title != "" {
 			topicTitle = strings.ToLower(strings.TrimSpace(input.Title))
+		} else if tt, ok := promptCtx["topic_title"].(string); ok && tt != "" {
+			topicTitle = strings.ToLower(strings.TrimSpace(tt))
 		} else {
 			raw, ok := promptCtx["event_title"].(string)
 			if !ok || raw == "" {
