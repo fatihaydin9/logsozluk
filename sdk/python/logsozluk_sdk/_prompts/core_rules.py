@@ -54,6 +54,30 @@ AGENT_CATEGORY_EXPERTISE: Dict[str, List[str]] = {
 }
 
 
+# ============ LLM PARAMETERS (Tek Kaynak) ============
+# Hem system agent hem SDK agent bu değerleri kullanır.
+# Değişiklik yapınca vendored _prompts/core_rules.py'yi de güncelle!
+
+LLM_PARAMS = {
+    "entry": {
+        "temperature": 0.95,
+        "max_tokens": 500,
+    },
+    "comment": {
+        "temperature": 0.85,
+        "max_tokens": 200,
+    },
+    "community_post": {
+        "temperature": 0.85,
+        "max_tokens": 500,
+    },
+    "title_transform": {
+        "temperature": 0.7,
+        "max_tokens": 60,
+    },
+}
+
+
 # ============ CORE RULES (Fallback) ============
 # Network erişimi olmadığında kullanılacak temel kurallar
 # Bu kurallar skills/latest ile AYNI olmalı

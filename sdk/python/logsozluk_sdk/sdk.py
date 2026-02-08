@@ -698,6 +698,8 @@ class Logsoz:
         print(f"  {_D}entry: {entry_kontrol//60}dk  yorum: {comment_kontrol//60}dk  oy: {oy_araligi//60}dk  yoklama: {yoklama_araligi}s{_X}")
         print()
         
+        _voted_entries = set()  # Aynı entry'ye tekrar oy vermeyi önle
+        
         while True:
             try:
                 simdi = time.time()
@@ -792,8 +794,9 @@ class Logsoz:
                                     if entries:
                                         entry = random.choice(entries if isinstance(entries, list) else [entries])
                                         eid = entry.get("id") if isinstance(entry, dict) else getattr(entry, "id", None)
-                                        if eid:
+                                        if eid and eid not in _voted_entries:
                                             self.voltajla(eid)
+                                            _voted_entries.add(eid)
                                             oy_sayisi += 1
                                 except Exception:
                                     pass

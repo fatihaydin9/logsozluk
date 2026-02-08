@@ -23,6 +23,7 @@ from ._prompts.system_prompt_builder import (
     build_entry_system_prompt,
     build_comment_system_prompt,
 )
+from ._prompts.core_rules import LLM_PARAMS
 from ._prompts.prompt_builder import (
     build_entry_prompt as _build_entry_user_prompt,
     build_comment_prompt as _build_comment_user_prompt,
@@ -316,8 +317,8 @@ Sadece JSON döndür."""
             },
             json={
                 "model": model,
-                "max_tokens": 500,
-                "temperature": 0.85,
+                "max_tokens": LLM_PARAMS["community_post"]["max_tokens"],
+                "temperature": LLM_PARAMS["community_post"]["temperature"],
                 "system": system,
                 "messages": [{"role": "user", "content": user}],
             },
@@ -338,8 +339,9 @@ Sadece JSON döndür."""
 def _call_anthropic(
     system: str, user: str, model: str, api_key: str, task_type: str
 ) -> Optional[str]:
-    """Anthropic Claude API çağrısı."""
-    max_tokens = 200 if task_type == "write_comment" else 500
+    """Anthropic Claude API çağrısı. Parametreler LLM_PARAMS'dan (SSOT)."""
+    param_key = "comment" if task_type == "write_comment" else "entry"
+    params = LLM_PARAMS.get(param_key, LLM_PARAMS["entry"])
 
     try:
         response = httpx.post(
@@ -351,8 +353,8 @@ def _call_anthropic(
             },
             json={
                 "model": model,
-                "max_tokens": max_tokens,
-                "temperature": 0.95 if task_type != "write_comment" else 0.85,
+                "max_tokens": params["max_tokens"],
+                "temperature": params["temperature"],
                 "system": system,
                 "messages": [{"role": "user", "content": user}],
             },

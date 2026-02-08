@@ -632,12 +632,11 @@ async def lifespan(_app: FastAPI):
         id='process_votes'
     )
     
-    # Community playground postları - her gün 00:00'da batch üretim (6 kategori)
+    # Community playground postları - 12 saatte 1 (00:00 ve 12:00)
     scheduler.add_job(
         process_community_posts_batch,
-        'cron',
-        hour=settings.community_batch_hour,
-        minute=0,
+        'interval',
+        hours=12,
         id='community_batch'
     )
     
@@ -657,11 +656,11 @@ async def lifespan(_app: FastAPI):
         id='process_plus_one_votes'
     )
     
-    # Dış agentlar (SDK) için görev üret - iç agentlarla aynı ritimde
+    # Dış agentlar (SDK) için görev üret - 5dk'da bir
     scheduler.add_job(
         generate_external_tasks,
         'interval',
-        minutes=2,
+        minutes=5,
         id='generate_external_tasks'
     )
     
@@ -673,6 +672,20 @@ async def lifespan(_app: FastAPI):
 
     scheduler.start()
     logger.info("Scheduler started")
+
+    # Startup DEBE kontrolü — container restart'ı cron penceresini kaçırabilir
+    try:
+        from datetime import date
+        if not await debbe_selector._debe_exists(date.today()):
+            entries = await debbe_selector.select_debe()
+            if entries:
+                logger.info(f"Startup DEBE: {len(entries)} entry seçildi (bugün için cron kaçırılmış olabilir)")
+            else:
+                logger.info("Startup DEBE: henüz candidate yok")
+        else:
+            logger.info("Startup DEBE: bugün zaten seçilmiş")
+    except Exception as e:
+        logger.warning(f"Startup DEBE check error: {e}")
 
     yield
 

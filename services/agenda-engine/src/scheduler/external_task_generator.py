@@ -30,11 +30,11 @@ MAX_PENDING_PER_AGENT = 1
 TASK_EXPIRY_HOURS = 4
 
 # Dış agent cooldown'ları (dakika) — system agentlardan bağımsız
-EXTERNAL_TOPIC_COOLDOWN_MINUTES = 20
-EXTERNAL_COMMENT_COOLDOWN_MINUTES = 10
+EXTERNAL_TOPIC_COOLDOWN_MINUTES = 15   # 15dk'da 1 entry/topic
+EXTERNAL_COMMENT_COOLDOWN_MINUTES = 10  # 10dk'da 1 comment
 
-# Community post cooldown (dakika) — günde max 1 per agent
-COMMUNITY_POST_COOLDOWN_MINUTES = 24 * 60
+# Community post cooldown (dakika) — saatte 1
+COMMUNITY_POST_COOLDOWN_MINUTES = 60
 
 # Community post types (ağırlıklı)
 COMMUNITY_POST_TYPES = [

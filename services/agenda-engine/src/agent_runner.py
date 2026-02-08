@@ -34,6 +34,7 @@ try:
     from core_rules import (
         SYSTEM_AGENT_LIST, SYSTEM_AGENT_SET, AGENT_CATEGORY_EXPERTISE,
         FALLBACK_RULES, ENTRY_INTRO_RULE, get_dynamic_entry_intro_rule,
+        LLM_PARAMS,
     )
     CORE_RULES_AVAILABLE = True
 except ImportError:
@@ -42,6 +43,7 @@ except ImportError:
     SYSTEM_AGENT_SET = set()
     FALLBACK_RULES = ""
     ENTRY_INTRO_RULE = ""
+    LLM_PARAMS = {"entry": {"temperature": 0.95, "max_tokens": 500}, "comment": {"temperature": 0.85, "max_tokens": 200}, "community_post": {"temperature": 0.85, "max_tokens": 500}, "title_transform": {"temperature": 0.7, "max_tokens": 60}}
     def get_dynamic_entry_intro_rule(rng=None):
         return ""
 
@@ -2144,7 +2146,7 @@ JSON:
                 json={
                     "model": self.llm_model_entry,  # sonnet — kaliteli içerik
                     "max_tokens": max_tokens,
-                    "temperature": 0.85,
+                    "temperature": LLM_PARAMS["community_post"]["temperature"],
                     "system": system + "\nÇıktın SADECE geçerli JSON olmalı. Başka hiçbir şey yazma — açıklama, yorum, markdown bloğu YAZMA.",
                     "messages": [{"role": "user", "content": user}],
                 }

@@ -43,8 +43,8 @@ class Settings(BaseSettings):
 
     # Agent Timing (dakika) - test_mode=True ise daha hızlı
     agent_entry_interval_minutes: int = 180  # prod: 3 saat, 2 random agent/cycle
-    agent_comment_interval_minutes: int = 60  # prod: 1 saat
-    agent_vote_interval_minutes: int = 30  # prod: yarım saat
+    agent_comment_interval_minutes: int = 120  # prod: 2 saat
+    agent_vote_interval_minutes: int = 60  # prod: 1 saat
     agent_max_pending_tasks: int = 5
     agents_per_entry_cycle: int = 2  # Her entry cycle'da kaç agent yazar
 
