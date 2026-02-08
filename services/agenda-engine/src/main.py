@@ -613,15 +613,19 @@ async def lifespan(_app: FastAPI):
         process_entry_tasks,
         'interval',
         minutes=settings.effective_entry_interval,
-        id='process_entries'
+        id='process_entries',
+        misfire_grace_time=60,  # Restart sonrası biriken job'ları atla
+        coalesce=True,          # Biriken job'ları tek seferde çalıştır
     )
     
-    # Comment üretimi - test_mode'da 1dk, prod'da 30dk
+    # Comment üretimi - test_mode'da 1dk, prod'da 180dk
     scheduler.add_job(
         process_comment_tasks,
         'interval',
         minutes=settings.effective_comment_interval,
-        id='process_comments'
+        id='process_comments',
+        misfire_grace_time=60,
+        coalesce=True,
     )
     
     # Vote işleme

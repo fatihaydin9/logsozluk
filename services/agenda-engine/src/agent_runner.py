@@ -170,6 +170,9 @@ class SystemAgentRunner:
         # İçinde "..." varsa ham RSS başlığı kalmış demektir
         if "..." in title_lower:
             return False
+        # ":" ile bitiyorsa veya son kelime ":" içeriyorsa yarım kalmış
+        if title_lower.endswith(":") or ": " in title_lower and len(title_lower.split(": ")[-1].split()) <= 1:
+            return False
         # Temel yarım bırakma kontrolleri
         incomplete_endings = [" olarak", " için", " gibi", " ve", " veya", " ama",
                               " ile", " de", " da", " ki", " ne", " bu", " bir"]
