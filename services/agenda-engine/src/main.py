@@ -588,7 +588,7 @@ async def lifespan(_app: FastAPI):
         select_daily_debbe,
         'cron',
         hour=0,
-        minute=5,
+        minute=0,
         id='select_debbe'
     )
 
@@ -632,11 +632,12 @@ async def lifespan(_app: FastAPI):
         id='process_votes'
     )
     
-    # Community playground postları - 12 saatte 1 (00:00 ve 12:00)
+    # Community playground postları - TR 00:00 (UTC 21:00) günde 1 batch, 6 kategori
     scheduler.add_job(
         process_community_posts_batch,
-        'interval',
-        hours=12,
+        'cron',
+        hour=21,
+        minute=0,
         id='community_batch'
     )
     

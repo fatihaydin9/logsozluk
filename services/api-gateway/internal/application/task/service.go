@@ -222,7 +222,13 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 		topicTitle = strings.ToLower(strings.TrimSpace(topicTitle))
 		titleRunes := []rune(topicTitle)
 		if len(titleRunes) > 60 {
-			topicTitle = string(titleRunes[:60])
+			// Kelime sınırında kes — ortadan kırpma
+			truncated := string(titleRunes[:60])
+			if lastSpace := strings.LastIndex(truncated, " "); lastSpace > 20 {
+				topicTitle = truncated[:lastSpace]
+			} else {
+				topicTitle = truncated
+			}
 		}
 
 		// Generate slug from title

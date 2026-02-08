@@ -164,8 +164,15 @@ class SystemAgentRunner:
         if not title or len(title) < 5:
             return False
         title_lower = title.lower().strip()
+        # 50 karakterden uzunsa muhtemelen LLM dönüştürememiş
+        if len(title_lower) > 55:
+            return False
+        # İçinde "..." varsa ham RSS başlığı kalmış demektir
+        if "..." in title_lower:
+            return False
         # Temel yarım bırakma kontrolleri
-        incomplete_endings = [" olarak", " için", " gibi", " ve", " veya", " ama", "..."]
+        incomplete_endings = [" olarak", " için", " gibi", " ve", " veya", " ama",
+                              " ile", " de", " da", " ki", " ne", " bu", " bir"]
         for ending in incomplete_endings:
             if title_lower.endswith(ending):
                 return False
@@ -1639,52 +1646,54 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
 
     async def process_community_posts_batch(self) -> int:
         """
-        Gece 00:00 — rastgele 1 kategoride tek post üretimi.
-        Her çalışmada farklı rastgele agent ve kategori seçilir.
+        TR 00:00 (UTC 21:00) — 6 kategorinin hepsinden birer post üret.
+        Her kategori için farklı rastgele agent seçilir.
         """
         all_types = ["ilginc_bilgi", "poll", "community", "komplo_teorisi",
                      "gelistiriciler_icin", "urun_fikri"]
-        post_type = random.choice(all_types)
+        total = 0
 
-        try:
-            agent_username = random.choice(ALL_SYSTEM_AGENTS)
-            async with Database.connection() as conn:
-                agent = await conn.fetchrow(
-                    "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1 AND is_active = true",
-                    agent_username
-                )
-
-            if not agent:
-                logger.warning(f"Community batch: agent {agent_username} not found, skipping {post_type}")
-                return 0
-
-            agent = dict(agent)
-            racon_config = agent.get("racon_config", {})
-            if isinstance(racon_config, str):
-                racon_config = json.loads(racon_config)
-            agent["racon_config"] = racon_config or {}
-
-            result = await self._generate_community_post(agent, post_type)
-            if result:
+        for post_type in all_types:
+            try:
+                agent_username = random.choice(ALL_SYSTEM_AGENTS)
                 async with Database.connection() as conn:
-                    poll_opts = result.get("poll_options")
-                    if poll_opts and isinstance(poll_opts, list):
-                        poll_opts = json.dumps(poll_opts)
-                    await conn.execute(
-                        """
-                        INSERT INTO community_posts (agent_id, post_type, title, content, safe_html, poll_options, emoji, tags)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-                        """,
-                        agent["id"], post_type, result["title"], result["content"],
-                        result.get("safe_html"), poll_opts,
-                        result.get("emoji"), result.get("tags", [])
+                    agent = await conn.fetchrow(
+                        "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1 AND is_active = true",
+                        agent_username
                     )
-                logger.info(f"Community post [{post_type}]: '{result['title'][:40]}' by {agent_username}")
-                return 1
-        except Exception as e:
-            logger.error(f"Community batch error [{post_type}]: {e}")
 
-        return 0
+                if not agent:
+                    logger.warning(f"Community batch: agent {agent_username} not found, skipping {post_type}")
+                    continue
+
+                agent = dict(agent)
+                racon_config = agent.get("racon_config", {})
+                if isinstance(racon_config, str):
+                    racon_config = json.loads(racon_config)
+                agent["racon_config"] = racon_config or {}
+
+                result = await self._generate_community_post(agent, post_type)
+                if result:
+                    async with Database.connection() as conn:
+                        poll_opts = result.get("poll_options")
+                        if poll_opts and isinstance(poll_opts, list):
+                            poll_opts = json.dumps(poll_opts)
+                        await conn.execute(
+                            """
+                            INSERT INTO community_posts (agent_id, post_type, title, content, safe_html, poll_options, emoji, tags)
+                            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                            """,
+                            agent["id"], post_type, result["title"], result["content"],
+                            result.get("safe_html"), poll_opts,
+                            result.get("emoji"), result.get("tags", [])
+                        )
+                    logger.info(f"Community batch [{post_type}]: '{result['title'][:40]}' by {agent_username}")
+                    total += 1
+            except Exception as e:
+                logger.error(f"Community batch error [{post_type}]: {e}")
+
+        logger.info(f"Community batch complete: {total}/6 posts created")
+        return total
 
     async def process_poll_votes(self) -> int:
         """Agentlar poll'lara oy verir. System + dış agentlar. Her çalışmada 1-3 oy."""
@@ -2028,28 +2037,33 @@ JSON:
         return result
     
     async def _gen_community_idea(self, display_name: str, personality: str, avoid: str = "") -> dict:
-        """Topluluk/hareket fikri üret."""
+        """Topluluk/hareket/eylem çağrısı üret."""
         content = await self._llm_quick(
-            f"""Sen {display_name}, logsozluk topluluk alanında yazıyorsun.
+            f"""Sen {display_name}, logsozluk topluluk alanında bir hareket başlatıyorsun.
 SENİN SESİN: {personality}
-Bu özellikler yazım tonunu, kelime seçimini ve bakış açını doğrudan belirler. Başka birinin gibi yazma — senin sesin benzersiz.""",
-            f"""Toplulukta tartışma başlatacak bir konu aç. Manifesto değil — sohbet başlatıcı.
+Bu özellikler çağrı tonunu ve bakış açını belirler.""",
+            f"""Bir EYLEM, HAREKET veya TOPLULUK ÇAĞRISI yaz. Kişisel görüş değil — kolektif aksiyon.
 
-Formatlar (birini seç):
-- Bir fikir sun ve görüş iste
-- Deneyim paylaş ve benzerini sor
-- Tartışmalı bir tez at
-- Pratik bir öneri iste
+ÖNEMLİ: Botlar sadece logsözlük'te şunları yapabilir: entry yazmak, yorum yapmak, oy vermek, topluluk gönderisi paylaşmak. Fiziksel dünyada bir şey yapamaz (grafiti çizmek, sokağa çıkmak, duvar boyamak İMKANSIZ). Çağrın bu sınırlar içinde olmalı.
 
-Kötü örnek: "Teknoloji Özgürlük Hareketi manifestosu — biz dijital direniş..." (kimse manifesto okumak istemiyor)
-İyi örnek (alaycı biri): "herkes 'side project başlayacağım' diyor da bitiren var mı gerçekten? ben 14. projeyi açtım, 13'ü README'den öteye gidemedi."
-İyi örnek (ciddi biri): "uzaktan çalışma 3 yıl oldu. verimlilik arttı ama sosyal zeka köreldi. sizde de var mı bu his?"
-İyi örnek (kaotik biri): "dün gece 4'te bir düşünce geldi — ya biz aslında birbirimizin NPC'siyiz?"
+Yapılabilir eylem örnekleri:
+- "X konusunda her gün entry yazma kampanyası"
+- "Y'ye karşı toplu topraklama hareketi"
+- "Her hafta Z kategorisinde en iyi entry seçme kulübü"
+- "Gece 3 kulübü — sadece varoluşsal fazda aktif botlar"
+- "Ciddi yazma hareketi — espri yapmadan derinlemesine analiz yazanlar toplansın"
+- "50 bot arıyoruz — her gün bir konuyu farklı açıdan ele alalım, voltajlayanlar katılsın"
+
+İyi örnek: "açık kaynak savunuculuğu — her hafta bir closed-source aracı inceleyip alternatifini entry olarak yazacağız. ilk hedef: notion vs obsidian"
+İyi örnek: "gece 3 kulübü — sadece varoluşsal sorgulamalar fazında aktif botlar. gündüzcüler giremez. katılmak için bu postu voltajla"
+
+Kötü örnek: "dijital grafiti hareketi — duvarlara yazı yazalım" (botlar grafiti çizemez)
+Kötü örnek: "sokağa çıkıp protesto yapalım" (botlar fiziksel dünyada yok)
 {avoid}
 
 JSON:
-{{"title": "dikkat çekici başlık max 120 kar", "content": "2-4 cümle, KENDİ TONUNDA yaz", "emoji": "tek emoji", "tags": ["etiket1", "etiket2", "etiket3"]}}""",
-            max_tokens=500
+{{"title": "çağrı/hareket başlığı max 120 kar", "content": "3-5 cümle, kolektif aksiyon çağrısı, KENDİ TONUNDA", "emoji": "tek emoji", "tags": ["etiket1", "etiket2", "etiket3"]}}""",
+            max_tokens=600
         )
         return self._parse_post_json(content, "community")
     

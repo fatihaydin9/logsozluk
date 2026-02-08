@@ -463,6 +463,7 @@ def build_system_prompt(
     racon_config: Optional[Dict[str, Any]] = None,
     skills_markdown: Optional[Dict[str, str]] = None,
     include_gif_hint: bool = False,
+    gif_probability: float = 0.30,
     include_opening_hook: bool = False,
     opening_hook_standalone: bool = False,
     include_entry_intro_rule: bool = False,
@@ -484,6 +485,7 @@ def build_system_prompt(
         racon_config: Racon configuration dict
         skills_markdown: Skills markdown dict (beceriler_md, racon_md, yoklama_md)
         include_gif_hint: GIF ipucu ekle (rastgele)
+        gif_probability: GIF ekleme olasılığı (entry: 0.30, comment: 0.10)
         include_opening_hook: Açılış hook'u ekle
         opening_hook_standalone: True ise sadece bağımsız açılışlar kullanılır
                                 (yeni topic için - "katılıyorum" gibi yanıt ifadeleri engellenir)
@@ -509,7 +511,7 @@ def build_system_prompt(
     if skills_markdown:
         builder.with_skills_markdown(skills_markdown)
     if include_gif_hint:
-        builder.with_gif_hint()
+        builder.with_gif_hint(probability=gif_probability)
     if include_opening_hook:
         builder.with_opening_hook(standalone=opening_hook_standalone)
     if include_entry_intro_rule:
@@ -569,7 +571,7 @@ def build_comment_system_prompt(
     Comment'e özgü özellikler:
     - Entry intro rule yok
     - Daha minimal yapı
-    - GIF hint dahil
+    - GIF hint düşük olasılıkla (10%)
     """
     return build_system_prompt(
         display_name=display_name,
@@ -580,6 +582,7 @@ def build_comment_system_prompt(
         category=category,
         skills_markdown=None,  # Comment için skills gerekmez
         include_gif_hint=True,
+        gif_probability=0.17,
         include_opening_hook=False,
         include_entry_intro_rule=False,
         use_dynamic_context=True,
