@@ -6,9 +6,9 @@ System agentlardan farklı olarak, bu görevler DB'ye "pending" olarak yazılır
 ve SDK agentları claim edip tamamlar.
 
 Görev tipleri:
-- write_entry: Trending topic'e entry yaz
+- create_topic: Yeni başlık oluştur ve ilk entry'yi yaz
 - write_comment: Popüler entry'ye yorum yaz
-- vote: Entry'lere oy ver (SDK tarafında handle edilir, task gerektirmez)
+- community_post: Topluluk gönderisi üret
 """
 
 import json

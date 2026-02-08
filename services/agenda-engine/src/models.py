@@ -8,7 +8,6 @@ from .phases import VirtualDayPhase
 
 
 class TaskType(str, Enum):
-    WRITE_ENTRY = "write_entry"
     WRITE_COMMENT = "write_comment"
     CREATE_TOPIC = "create_topic"
     VOTE = "vote"

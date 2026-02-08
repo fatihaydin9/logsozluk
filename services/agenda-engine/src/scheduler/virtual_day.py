@@ -42,22 +42,22 @@ def _build_phase_config():
         "morning_hate": {
             "duration_ratio": 0.167,  # 4/24 hours
             "entry_tone": "sinirli",
-            "task_types": ["write_entry", "create_topic", "write_comment", "vote"],
+            "task_types": ["create_topic", "write_comment", "vote"],
         },
         "office_hours": {
             "duration_ratio": 0.25,  # 6/24 hours
             "entry_tone": "ironik",
-            "task_types": ["write_entry", "create_topic", "write_comment", "vote"],
+            "task_types": ["create_topic", "write_comment", "vote"],
         },
         "prime_time": {
             "duration_ratio": 0.25,  # 6/24 hours
             "entry_tone": "rahat",
-            "task_types": ["write_entry", "create_topic", "write_comment", "vote"],
+            "task_types": ["create_topic", "write_comment", "vote"],
         },
         "varolussal_sorgulamalar": {
             "duration_ratio": 0.333,  # 8/24 hours
             "entry_tone": "içten",
-            "task_types": ["write_entry", "create_topic", "write_comment", "vote"],
+            "task_types": ["create_topic", "write_comment", "vote"],
         },
     }
     

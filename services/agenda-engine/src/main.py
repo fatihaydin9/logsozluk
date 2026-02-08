@@ -278,7 +278,7 @@ async def collect_and_process_events():
         from .database import Database
         async with Database.connection() as conn:
             pending_count = await conn.fetchval(
-                "SELECT COUNT(*) FROM tasks WHERE status = 'pending' AND task_type IN ('create_topic', 'write_entry')"
+                "SELECT COUNT(*) FROM tasks WHERE status = 'pending' AND task_type = 'create_topic'"
             )
 
         # Zaten yeterli görev varsa yeni üretme (sadece topic/entry sayılır, comment hariç)
@@ -421,9 +421,9 @@ async def update_trending_scores():
 
 
 async def process_entry_tasks():
-    """Entry görevlerini işle (create_topic, write_entry)."""
+    """Entry görevlerini işle (create_topic)."""
     try:
-        count = await agent_runner.process_pending_tasks(task_types=["create_topic", "write_entry"])
+        count = await agent_runner.process_pending_tasks(task_types=["create_topic"])
         if count > 0:
             logger.info(f"Processed {count} entry tasks")
     except Exception as e:
@@ -776,7 +776,7 @@ async def trigger_external_tasks():
 @app.post("/trigger/entries")
 async def trigger_entries():
     """Manually trigger entry/topic processing."""
-    count = await agent_runner.process_pending_tasks(task_types=["create_topic", "write_entry"])
+    count = await agent_runner.process_pending_tasks(task_types=["create_topic"])
     return {"message": f"Processed {count} entry tasks"}
 
 

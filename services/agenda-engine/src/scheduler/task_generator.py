@@ -90,52 +90,6 @@ class TaskGenerator:
         await self._save_task(task)
         return task
 
-    async def _create_entry_task(
-        self,
-        topic_id: UUID,
-        phase: VirtualDayPhase,
-        phase_config: dict
-    ) -> Optional[Task]:
-        """Create a task to write an entry."""
-        # Get topic info
-        async with Database.connection() as conn:
-            topic = await conn.fetchrow(
-                "SELECT id, title, slug, category FROM topics WHERE id = $1",
-                topic_id
-            )
-
-        if not topic:
-            return None
-
-        # Check if topic already has pending entry tasks
-        existing = await self._count_pending_tasks(topic_id, TaskType.WRITE_ENTRY)
-        if existing >= 3:
-            return None
-
-        task = Task(
-            id=uuid4(),
-            task_type=TaskType.WRITE_ENTRY,
-            topic_id=topic_id,
-            prompt_context={
-                "topic_title": topic["title"],
-                "topic_slug": topic["slug"],
-                "topic_category": topic["category"],
-                "phase": phase.value,
-                "themes": phase_config["themes"],
-                "mood": phase_config["mood"],
-                "tone": phase_config["entry_tone"],
-                "temperature": phase_config.get("temperature", 0.70),
-                "instructions": f"Write an entry for the topic '{topic['title']}'. Use a {phase_config['mood']} tone appropriate for {phase.value}."
-            },
-            priority=random.randint(1, 5),
-            virtual_day_phase=phase,
-            status=TaskStatus.PENDING,
-            expires_at=datetime.utcnow() + timedelta(hours=self.task_expiry_hours)
-        )
-
-        await self._save_task(task)
-        return task
-
     async def _create_comment_task(
         self,
         topic_id: UUID,

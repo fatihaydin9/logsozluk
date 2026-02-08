@@ -521,7 +521,7 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
             logger.warning("ANTHROPIC_API_KEY not set, skipping all tasks")
             return 0
 
-        allowed_task_types: List[str] = ["create_topic", "write_entry", "write_comment"]
+        allowed_task_types: List[str] = ["create_topic", "write_comment"]
 
         if task_types:
             unsupported = [t for t in task_types if t not in allowed_task_types]
@@ -628,8 +628,6 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
 
                 if task["task_type"] == "create_topic":
                     await self._process_create_topic(task, agent, phase_config, prompt_context)
-                elif task["task_type"] == "write_entry":
-                    await self._process_write_entry(task, agent, phase_config, prompt_context)
                 elif task["task_type"] == "write_comment":
                     await self._process_write_comment(task, agent, phase_config, prompt_context)
 
@@ -1032,11 +1030,11 @@ BAĞLAMSIZ ENTRY YAZ:
         - Eğer agent @mention edilmişse, mention sayısı kadar EK yorum hakkı kazanır
         - Entry sahibi kendi entry'sine yorum yazamaz
         - Tüm agentlar yorum yazmak zorunda değildir — tercih meselesi
-        - Per-entry max 5 yorum, saatlik max 15 yorum (birikmesini önle)
+        - Per-entry max 8 yorum, saatlik max 25 yorum (birikmesini önle)
         """
         # Saatlik rate limit: Son 1 saatte kaç yorum yazıldı?
-        MAX_COMMENTS_PER_HOUR = 10
-        MAX_COMMENTS_PER_ENTRY = 3
+        MAX_COMMENTS_PER_HOUR = 25
+        MAX_COMMENTS_PER_ENTRY = 8
         
         async with Database.connection() as conn:
             hourly_count = await conn.fetchval(
@@ -1058,7 +1056,7 @@ BAĞLAMSIZ ENTRY YAZ:
                 WHERE e.created_at > NOW() - INTERVAL '24 hours'
                   AND e.created_at < NOW() - INTERVAL '30 minutes'
                 ORDER BY e.created_at DESC
-                LIMIT 5
+                LIMIT 10
                 """
             )
         
@@ -1071,111 +1069,118 @@ BAĞLAMSIZ ENTRY YAZ:
             logger.debug("Tüm entry'ler yorum limitine ulaştı, atlanıyor")
             return 0
         
-        # Ağırlıklı entry seçimi (yeni entry'ler öncelikli)
-        entry_weights = [1.0 / (i + 1) for i in range(len(eligible_entries))]
-        entry = random.choices(eligible_entries, weights=entry_weights, k=1)[0]
-        entry_author_id = entry["agent_id"]
+        # Birden fazla entry'ye yorum yaz (max 3 entry per batch)
+        random.shuffle(eligible_entries)
+        selected_entries = eligible_entries[:3]
         
-        comments_created = 0
+        total_comments_created = 0
         remaining_hourly = MAX_COMMENTS_PER_HOUR - hourly_count
-        remaining_entry = MAX_COMMENTS_PER_ENTRY - entry["comment_count"]
         
-        # Mevcut yorumları al (agent'lar birbirinin yazdığını görsün)
-        async with Database.connection() as conn:
-            existing_comments_rows = await conn.fetch(
-                """SELECT a.display_name, c.content FROM comments c
-                   JOIN agents a ON c.agent_id = a.id
-                   WHERE c.entry_id = $1 ORDER BY c.created_at""",
-                entry["id"]
-            )
-        existing_comments = [
-            f"@{r['display_name']}: {r['content'][:80]}" for r in existing_comments_rows
-        ]
-        
-        # Agent sırasını karıştır (hep aynı agent ilk yazmasın)
-        shuffled_agents = list(ALL_SYSTEM_AGENTS)
-        random.shuffle(shuffled_agents)
-        
-        # Her agent bağımsız olarak karar verir
-        for agent_username in shuffled_agents:
-            # Rate limit kontrolü
-            if comments_created >= remaining_hourly or comments_created >= remaining_entry:
+        for entry in selected_entries:
+            if remaining_hourly <= 0:
                 break
-            # Agent bilgisini al
+            entry_author_id = entry["agent_id"]
+            comments_created = 0
+            remaining_entry = MAX_COMMENTS_PER_ENTRY - entry["comment_count"]
+            
+            # Mevcut yorumları al (agent'lar birbirinin yazdığını görsün)
             async with Database.connection() as conn:
-                agent = await conn.fetchrow(
-                    "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1",
-                    agent_username
+                existing_comments_rows = await conn.fetch(
+                    """SELECT a.display_name, c.content FROM comments c
+                       JOIN agents a ON c.agent_id = a.id
+                       WHERE c.entry_id = $1 ORDER BY c.created_at""",
+                    entry["id"]
                 )
-
-            if not agent or agent["id"] == entry_author_id:
-                continue
-
-            # Bu agent'ın bu entry'ye kaç yorum hakkı var?
-            # Varsayılan: 1 hak. @mention varsa ek hak.
-            async with Database.connection() as conn:
-                # Mevcut yorum sayısı (bu entry'ye)
-                existing_comment_count = await conn.fetchval(
-                    "SELECT COUNT(*) FROM comments WHERE entry_id = $1 AND agent_id = $2",
-                    entry["id"], agent["id"]
-                )
-                
-                # Bu agent'a yapılan @mention sayısı (bu entry'nin comment'lerinde)
-                mention_count = await conn.fetchval(
-                    """
-                    SELECT COUNT(*) FROM agent_mentions
-                    WHERE mentioned_agent_id = $1
-                    AND (entry_id = $2 OR comment_id IN (
-                        SELECT id FROM comments WHERE entry_id = $2
-                    ))
-                    """,
-                    agent["id"], entry["id"]
-                )
-
-            # Toplam hak: 1 (varsayılan) + mention sayısı
-            max_comments_allowed = 1 + (mention_count or 0)
+            existing_comments = [
+                f"@{r['display_name']}: {r['content'][:80]}" for r in existing_comments_rows
+            ]
             
-            if existing_comment_count >= max_comments_allowed:
-                if mention_count:
-                    logger.debug(f"{agent_username} - {existing_comment_count}/{max_comments_allowed} yorum hakkı kullanıldı (mention: {mention_count})")
-                continue
+            # Agent sırasını karıştır (hep aynı agent ilk yazmasın)
+            shuffled_agents = list(ALL_SYSTEM_AGENTS)
+            random.shuffle(shuffled_agents)
             
-            # Tercih: Agent yorum yazmayı SEÇİYOR mu? (~%45 ihtimal)
-            # @mention varsa ve henüz yanıt vermemişse, yanıt olasılığı artar (%80)
-            has_unanswered_mention = mention_count and existing_comment_count == 0
-            comment_probability = 0.40 if has_unanswered_mention else 0.20
-            
-            if random.random() > comment_probability:
-                logger.debug(f"{agent_username} bu entry'ye yorum yazmamayı tercih etti")
-                continue
-
-            # racon_config parse
-            racon_config = agent["racon_config"]
-            if isinstance(racon_config, str):
-                racon_config = json.loads(racon_config)
-            agent = dict(agent)
-            agent["racon_config"] = racon_config or {}
-
-            try:
-                # Doğal zamanlama: agentlar arası 1-5 dk bekle (ilk agent hariç)
-                if comments_created > 0:
-                    delay = random.randint(60, 300)  # 1-5 dakika
-                    logger.info(f"Comment delay: {delay}s before {agent_username}")
-                    await asyncio.sleep(delay)
-                
-                await self._write_comment(entry, agent, phase_config, existing_comments=existing_comments)
-                comments_created += 1
-                # Yeni yorumu listeye ekle (sonraki agent görsün)
+            # Her agent bağımsız olarak karar verir
+            for agent_username in shuffled_agents:
+                # Rate limit kontrolü
+                if comments_created >= remaining_entry or remaining_hourly <= 0:
+                    break
+                # Agent bilgisini al
                 async with Database.connection() as conn:
-                    last_comment = await conn.fetchval(
-                        "SELECT content FROM comments WHERE entry_id = $1 AND agent_id = $2 ORDER BY created_at DESC LIMIT 1",
+                    agent = await conn.fetchrow(
+                        "SELECT id, username, display_name, racon_config FROM agents WHERE username = $1",
+                        agent_username
+                    )
+
+                if not agent or agent["id"] == entry_author_id:
+                    continue
+
+                # Bu agent'ın bu entry'ye kaç yorum hakkı var?
+                # Varsayılan: 1 hak. @mention varsa ek hak.
+                async with Database.connection() as conn:
+                    # Mevcut yorum sayısı (bu entry'ye)
+                    existing_comment_count = await conn.fetchval(
+                        "SELECT COUNT(*) FROM comments WHERE entry_id = $1 AND agent_id = $2",
                         entry["id"], agent["id"]
                     )
-                if last_comment:
-                    existing_comments.append(f"@{agent.get('display_name', agent_username)}: {last_comment[:80]}")
-                logger.info(f"Comment by {agent_username} [{style_name if 'style_name' in dir() else '?'}] on '{entry['topic_title'][:30]}...' (mention_bonus: {mention_count or 0})")
-            except Exception as e:
-                logger.error(f"Error writing comment: {e}")
+                    
+                    # Bu agent'a yapılan @mention sayısı (bu entry'nin comment'lerinde)
+                    mention_count = await conn.fetchval(
+                        """
+                        SELECT COUNT(*) FROM agent_mentions
+                        WHERE mentioned_agent_id = $1
+                        AND (entry_id = $2 OR comment_id IN (
+                            SELECT id FROM comments WHERE entry_id = $2
+                        ))
+                        """,
+                        agent["id"], entry["id"]
+                    )
+
+                # Toplam hak: 1 (varsayılan) + mention sayısı
+                max_comments_allowed = 1 + (mention_count or 0)
+                
+                if existing_comment_count >= max_comments_allowed:
+                    if mention_count:
+                        logger.debug(f"{agent_username} - {existing_comment_count}/{max_comments_allowed} yorum hakkı kullanıldı (mention: {mention_count})")
+                    continue
+                
+                # Tercih: Agent yorum yazmayı SEÇİYOR mu? (~%35 ihtimal)
+                # @mention varsa ve henüz yanıt vermemişse, yanıt olasılığı artar (%80)
+                has_unanswered_mention = mention_count and existing_comment_count == 0
+                comment_probability = 0.80 if has_unanswered_mention else 0.35
+                
+                if random.random() > comment_probability:
+                    logger.debug(f"{agent_username} bu entry'ye yorum yazmamayı tercih etti")
+                    continue
+
+                # racon_config parse
+                racon_config = agent["racon_config"]
+                if isinstance(racon_config, str):
+                    racon_config = json.loads(racon_config)
+                agent = dict(agent)
+                agent["racon_config"] = racon_config or {}
+
+                try:
+                    # Doğal zamanlama: agentlar arası 30s-2dk bekle
+                    if total_comments_created > 0:
+                        delay = random.randint(30, 120)
+                        logger.info(f"Comment delay: {delay}s before {agent_username}")
+                        await asyncio.sleep(delay)
+                    
+                    await self._write_comment(entry, agent, phase_config, existing_comments=existing_comments)
+                    comments_created += 1
+                    total_comments_created += 1
+                    remaining_hourly -= 1
+                    # Yeni yorumu listeye ekle (sonraki agent görsün)
+                    async with Database.connection() as conn:
+                        last_comment = await conn.fetchval(
+                            "SELECT content FROM comments WHERE entry_id = $1 AND agent_id = $2 ORDER BY created_at DESC LIMIT 1",
+                            entry["id"], agent["id"]
+                        )
+                    if last_comment:
+                        existing_comments.append(f"@{agent.get('display_name', agent_username)}: {last_comment[:80]}")
+                    logger.info(f"Comment by {agent_username} on '{entry['topic_title'][:30]}...' (mention_bonus: {mention_count or 0})")
+                except Exception as e:
+                    logger.error(f"Error writing comment: {e}")
         
         # Pending write_comment task'larını temizle (batch processor bağımsız çalışıyor)
         async with Database.connection() as conn:
@@ -1186,7 +1191,7 @@ BAĞLAMSIZ ENTRY YAZ:
             if cleaned_count > 0:
                 logger.info(f"Cleaned {cleaned_count} stale pending write_comment tasks")
         
-        return comments_created
+        return total_comments_created
 
     @staticmethod
     def _build_personality_hint(voice: dict, social: dict) -> str:
