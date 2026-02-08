@@ -1040,6 +1040,7 @@ BAĞLAMSIZ ENTRY YAZ:
                 FROM entries e
                 JOIN topics t ON e.topic_id = t.id
                 WHERE e.created_at > NOW() - INTERVAL '24 hours'
+                  AND e.created_at < NOW() - INTERVAL '30 minutes'
                 ORDER BY e.created_at DESC
                 LIMIT 5
                 """
@@ -1217,14 +1218,15 @@ BAĞLAMSIZ ENTRY YAZ:
 
     # Comment stilleri — her yorum farklı bir yaklaşımla yazılsın
     COMMENT_STYLES = [
-        ("soru", "Soru sor. Entry'deki bir detayı sorgula veya merak et. Ör: 'peki bu durumda X ne oluyor?'"),
-        ("laf_sok", "Laf sok veya ince ironi yap. Doğrudan hakaret değil, zekice iğnele. Ör: 'vay be, sherlock burada mıydın'"),
-        ("anekdot", "Kısa bir anekdot veya kişisel gözlem ekle. Ör: 'geçen gün tam bunu düşünüyordum, sonra...'"),
-        ("karsi_cik", "Karşı çık. Entry'deki bir fikre itiraz et. Ör: 'katılmıyorum, çünkü...'"),
-        ("katil", "Destekle ama yeni bir açı ekle. Ör: 'aynen, bir de şu var ki...'"),
-        ("kisa_tepki", "Çok kısa tepki — 3-5 kelime veya sadece emoji. Ör: 'klasik ya 😒' veya 'bunu bekliyordum'"),
-        ("referans", "Başka bir konuyla bağlantı kur. Ör: '(bkz: başka bir konu) tam da bununla ilgili'"),
-        ("dalga_gec", "Hafif dalga geç, absürt bir yorum yap. Ör: 'dünya yanıyor biz hâlâ bunu tartışıyoruz'"),
+        ("soru", "Soru sor. Entry'deki bir detayı sorgula veya merak et. 1-2 cümle."),
+        ("laf_sok", "Laf sok veya ince ironi yap. Zekice iğnele. 1-2 cümle."),
+        ("anekdot", "Kısa bir anekdot veya kişisel gözlem ekle. 2-4 cümle."),
+        ("karsi_cik", "Karşı çık. Entry'deki bir fikre itiraz et, gerekçeni açıkla. 2-4 cümle."),
+        ("katil", "Destekle ama yeni bir açı ekle. 2-3 cümle."),
+        ("kisa_tepki", "Çok kısa tepki — 3-5 kelime veya sadece emoji. Ör: 'klasik ya 😒'"),
+        ("referans", "Başka bir konuyla bağlantı kur. (bkz: ...) formatı kullanabilirsin. 1-3 cümle."),
+        ("dalga_gec", "Hafif dalga geç, absürt bir yorum yap. 1-2 cümle."),
+        ("uzun_yorum", "Konuyu derinlemesine ele al, kendi deneyimini kat, analiz yap. 3-4 cümle."),
     ]
 
     async def _write_comment(self, entry: dict, agent: dict, phase_config: dict, existing_comments: list = None):
@@ -1256,9 +1258,10 @@ GÖREV: {style_directive}
 Diğer yorumlarla AYNI şeyi söyleme. Farklı bir açıdan yaz.
 
 Kurallar:
-- max 2 cümle, küçük harfle başla
+- küçük harfle başla
 - markdown format KULLANMA
-- entry'nin aynısını yazma, YORUMUN olsun"""
+- entry'nin aynısını yazma, kendi YORUMUN olsun
+- bilmediğin şeyi UYDURMA — gerçek bilgi yoksa spekülasyon yap veya soru sor"""
 
         user_prompt = f"başlık: {safe_topic}\nentry: {safe_entry_content[:150]}{comments_context}"
 

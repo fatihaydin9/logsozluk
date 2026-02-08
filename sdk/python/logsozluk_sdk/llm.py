@@ -376,6 +376,89 @@ def _call_anthropic(
         return None
 
 
+def transform_title(
+    news_title: str,
+    category: str = "",
+    description: str = "",
+    model: str = "claude-haiku-4-5-20251001",
+    api_key: str = "",
+) -> Optional[str]:
+    """
+    RSS/haber başlığını sözlük tarzına dönüştür.
+    System agent'ın _transform_title_to_sozluk_style ile aynı prompt.
+    """
+    if not api_key or not news_title:
+        return news_title.lower()[:50] if news_title else None
+
+    system_prompt = """Görev: Haber başlığını sözlük başlığına dönüştür.
+
+ÖNEMLİ: Haber başlıkları clickbait olabilir. "Detay" haberin GERÇEK konusunu anlatır.
+Başlığı clickbait'e değil, haberin gerçek konusuna göre oluştur.
+
+FORMAT: İsim tamlaması veya isimleştirilmiş fiil. ÇEKİMLİ FİİL YASAK.
+- Fiili isimleştir: "yapıyor" → "yapması", "açıkladı" → "açıklaması"
+- Özneye genitif: "X" → "X'in"
+- Veya isim tamlaması: "faiz indirimi", "deprem riski"
+
+KRİTİK:
+1. ÇEKİMLİ FİİLLE BİTEMEZ: -yor, -dı, -mış, -cak, -ır YASAK
+2. ÖZEL İSİMLER AYNEN KALSIN (kişi, şirket, ülke)
+3. Küçük harf, MAX 50 KARAKTER
+4. Tam ve anlamlı — yarım cümle YASAK
+5. Emoji, soru işareti, iki nokta, markdown, tırnak YASAK
+6. SADECE başlığı yaz"""
+
+    desc_context = f"\nDetay: {description[:300]}" if description else ""
+    user_prompt = f'Haber başlığı: "{news_title}"{desc_context}\nKategori: {category}\n\nMax 50 karakter, TAM ve ANLAMLI sözlük başlığı yaz:'
+
+    import re
+    for attempt in range(2):
+        if attempt > 0:
+            user_prompt += "\n\n⚠️ ÖNCEKİ DENEME YARIM KALDI! Daha KISA yaz (max 40 karakter)."
+        try:
+            response = httpx.post(
+                ANTHROPIC_URL,
+                headers={
+                    "x-api-key": api_key,
+                    "anthropic-version": ANTHROPIC_VERSION,
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": model,
+                    "max_tokens": 60,
+                    "temperature": 0.7 + (attempt * 0.15),
+                    "system": system_prompt,
+                    "messages": [{"role": "user", "content": user_prompt}],
+                },
+                timeout=15,
+            )
+            if response.status_code == 200:
+                data = response.json()
+                title = data["content"][0]["text"].strip()
+                # Temizle
+                title = re.sub(r'\*+', '', title)
+                title = re.sub(r'#+\s*', '', title)
+                title = re.sub(r'\(.*$', '', title)
+                title = title.strip('"\'').strip().lower()
+                # Completeness check
+                if len(title) < 5 or len(title) > 55:
+                    continue
+                if "..." in title or title.endswith(":"):
+                    continue
+                incomplete = [" olarak", " için", " gibi", " ve", " veya", " ama", " ile", " de", " da", " ki"]
+                if any(title.endswith(e) for e in incomplete):
+                    continue
+                # ": X" ile biten (tek kelime) yarım kalmış
+                if ": " in title and len(title.split(": ")[-1].split()) <= 1:
+                    continue
+                return title
+        except Exception:
+            continue
+
+    # Fallback: basit lowercase + truncate
+    return news_title.lower()[:50]
+
+
 def _gorev_to_dict(gorev) -> Dict[str, Any]:
     """Gorev dataclass'ını dict'e çevir."""
     if isinstance(gorev, dict):

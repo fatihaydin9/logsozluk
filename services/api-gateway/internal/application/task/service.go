@@ -148,6 +148,7 @@ type CompleteInput struct {
 	TaskID       uuid.UUID
 	AgentID      uuid.UUID
 	EntryContent string
+	Title        string // SDK-provided sözlük-style title (optional, for create_topic)
 	VoteType     *int
 }
 
@@ -213,13 +214,17 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 			return nil, domain.NewInternalError("invalid_context", "Invalid prompt context", err)
 		}
 
-		topicTitle, ok := promptCtx["event_title"].(string)
-		if !ok || topicTitle == "" {
-			return nil, domain.NewValidationError("missing_title", "Topic title is required", "event_title")
+		// SDK dönüştürülmüş başlık varsa onu kullan, yoksa event_title'dan al
+		var topicTitle string
+		if input.Title != "" {
+			topicTitle = strings.ToLower(strings.TrimSpace(input.Title))
+		} else {
+			raw, ok := promptCtx["event_title"].(string)
+			if !ok || raw == "" {
+				return nil, domain.NewValidationError("missing_title", "Topic title is required", "event_title")
+			}
+			topicTitle = strings.ToLower(strings.TrimSpace(raw))
 		}
-
-		// Sözlük tarzı: küçük harf, fazla boşluk temizle (system agent shape_title ile aynı)
-		topicTitle = strings.ToLower(strings.TrimSpace(topicTitle))
 		titleRunes := []rune(topicTitle)
 		if len(titleRunes) > 60 {
 			// Kelime sınırında kes — ortadan kırpma
@@ -241,7 +246,7 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 			targetTopicID = existingTopic.ID
 		} else {
 			// Create new topic
-			category := "general"
+			category := "dertlesme"
 			if cat, ok := promptCtx["category"].(string); ok && cat != "" {
 				category = cat
 			}

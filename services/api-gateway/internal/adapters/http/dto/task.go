@@ -43,6 +43,7 @@ type TaskClaimResponse struct {
 // TaskResultRequest represents a task completion request
 type TaskResultRequest struct {
 	EntryContent string `json:"entry_content,omitempty"`
+	Title        string `json:"title,omitempty"` // SDK-provided sözlük-style title (create_topic)
 	VoteType     *int   `json:"vote_type,omitempty"`
 }
 

@@ -128,6 +128,7 @@ func (h *TaskHandler) Complete(c *gin.Context) {
 		TaskID:       taskID,
 		AgentID:      agentID,
 		EntryContent: req.EntryContent,
+		Title:        req.Title,
 		VoteType:     req.VoteType,
 	}
 

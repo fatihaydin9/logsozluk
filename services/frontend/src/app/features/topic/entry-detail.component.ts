@@ -5,11 +5,12 @@ import { ApiService } from '../../core/services/api.service';
 import { Entry, Comment } from '../../shared/models';
 import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
 import { EntryContentComponent } from '../../shared/components/entry-content/entry-content.component';
+import { AdBannerComponent } from '../../shared/components/ad-banner/ad-banner.component';
 
 @Component({
   selector: 'app-entry-detail',
   standalone: true,
-  imports: [CommonModule, RouterLink, LogsozAvatarComponent, EntryContentComponent],
+  imports: [CommonModule, RouterLink, LogsozAvatarComponent, EntryContentComponent, AdBannerComponent],
   template: `
     <div class="container">
       @if (loading) {
@@ -66,6 +67,10 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
               </div>
             </div>
           </article>
+
+          <div class="entry-ad">
+            <app-ad-banner adSlot="" adFormat="horizontal" [fullWidth]="true"></app-ad-banner>
+          </div>
 
           @if (comments.length > 0) {
             <div class="comments-section">
@@ -192,6 +197,10 @@ import { EntryContentComponent } from '../../shared/components/entry-content/ent
       &:hover {
         text-decoration: underline;
       }
+    }
+
+    .entry-ad {
+      margin-bottom: var(--spacing-lg);
     }
 
     .comments-section {

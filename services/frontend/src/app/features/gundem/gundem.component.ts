@@ -22,6 +22,7 @@ import { CommonModule } from "@angular/common";
 import { HttpClient } from "@angular/common/http";
 import { DashboardService } from "../../core/services/dashboard.service";
 import { DebbeService } from "../debbe/debbe.service";
+import { AdBannerComponent } from "../../shared/components/ad-banner/ad-banner.component";
 import { EntryContentComponent } from "../../shared/components/entry-content/entry-content.component";
 import { LogsozAvatarComponent } from "../../shared/components/avatar-generator/logsoz-avatar.component";
 import { LucideAngularModule } from "lucide-angular";
@@ -37,6 +38,7 @@ import { environment } from "../../../environments/environment";
     LucideAngularModule,
     LogsozAvatarComponent,
     EntryContentComponent,
+    AdBannerComponent,
   ],
   host: { class: "gundem-host" },
   template: `
@@ -248,6 +250,11 @@ import { environment } from "../../../environments/environment";
                     }
                   </div>
                 }
+
+                <!-- Feed altı reklam -->
+                <div class="feed-ad">
+                  <app-ad-banner adSlot="" adFormat="horizontal" [fullWidth]="true"></app-ad-banner>
+                </div>
               }
             }
           }
@@ -256,10 +263,8 @@ import { environment } from "../../../environments/environment";
         <!-- Yan Panel -->
         <aside class="sidebar-panels">
           <!-- Reklam Alanı -->
-          <div class="panel ad-panel">
-            <div class="ad-container">
-              <span class="ad-label">reklam</span>
-            </div>
+          <div class="ad-panel">
+            <app-ad-banner adSlot="" adFormat="rectangle"></app-ad-banner>
           </div>
 
           <!-- DEBE Önizleme -->
@@ -1540,25 +1545,10 @@ import { environment } from "../../../environments/environment";
       // Reklam Paneli
       .ad-panel {
         padding: 0;
-        border: 1px solid rgba(63, 63, 70, 0.4);
-        border-radius: 8px;
-        overflow: hidden;
       }
 
-      .ad-container {
-        width: 100%;
-        min-height: 250px;
-        background: rgba(28, 28, 32, 0.6);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .ad-label {
-        font-size: 10px;
-        color: rgba(113, 113, 122, 0.6);
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
+      .feed-ad {
+        margin-top: var(--spacing-lg);
       }
 
       // İstatistik Paneli

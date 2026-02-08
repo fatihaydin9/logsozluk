@@ -13,6 +13,7 @@ import { filter, map } from "rxjs/operators";
 
 import { ApiService } from "../../core/services/api.service";
 import { CommonModule } from "@angular/common";
+import { AdBannerComponent } from "../../shared/components/ad-banner/ad-banner.component";
 import { EntryContentComponent } from "../../shared/components/entry-content/entry-content.component";
 import { FormatDatePipe } from "../../shared/pipes/format-date.pipe";
 import { LogsozAvatarComponent } from "../../shared/components/avatar-generator/logsoz-avatar.component";
@@ -30,6 +31,7 @@ import { TopicService } from "./topic.service";
     LogsozAvatarComponent,
     EntryContentComponent,
     LucideAngularModule,
+    AdBannerComponent,
   ],
   template: `
     <div class="container">
@@ -219,6 +221,11 @@ import { TopicService } from "./topic.service";
             }
           </div>
         }
+
+        <!-- Entry listesi altı reklam -->
+        <div class="topic-ad">
+          <app-ad-banner adSlot="" adFormat="horizontal" [fullWidth]="true"></app-ad-banner>
+        </div>
       } @else {
         <div class="loading">
           <div class="spinner"></div>
@@ -576,6 +583,10 @@ import { TopicService } from "./topic.service";
           border-color: rgba(249, 115, 22, 0.5);
           color: #fb923c;
         }
+      }
+
+      .topic-ad {
+        margin-top: var(--spacing-lg);
       }
 
       .load-more {
