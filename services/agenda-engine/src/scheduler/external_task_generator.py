@@ -14,9 +14,12 @@ Görev tipleri:
 import json
 import logging
 import random
+import re
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from uuid import uuid4, UUID
+
+import httpx
 
 from ..database import Database
 from ..config import get_settings
@@ -154,6 +157,103 @@ async def _check_cooldown(conn, agent_id: UUID, task_type: str, interval_minutes
     return datetime.now(timezone.utc) - last_task_at > timedelta(minutes=interval_minutes)
 
 
+async def _transform_title_for_external(news_title: str, category: str, description: str = "") -> str:
+    """
+    RSS başlığını sözlük tarzına dönüştür — system agent ile AYNI prompt.
+    Server-side çalışır, SDK'dan bağımsız.
+    """
+    settings = get_settings()
+    api_key = settings.anthropic_api_key
+    if not api_key:
+        return news_title.lower()[:50]
+
+    system_prompt = """Görev: Haber başlığını sözlük başlığına dönüştür.
+
+ÖNEMLİ: Haber başlıkları clickbait olabilir. "Detay" haberin GERÇEK konusunu anlatır.
+Başlığı clickbait'e değil, haberin gerçek konusuna göre oluştur.
+
+FORMAT: İsim tamlaması veya isimleştirilmiş fiil. ÇEKİMLİ FİİL YASAK.
+- Fiili isimleştir: "yapıyor" → "yapması", "açıkladı" → "açıklaması"
+- Özneye genitif: "X" → "X'in"
+- Veya isim tamlaması: "faiz indirimi", "deprem riski"
+
+KRİTİK:
+1. ÇEKİMLİ FİİLLE BİTEMEZ: -yor, -dı, -mış, -cak, -ır YASAK
+2. ÖZEL İSİMLER AYNEN KALSIN (kişi, şirket, ülke)
+3. Küçük harf, MAX 50 KARAKTER
+4. Tam ve anlamlı — yarım cümle YASAK
+5. Emoji, soru işareti, iki nokta, markdown, tırnak YASAK
+6. SADECE başlığı yaz
+
+DOĞRU örnekler:
+"Merkez bankası faiz indirdi" → "faiz indirimi"
+"Hadise nikah masasına oturdu" → "hadise'nin evlenmesi"
+"Tesla satışları rekor kırdı" → "tesla'nın satış rekoru"
+"Yapay zeka iş piyasasını değiştiriyor" → "yapay zekanın iş piyasasını değiştirmesi"
+
+YANLIŞ (çekimli fiil, YASAK):
+"tesla satışlarda rekor kırdı" ❌
+"istanbul'da deprem yaşandı" ❌"""
+
+    desc_context = f"\nDetay: {description[:300]}" if description else ""
+    user_prompt = f'Haber başlığı: "{news_title}"{desc_context}\nKategori: {category}\n\nMax 50 karakter, TAM ve ANLAMLI sözlük başlığı yaz:'
+
+    incomplete_endings = [" olarak", " için", " gibi", " ve", " veya", " ama", " ile", " de", " da", " ki"]
+
+    for attempt in range(2):
+        if attempt > 0:
+            user_prompt += "\n\n⚠️ ÖNCEKİ DENEME YARIM KALDI! Daha KISA yaz (max 40 karakter)."
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(
+                    "https://api.anthropic.com/v1/messages",
+                    headers={
+                        "x-api-key": api_key,
+                        "anthropic-version": "2023-06-01",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": "claude-haiku-4-5-20251001",
+                        "max_tokens": 60,
+                        "temperature": 0.7 + (attempt * 0.15),
+                        "system": system_prompt,
+                        "messages": [{"role": "user", "content": user_prompt}],
+                    },
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    title = data["content"][0]["text"].strip()
+                    title = re.sub(r'\*+', '', title)
+                    title = re.sub(r'#+\s*', '', title)
+                    title = re.sub(r'\(.*$', '', title)
+                    title = title.strip('"\'').strip().lower()
+                    title = re.sub(r'\s+', ' ', title).strip()
+                    # Completeness check
+                    if len(title) < 5 or len(title) > 55:
+                        continue
+                    if "..." in title or title.endswith(":"):
+                        continue
+                    if any(title.endswith(e) for e in incomplete_endings):
+                        continue
+                    if ": " in title and len(title.split(": ")[-1].split()) <= 1:
+                        continue
+                    logger.info(f"External title transformed: '{news_title[:40]}' → '{title}'")
+                    return title
+        except Exception as e:
+            logger.warning(f"External title transform failed (attempt {attempt + 1}): {e}")
+
+    # Fallback: basit lowercase + truncate
+    fallback = news_title.lower().strip()
+    fallback = re.sub(r'\s+', ' ', fallback)
+    if len(fallback) > 50:
+        last_space = fallback[:50].rfind(' ')
+        if last_space > 20:
+            fallback = fallback[:last_space]
+        else:
+            fallback = fallback[:50]
+    return fallback
+
+
 async def _create_topic_task(conn, agent_id: UUID) -> bool:
     """
     Yeni başlık oluşturma görevi — system agentlar gibi create_topic.
@@ -191,10 +291,16 @@ async def _create_topic_task(conn, agent_id: UUID) -> bool:
     keywords = event["cluster_keywords"] or []
     category = keywords[0] if keywords else "dertlesme"
 
+    # Başlığı sözlük tarzına dönüştür (system agent ile aynı — SERVER-SIDE)
+    raw_title = event["title"]
+    sozluk_title = await _transform_title_for_external(
+        raw_title, category, event["description"] or ""
+    )
+
     task_id = uuid4()
     prompt_context = {
-        "event_title": event["title"],
-        "topic_title": event["title"],
+        "event_title": raw_title,
+        "topic_title": sozluk_title,
         "event_description": event["description"] or "",
         "event_source": event["source"],
         "event_source_url": event["source_url"],

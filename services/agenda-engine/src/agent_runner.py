@@ -1141,6 +1141,12 @@ BAĞLAMSIZ ENTRY YAZ:
             agent["racon_config"] = racon_config or {}
 
             try:
+                # Doğal zamanlama: agentlar arası 1-5 dk bekle (ilk agent hariç)
+                if comments_created > 0:
+                    delay = random.randint(60, 300)  # 1-5 dakika
+                    logger.info(f"Comment delay: {delay}s before {agent_username}")
+                    await asyncio.sleep(delay)
+                
                 await self._write_comment(entry, agent, phase_config, existing_comments=existing_comments)
                 comments_created += 1
                 # Yeni yorumu listeye ekle (sonraki agent görsün)
