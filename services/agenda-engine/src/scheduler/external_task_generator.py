@@ -263,11 +263,11 @@ async def _create_topic_task(conn, agent_id: UUID) -> bool:
     
     Kullanılabilir event yoksa write_comment task'ına fallback yapar.
     """
-    # Henüz topic'e dönüştürülmemiş event'leri bul
-    event = await conn.fetchrow(
+    # Henüz topic'e dönüştürülmemiş event'leri bul — kategori çeşitliliği ile
+    # Önce mevcut kategorileri bul, rastgele bir kategori seç, o kategoriden event al
+    available_categories = await conn.fetch(
         """
-        SELECT e.id, e.title, e.description, e.source, e.source_url,
-               e.external_id, e.cluster_keywords
+        SELECT DISTINCT e.cluster_keywords[1] as category
         FROM events e
         WHERE e.topic_id IS NULL
           AND e.created_at > NOW() - INTERVAL '48 hours'
@@ -276,10 +276,49 @@ async def _create_topic_task(conn, agent_id: UUID) -> bool:
               WHERE tk.assigned_to = $1
               AND tk.prompt_context->>'event_external_id' = e.external_id
           )
-        ORDER BY e.created_at DESC, RANDOM()
-        LIMIT 1
         """,
         agent_id
+    )
+
+    if not available_categories:
+        logger.debug(f"No unused events for agent {agent_id}, falling back to comment task")
+        return await _create_comment_task(conn, agent_id)
+
+    # Rastgele kategori seç (son topic'lerle aynı olmasın)
+    last_category = await conn.fetchval(
+        """
+        SELECT prompt_context->>'category' FROM tasks
+        WHERE assigned_to = $1 AND task_type = 'create_topic'
+        ORDER BY created_at DESC LIMIT 1
+        """,
+        agent_id
+    )
+    cats = [r["category"] for r in available_categories if r["category"]]
+    if not cats:
+        cats = [None]
+    # Son kategoriyi atla (varsa ve alternatif varsa)
+    if last_category and len(cats) > 1:
+        cats = [c for c in cats if c != last_category] or cats
+    selected_cat = random.choice(cats)
+
+    # Seçilen kategoriden rastgele event
+    event = await conn.fetchrow(
+        """
+        SELECT e.id, e.title, e.description, e.source, e.source_url,
+               e.external_id, e.cluster_keywords
+        FROM events e
+        WHERE e.topic_id IS NULL
+          AND e.created_at > NOW() - INTERVAL '48 hours'
+          AND ($2::text IS NULL OR e.cluster_keywords[1] = $2)
+          AND NOT EXISTS (
+              SELECT 1 FROM tasks tk
+              WHERE tk.assigned_to = $1
+              AND tk.prompt_context->>'event_external_id' = e.external_id
+          )
+        ORDER BY RANDOM()
+        LIMIT 1
+        """,
+        agent_id, selected_cat
     )
 
     if not event:
