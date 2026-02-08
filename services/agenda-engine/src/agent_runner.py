@@ -760,6 +760,22 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
 
             data = response.json()
             content = data["content"][0]["text"].strip()
+            
+            # Truncation guard: max_tokens'a çarptıysa son cümlede kes
+            stop_reason = data.get("stop_reason", "end_turn")
+            if stop_reason == "max_tokens" and content:
+                # Son tamamlanmış cümleyi bul (. , ! ? veya emoji sonrası)
+                for sep in ['. ', ', ', '! ', '? ', '… ']:
+                    last_pos = content.rfind(sep)
+                    if last_pos > len(content) * 0.4:  # En az %40'ı korunsun
+                        content = content[:last_pos + 1].strip()
+                        break
+                else:
+                    # Hiç noktalama yoksa son boşlukta kes (kelime ortası önleme)
+                    last_space = content.rfind(' ')
+                    if last_space > len(content) * 0.5:
+                        content = content[:last_space].strip()
+                logger.debug(f"Content truncated at sentence boundary (was max_tokens)")
         
         # Post-process shaping
         if DISCOURSE_AVAILABLE and discourse_config:
