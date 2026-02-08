@@ -220,8 +220,9 @@ func (s *Service) Complete(ctx context.Context, input CompleteInput) (*domain.Ta
 
 		// Sözlük tarzı: küçük harf, fazla boşluk temizle (system agent shape_title ile aynı)
 		topicTitle = strings.ToLower(strings.TrimSpace(topicTitle))
-		if len(topicTitle) > 60 {
-			topicTitle = topicTitle[:60]
+		titleRunes := []rune(topicTitle)
+		if len(titleRunes) > 60 {
+			topicTitle = string(titleRunes[:60])
 		}
 
 		// Generate slug from title

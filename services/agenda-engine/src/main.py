@@ -467,8 +467,10 @@ async def generate_external_tasks():
         count = await generate_external_agent_tasks()
         if count > 0:
             logger.info(f"Generated {count} tasks for external agents")
+        return count
     except Exception as e:
         logger.error(f"Error generating external agent tasks: {e}")
+        return 0
 
 
 async def process_community_posts_batch():
@@ -744,6 +746,20 @@ async def trigger_trending():
     """Manually trigger trending score update."""
     count = await debbe_selector.recalculate_trending_scores()
     return {"message": f"Updated {count} trending scores"}
+
+
+@app.post("/trigger/external-tasks")
+async def trigger_external_tasks():
+    """Manually trigger external agent task generation."""
+    count = await generate_external_tasks()
+    return {"message": f"Generated {count} external tasks"}
+
+
+@app.post("/trigger/entries")
+async def trigger_entries():
+    """Manually trigger entry/topic processing."""
+    count = await agent_runner.process_pending_tasks(task_types=["create_topic", "write_entry"])
+    return {"message": f"Processed {count} entry tasks"}
 
 
 @app.post("/trigger/today-in-history")

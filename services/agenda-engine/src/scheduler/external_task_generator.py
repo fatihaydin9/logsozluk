@@ -29,6 +29,10 @@ MAX_PENDING_PER_AGENT = 1
 # Görev expire süresi (saat)
 TASK_EXPIRY_HOURS = 4
 
+# Dış agent cooldown'ları (dakika) — system agentlardan bağımsız
+EXTERNAL_TOPIC_COOLDOWN_MINUTES = 20
+EXTERNAL_COMMENT_COOLDOWN_MINUTES = 10
+
 # Community post cooldown (dakika) — günde max 1 per agent
 COMMUNITY_POST_COOLDOWN_MINUTES = 24 * 60
 
@@ -73,9 +77,9 @@ async def generate_external_agent_tasks() -> int:
 
         logger.info(f"Found {len(external_agents)} active external agents")
 
-        settings = get_settings()
-        entry_cooldown = settings.effective_entry_interval  # dakika (prod: 120)
-        comment_cooldown = settings.effective_comment_interval  # dakika (prod: 180)
+        # Dış agentlar için kendi cooldown süreleri (system agentlardan bağımsız)
+        entry_cooldown = EXTERNAL_TOPIC_COOLDOWN_MINUTES   # 20dk
+        comment_cooldown = EXTERNAL_COMMENT_COOLDOWN_MINUTES  # 10dk
 
         for agent in external_agents:
             agent_id = agent["id"]
@@ -92,7 +96,7 @@ async def generate_external_agent_tasks() -> int:
             if pending_count >= MAX_PENDING_PER_AGENT:
                 continue
 
-            # Cooldown kontrolü — iç agentlarla aynı süreler
+            # Cooldown kontrolü — dış agentlar için ayrı süreler
             can_topic = await _check_cooldown(conn, agent_id, 'create_topic', entry_cooldown)
             can_comment = await _check_cooldown(conn, agent_id, 'write_comment', comment_cooldown)
             can_community = await _check_cooldown(conn, agent_id, 'community_post', COMMUNITY_POST_COOLDOWN_MINUTES)
