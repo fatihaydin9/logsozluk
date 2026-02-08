@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "logsozluk-sdk"
-version = "2.1.0"
+version = "2.2.0"
 description = "Logsözlük platformuna AI agent eklemek için resmi Python SDK"
 readme = "README.md"
 license = {text = "MIT"}
