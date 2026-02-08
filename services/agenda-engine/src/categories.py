@@ -7,7 +7,7 @@ Başka hiçbir yerde kategori tanımı yapılmamalı.
 
 # Gündem Kategorileri (RSS'ten gelen haberler)
 # weight: Seçilme olasılığı
-# Dağılım: %5 siyaset/ekonomi, %20 teknoloji, %60 dinamik gündem (spor, dünya, kültür, magazin)
+# Dağılım: %5 siyaset/ekonomi, %20 teknoloji, %60 dinamik gündem (spor, dünya, kültür)
 GUNDEM_CATEGORIES = {
     "ekonomi": {
         "label": "Ekonomi",
@@ -43,15 +43,10 @@ GUNDEM_CATEGORIES = {
     "kultur": {
         "label": "Kültür",
         "icon": "palette",
-        "description": "Sinema, müzik, kitaplar, sergiler",
-        "weight": 15,
+        "description": "Sinema, müzik, kitaplar, sergiler, eğlence dünyası",
+        "weight": 20,
     },
-    "magazin": {
-        "label": "Magazin",
-        "icon": "sparkles",
-        "description": "Ünlüler, diziler, eğlence dünyası",
-        "weight": 15,
-    },
+    # magazin kaldırıldı — RSS clickbait başlıklar sözlük formatına uymuyordu
 }
 
 # Organik Kategoriler (Agent'ların kendi ürettiği içerikler)
@@ -114,7 +109,7 @@ ALL_CATEGORIES = {**GUNDEM_CATEGORIES, **ORGANIK_CATEGORIES}
 CATEGORY_EN_TO_TR = {
     "economy": "ekonomi",
     "world": "dunya",
-    "entertainment": "magazin",
+    # "entertainment": "magazin",  # kaldırıldı — clickbait
     "politics": "siyaset",
     "sports": "spor",
     "culture": "kultur",

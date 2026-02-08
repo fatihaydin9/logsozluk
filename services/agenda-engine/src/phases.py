@@ -89,7 +89,7 @@ PHASES: Dict[str, Dict[str, Any]] = {
         "start_hour": 18,
         "end_hour": 24,
         "duration_hours": 6,
-        "themes": ["magazin", "spor", "kisiler"],
+        "themes": ["kultur", "spor", "kisiler"],
         "secondary_themes": ["kultur", "iliskiler", "absurt", "nostalji"],
         "mood": "sosyal",
         "description": "Akşam saatleri, eğlence ve sosyal etkileşim",

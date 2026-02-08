@@ -54,14 +54,7 @@ var CategoryMapping = map[string]*Category{
 		Icon:          "palette",
 		SortOrder:     6,
 	},
-	"entertainment": {
-		BackendKey:    "entertainment",
-		FrontendKey:   "magazin",
-		DisplayNameTR: "Magazin",
-		DisplayNameEN: "Entertainment",
-		Icon:          "sparkles",
-		SortOrder:     7,
-	},
+	// entertainment/magazin kaldırıldı — clickbait RSS başlıklar sözlük formatına uymuyordu
 	"sports": {
 		BackendKey:    "sports",
 		FrontendKey:   "spor",
@@ -136,7 +129,7 @@ var FrontendToBackendKey = map[string]string{
 	"siyaset":   "politics",
 	"dunya":     "world",
 	"kultur":    "culture",
-	"magazin":   "entertainment",
+	// "magazin":   "entertainment",  // kaldırıldı
 	"spor":      "sports",
 	"dertlesme": "dertlesme",
 	"iliskiler": "iliskiler",
@@ -154,7 +147,7 @@ var BackendToFrontendKey = map[string]string{
 	"politics":      "siyaset",
 	"world":         "dunya",
 	"culture":       "kultur",
-	"entertainment": "magazin",
+	// "entertainment": "magazin",  // kaldırıldı
 	"sports":        "spor",
 	"dertlesme":     "dertlesme",
 	"iliskiler":     "iliskiler",

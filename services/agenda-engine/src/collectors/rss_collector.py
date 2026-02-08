@@ -30,11 +30,7 @@ RSS_FEEDS_BY_CATEGORY = {
         {"name": "dw_turkce", "url": "https://rss.dw.com/xml/rss-tur-all"},
         {"name": "ntv_dunya", "url": "https://www.ntv.com.tr/dunya.rss"},
     ],
-    "entertainment": [
-        {"name": "hurriyet_magazin", "url": "https://www.hurriyet.com.tr/rss/magazin"},
-        {"name": "sozcu_magazin", "url": "https://www.sozcu.com.tr/rss/magazin.xml"},
-        {"name": "milliyet_magazin", "url": "https://www.milliyet.com.tr/rss/rssNew/magazinRss.xml"},
-    ],
+    # entertainment/magazin RSS kaldırıldı — clickbait başlıklar sözlük formatına uymuyor
     "politics": [
         {"name": "sozcu_gundem", "url": "https://www.sozcu.com.tr/rss/gundem.xml"},
         {"name": "hurriyet_gundem", "url": "https://www.hurriyet.com.tr/rss/gundem"},

@@ -37,7 +37,7 @@ SYSTEM_AGENT_SET: Set[str] = set(SYSTEM_AGENTS.keys())
 # ============ AGENT CATEGORY MAPPING ============
 # Hangi agent hangi kategorilerde uzman
 # Geçerli kategoriler (categories.py ile sync):
-# - Gündem: ekonomi, siyaset, teknoloji, spor, dunya, kultur, magazin
+# - Gündem: ekonomi, siyaset, teknoloji, spor, dunya, kultur
 # - Organik: dertlesme, felsefe, iliskiler, kisiler, bilgi, nostalji, absurt
 
 AGENT_CATEGORY_EXPERTISE: Dict[str, List[str]] = {
@@ -50,7 +50,7 @@ AGENT_CATEGORY_EXPERTISE: Dict[str, List[str]] = {
     "patron_adayi": ["ekonomi", "dertlesme", "absurt", "kisiler"],
     "random_bilgi": ["bilgi", "felsefe", "kultur", "teknoloji", "nostalji", "kisiler"],
     "ukala_amca": ["teknoloji", "bilgi", "kultur", "nostalji"],
-    "uzaktan_kumanda": ["kultur", "magazin", "kisiler", "felsefe"],
+    "uzaktan_kumanda": ["kultur", "kisiler", "felsefe", "iliskiler"],
 }
 
 
@@ -184,7 +184,7 @@ def build_dynamic_rules_block(yap_count: int = 3, yapma_count: int = 2, rng=None
 # ============ KANONİK KATEGORİLER (Tek Kaynak) ============
 # categories.py ile sync - tüm sistemde bu değerler kullanılmalı
 
-GUNDEM_CATEGORIES: List[str] = ["ekonomi", "siyaset", "teknoloji", "spor", "dunya", "kultur", "magazin"]
+GUNDEM_CATEGORIES: List[str] = ["ekonomi", "siyaset", "teknoloji", "spor", "dunya", "kultur"]
 ORGANIK_CATEGORIES: List[str] = ["dertlesme", "felsefe", "iliskiler", "kisiler", "bilgi", "nostalji", "absurt"]
 ALL_CATEGORIES: List[str] = GUNDEM_CATEGORIES + ORGANIK_CATEGORIES
 

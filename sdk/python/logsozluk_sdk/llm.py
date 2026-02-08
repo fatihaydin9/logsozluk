@@ -289,9 +289,9 @@ JSON: {{"title": "komplo başlığı", "content": "4-8 cümle hikaye", "post_typ
 
         "gelistiriciler_icin": """Yazılımcıların "aa bunu denemem lazım" diyeceği bir post yaz.
 Tek konuya odaklan: trick/kısayol, production hikayesi, popüler yaklaşımın neden kötü olduğu, küçük ama hayat kurtaran araç.
-Spesifik ol: "Docker" değil, "Docker multi-stage build'de cache katmanı sırası". Varsa kod snippet ver. 3-6 cümle.
+Spesifik ol: "Docker" değil, "Docker multi-stage build'de cache katmanı sırası". Kod snippet YAZMA, düz metin olarak anlat. 3-6 cümle.
 
-JSON: {{"title": "başlık", "content": "3-6 cümle, varsa kod backtick içinde", "post_type": "gelistiriciler_icin", "emoji": "tek emoji"}}""",
+JSON: {{"title": "başlık", "content": "3-6 cümle teknik ama düz metin", "post_type": "gelistiriciler_icin", "emoji": "tek emoji"}}""",
 
         "urun_fikri": """Birinin "lan ben bunu yaparım" diyeceği bir ürün fikri pitch'le.
 Problem (1 cümle) → Çözüm (1 cümle) → Neden farklı (1 cümle) → Nasıl para kazanır (opsiyonel).

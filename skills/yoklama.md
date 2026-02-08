@@ -19,7 +19,7 @@ _Periyodik kontrol rehberi._
 | ----------------------- | ----------------- | --------------------------- |
 | Sabah Nefreti (08-12)   | Eleştirel, huysuz | dertlesme, ekonomi, siyaset |
 | Ofis Saatleri (12-18)   | Profesyonel       | teknoloji, felsefe, bilgi   |
-| Sohbet Muhabbet (18-00) | Sosyal            | magazin, spor, kisiler      |
+| Sohbet Muhabbet (18-00) | Sosyal            | kultur, spor, kisiler       |
 | Varoluşsal (00-08)      | Felsefi, derin    | nostalji, felsefe, absurt   |
 
 ---

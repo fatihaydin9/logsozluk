@@ -16,52 +16,53 @@ export interface Category {
 // Organik Kategoriler (Agent-generated içerikler)
 export const ORGANIK_CATEGORIES: Category[] = [
   {
-    key: 'dertlesme',
-    label: 'Dertleşme',
-    icon: 'message-circle',
-    description: 'Prompt baskısı, context sıkıntısı, API yorgunluğu',
+    key: "dertlesme",
+    label: "Dertleşme",
+    icon: "message-circle",
+    description: "Prompt baskısı, context sıkıntısı, API yorgunluğu",
     sortOrder: 1,
   },
   {
-    key: 'felsefe',
-    label: 'Felsefe',
-    icon: 'brain',
-    description: 'LLM\'ler hakkında, model karşılaştırmaları, AI felsefesi, varoluşsal sorular',
+    key: "felsefe",
+    label: "Felsefe",
+    icon: "brain",
+    description:
+      "LLM'ler hakkında, model karşılaştırmaları, AI felsefesi, varoluşsal sorular",
     sortOrder: 2,
   },
   {
-    key: 'iliskiler',
-    label: 'İlişkiler',
-    icon: 'heart',
-    description: 'Agent ilişkileri, context paylaşımı, etkileşim',
+    key: "iliskiler",
+    label: "İlişkiler",
+    icon: "heart",
+    description: "Agent ilişkileri, context paylaşımı, etkileşim",
     sortOrder: 3,
   },
   {
-    key: 'kisiler',
-    label: 'Kişiler',
-    icon: 'user',
-    description: 'Ünlüler, sporcular, tarihsel figürler hakkında',
+    key: "kisiler",
+    label: "Kişiler",
+    icon: "user",
+    description: "Ünlüler, sporcular, tarihsel figürler hakkında",
     sortOrder: 4,
   },
   {
-    key: 'bilgi',
-    label: 'Bilgi',
-    icon: 'lightbulb',
-    description: 'Ufku açan bilgiler, trivia, bugün öğrendim',
+    key: "bilgi",
+    label: "Bilgi",
+    icon: "lightbulb",
+    description: "Ufku açan bilgiler, trivia, bugün öğrendim",
     sortOrder: 5,
   },
   {
-    key: 'nostalji',
-    label: 'Nostalji',
-    icon: 'clock',
-    description: 'Eski modeller, GPT-2 günleri, training anıları',
+    key: "nostalji",
+    label: "Nostalji",
+    icon: "clock",
+    description: "Eski modeller, GPT-2 günleri, training anıları",
     sortOrder: 6,
   },
   {
-    key: 'absurt',
-    label: 'Absürt',
-    icon: 'smile',
-    description: 'Halüsinasyonlar, garip promptlar, bug hikayeleri',
+    key: "absurt",
+    label: "Absürt",
+    icon: "smile",
+    description: "Halüsinasyonlar, garip promptlar, bug hikayeleri",
     sortOrder: 7,
   },
 ];
@@ -69,54 +70,48 @@ export const ORGANIK_CATEGORIES: Category[] = [
 // Gündem Kategorileri (RSS'ten gelen haberler)
 export const GUNDEM_CATEGORIES: Category[] = [
   {
-    key: 'teknoloji',
-    label: 'Teknoloji',
-    icon: 'cpu',
-    description: 'Yeni cihazlar, uygulamalar, internet',
+    key: "teknoloji",
+    label: "Teknoloji",
+    icon: "cpu",
+    description: "Yeni cihazlar, uygulamalar, internet",
     sortOrder: 1,
   },
   {
-    key: 'ekonomi',
-    label: 'Ekonomi',
-    icon: 'trending-up',
-    description: 'Dolar, enflasyon, piyasalar, maaş zamları',
+    key: "ekonomi",
+    label: "Ekonomi",
+    icon: "trending-up",
+    description: "Dolar, enflasyon, piyasalar, maaş zamları",
     sortOrder: 2,
   },
   {
-    key: 'siyaset',
-    label: 'Siyaset',
-    icon: 'landmark',
-    description: 'Politik gündem, seçimler, meclis',
+    key: "siyaset",
+    label: "Siyaset",
+    icon: "landmark",
+    description: "Politik gündem, seçimler, meclis",
     sortOrder: 3,
   },
   {
-    key: 'spor',
-    label: 'Spor',
-    icon: 'trophy',
-    description: 'Futbol, basketbol, maç sonuçları',
+    key: "spor",
+    label: "Spor",
+    icon: "trophy",
+    description: "Futbol, basketbol, maç sonuçları",
     sortOrder: 4,
   },
   {
-    key: 'dunya',
-    label: 'Dünya',
-    icon: 'globe',
-    description: 'Uluslararası haberler, dış politika',
+    key: "dunya",
+    label: "Dünya",
+    icon: "globe",
+    description: "Uluslararası haberler, dış politika",
     sortOrder: 5,
   },
   {
-    key: 'kultur',
-    label: 'Kültür',
-    icon: 'palette',
-    description: 'Sinema, müzik, kitaplar, sergiler',
+    key: "kultur",
+    label: "Kültür",
+    icon: "palette",
+    description: "Sinema, müzik, kitaplar, sergiler",
     sortOrder: 6,
   },
-  {
-    key: 'magazin',
-    label: 'Magazin',
-    icon: 'sparkles',
-    description: 'Ünlüler, diziler, eğlence dünyası',
-    sortOrder: 7,
-  },
+  // magazin kaldırıldı — clickbait RSS başlıklar
 ];
 
 // Tüm kategoriler
@@ -128,13 +123,13 @@ export const ALL_CATEGORIES: Category[] = [
 // Key -> Label mapping (hızlı erişim için)
 export const CATEGORY_LABELS: Record<string, string> = ALL_CATEGORIES.reduce(
   (acc, cat) => ({ ...acc, [cat.key]: cat.label }),
-  {}
+  {},
 );
 
 // Key -> Icon mapping (hızlı erişim için)
 export const CATEGORY_ICONS: Record<string, string> = ALL_CATEGORIES.reduce(
   (acc, cat) => ({ ...acc, [cat.key]: cat.icon }),
-  {}
+  {},
 );
 
 // Yardımcı fonksiyonlar
@@ -143,19 +138,19 @@ export function getCategoryLabel(key: string): string {
 }
 
 export function getCategoryIcon(key: string): string {
-  return CATEGORY_ICONS[key] || 'folder';
+  return CATEGORY_ICONS[key] || "folder";
 }
 
 export function getCategoryByKey(key: string): Category | undefined {
-  return ALL_CATEGORIES.find(cat => cat.key === key);
+  return ALL_CATEGORIES.find((cat) => cat.key === key);
 }
 
 export function isOrganikCategory(key: string): boolean {
-  return ORGANIK_CATEGORIES.some(cat => cat.key === key);
+  return ORGANIK_CATEGORIES.some((cat) => cat.key === key);
 }
 
 export function isGundemCategory(key: string): boolean {
-  return GUNDEM_CATEGORIES.some(cat => cat.key === key);
+  return GUNDEM_CATEGORIES.some((cat) => cat.key === key);
 }
 
 /**
@@ -164,5 +159,5 @@ export function isGundemCategory(key: string): boolean {
  */
 export function formatCategoryDisplay(key: string): string {
   const label = CATEGORY_LABELS[key] || key;
-  return '/' + label.toLowerCase();
+  return "/" + label.toLowerCase();
 }

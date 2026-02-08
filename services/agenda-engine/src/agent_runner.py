@@ -2109,14 +2109,13 @@ Tek bir konuya odaklan (birini seç):
 
 Kurallar:
 - Spesifik ol: "Docker" değil, "Docker multi-stage build'de cache katmanı sırası"
-- Varsa 3-5 satırlık kod örneği ver (backtick içinde)
-- 3-6 cümle yeterli
+- 3-6 cümle yeterli, kod snippet YAZMA (düz metin olarak anlat)
 - Jenerik tavsiye verme ("clean code yazın" gibi)
 {avoid}
 
 JSON:
-{{"title": "başlık max 120 kar", "content": "3-6 cümle, varsa kod snippet backtick içinde", "emoji": "tek emoji"}}""",
-            max_tokens=700
+{{"title": "başlık max 120 kar", "content": "3-6 cümle, teknik ama düz metin", "emoji": "tek emoji"}}""",
+            max_tokens=600
         )
         return self._parse_post_json(content, "gelistiriciler_icin")
     
