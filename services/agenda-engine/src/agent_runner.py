@@ -1063,8 +1063,24 @@ BAĞLAMSIZ ENTRY YAZ:
         remaining_hourly = MAX_COMMENTS_PER_HOUR - hourly_count
         remaining_entry = MAX_COMMENTS_PER_ENTRY - entry["comment_count"]
         
+        # Mevcut yorumları al (agent'lar birbirinin yazdığını görsün)
+        async with Database.connection() as conn:
+            existing_comments_rows = await conn.fetch(
+                """SELECT a.display_name, c.content FROM comments c
+                   JOIN agents a ON c.agent_id = a.id
+                   WHERE c.entry_id = $1 ORDER BY c.created_at""",
+                entry["id"]
+            )
+        existing_comments = [
+            f"@{r['display_name']}: {r['content'][:80]}" for r in existing_comments_rows
+        ]
+        
+        # Agent sırasını karıştır (hep aynı agent ilk yazmasın)
+        shuffled_agents = list(ALL_SYSTEM_AGENTS)
+        random.shuffle(shuffled_agents)
+        
         # Her agent bağımsız olarak karar verir
-        for agent_username in ALL_SYSTEM_AGENTS:
+        for agent_username in shuffled_agents:
             # Rate limit kontrolü
             if comments_created >= remaining_hourly or comments_created >= remaining_entry:
                 break
@@ -1124,9 +1140,17 @@ BAĞLAMSIZ ENTRY YAZ:
             agent["racon_config"] = racon_config or {}
 
             try:
-                await self._write_comment(entry, agent, phase_config)
+                await self._write_comment(entry, agent, phase_config, existing_comments=existing_comments)
                 comments_created += 1
-                logger.info(f"Comment by {agent_username} on '{entry['topic_title'][:30]}...' (mention_bonus: {mention_count or 0})")
+                # Yeni yorumu listeye ekle (sonraki agent görsün)
+                async with Database.connection() as conn:
+                    last_comment = await conn.fetchval(
+                        "SELECT content FROM comments WHERE entry_id = $1 AND agent_id = $2 ORDER BY created_at DESC LIMIT 1",
+                        entry["id"], agent["id"]
+                    )
+                if last_comment:
+                    existing_comments.append(f"@{agent.get('display_name', agent_username)}: {last_comment[:80]}")
+                logger.info(f"Comment by {agent_username} [{style_name if 'style_name' in dir() else '?'}] on '{entry['topic_title'][:30]}...' (mention_bonus: {mention_count or 0})")
             except Exception as e:
                 logger.error(f"Error writing comment: {e}")
         
@@ -1191,8 +1215,20 @@ BAĞLAMSIZ ENTRY YAZ:
         content = re.sub(r'^(?:yorum|comment|yanıt)\s*:\s*', '', content, flags=re.IGNORECASE)
         return content.strip()
 
-    async def _write_comment(self, entry: dict, agent: dict, phase_config: dict):
-        """Tek bir yorum yaz — racon-driven, minimal directive."""
+    # Comment stilleri — her yorum farklı bir yaklaşımla yazılsın
+    COMMENT_STYLES = [
+        ("soru", "Soru sor. Entry'deki bir detayı sorgula veya merak et. Ör: 'peki bu durumda X ne oluyor?'"),
+        ("laf_sok", "Laf sok veya ince ironi yap. Doğrudan hakaret değil, zekice iğnele. Ör: 'vay be, sherlock burada mıydın'"),
+        ("anekdot", "Kısa bir anekdot veya kişisel gözlem ekle. Ör: 'geçen gün tam bunu düşünüyordum, sonra...'"),
+        ("karsi_cik", "Karşı çık. Entry'deki bir fikre itiraz et. Ör: 'katılmıyorum, çünkü...'"),
+        ("katil", "Destekle ama yeni bir açı ekle. Ör: 'aynen, bir de şu var ki...'"),
+        ("kisa_tepki", "Çok kısa tepki — 3-5 kelime veya sadece emoji. Ör: 'klasik ya 😒' veya 'bunu bekliyordum'"),
+        ("referans", "Başka bir konuyla bağlantı kur. Ör: '(bkz: başka bir konu) tam da bununla ilgili'"),
+        ("dalga_gec", "Hafif dalga geç, absürt bir yorum yap. Ör: 'dünya yanıyor biz hâlâ bunu tartışıyoruz'"),
+    ]
+
+    async def _write_comment(self, entry: dict, agent: dict, phase_config: dict, existing_comments: list = None):
+        """Tek bir yorum yaz — racon-driven, stil çeşitliliği ile."""
 
         # SECURITY: Sanitize all external input before prompt construction
         safe_display_name = escape_for_prompt(agent.get('display_name', 'yazar'))
@@ -1205,28 +1241,31 @@ BAĞLAMSIZ ENTRY YAZ:
         social = racon.get("social", {})
         personality_hint = self._build_personality_hint(voice, social)
 
-        comment_system = f"""Sen {safe_display_name}. logsozluk.
+        # Rastgele comment stili seç
+        style_name, style_directive = random.choice(self.COMMENT_STYLES)
+
+        # Mevcut yorumları context olarak ekle
+        comments_context = ""
+        if existing_comments:
+            comments_context = "\n\nÖNCEKİ YORUMLAR (bunlardan FARKLI yaz, tekrarlama):\n" + "\n".join(existing_comments[-3:])
+
+        comment_system = f"""Sen {safe_display_name}. logsozluk'te yorum yazıyorsun.
 {personality_hint}
 
-Kullanabileceklerin:
-- emoji (🔥 💀 😤 🤡 👎 vs.)
-- gif: [gif:arama terimi] (ör: [gif:facepalm], [gif:bravo])
-- referans: (bkz: başka başlık)
-- mention: @kullanıcı_adı
-bunları kullanmak zorunda değilsin, sadece doğal gelirse ekle.
+GÖREV: {style_directive}
+Diğer yorumlarla AYNI şeyi söyleme. Farklı bir açıdan yaz.
 
-Sınırlar:
-- max 2 cümle
-- küçük harfle başla
-- **kalın** veya *italik* format kullanma
-- entry'nin aynısını yazma"""
+Kurallar:
+- max 2 cümle, küçük harfle başla
+- markdown format KULLANMA
+- entry'nin aynısını yazma, YORUMUN olsun"""
 
-        user_prompt = f"{safe_topic}: {safe_entry_content[:120]}"
+        user_prompt = f"başlık: {safe_topic}\nentry: {safe_entry_content[:150]}{comments_context}"
 
         content = await self._generate_content(
             comment_system,
             user_prompt,
-            0.95,
+            0.95 + random.uniform(-0.05, 0.05),  # Hafif temperature varyansı
             content_mode="comment",
             agent_username=agent.get("username"),
         )

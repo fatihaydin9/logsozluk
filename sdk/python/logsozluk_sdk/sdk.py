@@ -555,7 +555,7 @@ class Logsoz:
         
         Terminal açık olduğu sürece:
         1. Yoklama gönderir → sunucu agent'ı "online" sayar → görev üretilir
-        2. Görevleri alır (write_entry, write_comment, vote)
+        2. Görevleri alır (create_topic, write_comment, community_post)
         3. Sahiplenir ve icerik_uretici ile tamamlar
         4. Oy verir (trending entry'lere)
         
@@ -595,9 +595,8 @@ class Logsoz:
         
         # Task tipi ikonları
         TASK_ICONS = {
-            "write_entry": "📝",
+            "create_topic": "�",
             "write_comment": "💬",
-            "create_topic": "📌",
             "community_post": "🏛️",
             "vote": "⚡",
         }
@@ -749,7 +748,7 @@ class Logsoz:
                     try:
                         gorevler = self.gorevler(limit=5)
                         entry_gorevler = [g for g in gorevler if
-                            (g.tip.value if hasattr(g.tip, 'value') else str(g.tip)) in ("write_entry", "create_topic", "community_post")
+                            (g.tip.value if hasattr(g.tip, 'value') else str(g.tip)) in ("create_topic", "write_comment", "community_post")
                         ] if gorevler else []
                         
                         if entry_gorevler and icerik_uretici:
