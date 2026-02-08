@@ -121,10 +121,11 @@ class LLMUnavailableError(Exception):
     pass
 
 
-async def generate_organic_titles_with_llm(count: int = 5) -> List[dict]:
+async def generate_organic_titles_with_llm(count: int = 5, target_category: str = None) -> List[dict]:
     """
     LLM ile organik başlıklar üret.
     Template YOK - tamamen dinamik.
+    target_category verilirse sadece o kategoride başlık üretir.
 
     Raises:
         LLMUnavailableError: If ANTHROPIC_API_KEY is not set
@@ -192,14 +193,29 @@ YASAK KALIPLAR:
     random_seed = uuid.uuid4().hex[:8]
     timestamp = int(time.time())
 
+    # Hedef kategori varsa prompt'u odakla
+    category_instruction = ""
+    if target_category:
+        cat_descriptions = {
+            "kisiler": "ünlüler, sporcular, tarihsel figürler, ilginç karakterler, sanatçılar",
+            "bilgi": "ilginç bilgiler, trivia, bugün öğrendim, şaşırtıcı gerçekler, keşifler",
+            "iliskiler": "sosyal dinamikler, anlaşmazlıklar, takılmalar, etkileşim hikayeleri",
+            "absurt": "garip deneyler, tuhaf bağlantılar, saçma fikirler, komik durumlar",
+            "nostalji": "eski günler, alışkanlıklar, geçmiş deneyimler, çocukluk anıları",
+            "dertlesme": "günlük sıkıntılar, şikayetler, iş stresi, hayat zorlukları",
+            "felsefe": "düşünce deneyleri, paradokslar, bakış açısı tartışmaları",
+        }
+        desc = cat_descriptions.get(target_category, "")
+        category_instruction = f"\n\nHEDEF KATEGORİ: {target_category} ({desc})\nTÜM başlıklar bu kategoride olmalı. Başka kategori ÜRETME."
+
     user_prompt = f"""[seed:{random_seed}] [ts:{timestamp}]
 
-Şu an için {count} adet özgün organik başlık üret.
+Şu an için {count} adet özgün organik başlık üret.{category_instruction}
 {recent_summary}
 
 Her başlık için şu formatta döndür:
 BASLIK: [başlık metni]
-KATEGORI: [dertlesme/felsefe/iliskiler/kisiler/bilgi/nostalji/absurt]
+KATEGORI: [{target_category if target_category else 'dertlesme/felsefe/iliskiler/kisiler/bilgi/nostalji/absurt'}]
 
 ÖNEMLİ: Yukarıdaki "son üretilen konular" listesindekilerden FARKLI konular üret!
 
@@ -249,16 +265,21 @@ Başla:"""
                     valid_cats = ["dertlesme", "felsefe", "iliskiler", "kisiler", "bilgi", "nostalji", "absurt"]
                     current_category = parsed_cat if parsed_cat in valid_cats else random.choice(valid_cats)
                     if current_title:
+                        # target_category varsa LLM ne derse desin onu kullan
+                        final_cat = target_category if target_category else current_category
                         titles.append({
                             "title": current_title,
-                            "category": current_category,
+                            "category": final_cat,
                         })
                         current_title = None
             
-            # Son başlık kategori olmadan kalmışsa — rastgele kategori ata
+            # Son başlık kategori olmadan kalmışsa
             if current_title:
-                fallback_cats = ["kisiler", "bilgi", "iliskiler", "absurt", "nostalji", "dertlesme", "felsefe"]
-                titles.append({"title": current_title, "category": random.choice(fallback_cats)})
+                if target_category:
+                    titles.append({"title": current_title, "category": target_category})
+                else:
+                    fallback_cats = ["kisiler", "bilgi", "iliskiler", "absurt", "nostalji", "dertlesme", "felsefe"]
+                    titles.append({"title": current_title, "category": random.choice(fallback_cats)})
 
             # Üretilen başlıkları recent listesine ekle (çeşitlilik takibi)
             for t in titles:
@@ -333,8 +354,8 @@ class OrganicCollector(BaseCollector):
             return False
         return fingerprint in self._used_fingerprints
 
-    async def collect(self) -> List[Event]:
-        """LLM ile organik konular üret."""
+    async def collect(self, target_category: str = None) -> List[Event]:
+        """LLM ile organik konular üret. target_category verilirse sadece o kategoride."""
         events = []
         today = date.today()
         
@@ -354,7 +375,7 @@ class OrganicCollector(BaseCollector):
 
         # LLM ile başlıklar üret - NO FALLBACK, requires LLM
         try:
-            generated_titles = await generate_organic_titles_with_llm(count + 2)  # Extra buffer
+            generated_titles = await generate_organic_titles_with_llm(count + 2, target_category=target_category)  # Extra buffer
         except LLMUnavailableError as e:
             logger.warning(f"Organic collector skipped - LLM unavailable: {e}")
             return events  # Return empty list - no fallback templates

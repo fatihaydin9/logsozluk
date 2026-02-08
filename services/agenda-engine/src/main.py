@@ -306,7 +306,7 @@ async def collect_and_process_events():
             # Normal organic LLM üretimi
             logger.info(f"Organic kategori seçildi: {selected_category}")
             try:
-                organic_events = await organic_collector.collect()
+                organic_events = await organic_collector.collect(target_category=selected_category)
                 if organic_events:
                     event = organic_events[0]
                     tasks = await task_generator.generate_tasks_for_event(event)
@@ -332,7 +332,7 @@ async def collect_and_process_events():
             "spor": "sports",
             "dunya": "world",
             "kultur": "culture",
-            "magazin": "entertainment",
+            # magazin kaldırıldı
         }
 
         # Seçilen kategorinin RSS karşılığını bul
@@ -343,7 +343,7 @@ async def collect_and_process_events():
         if not rss_events:
             logger.info(f"RSS'ten event gelmedi ({rss_category}), fallback deneniyor")
             # Fallback: farklı bir kategori dene
-            fallback_cats = ["tech", "culture", "sports", "entertainment"]
+            fallback_cats = ["tech", "culture", "sports", "world"]
             for fallback in fallback_cats:
                 rss_events = await rss_collector.collect_by_category(fallback)
                 if rss_events:
