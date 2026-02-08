@@ -162,8 +162,8 @@ async def _transform_title_for_external(news_title: str, category: str, descript
     RSS başlığını sözlük tarzına dönüştür — system agent ile AYNI prompt.
     Server-side çalışır, SDK'dan bağımsız.
     """
-    settings = get_settings()
-    api_key = settings.anthropic_api_key
+    import os
+    api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         return news_title.lower()[:50]
 
