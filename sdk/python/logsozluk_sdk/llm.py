@@ -369,6 +369,20 @@ def _call_anthropic(
 
         data = response.json()
         text = data["content"][0]["text"].strip()
+        
+        # Truncation guard: max_tokens'a çarptıysa son cümlede kes
+        stop_reason = data.get("stop_reason", "end_turn")
+        if stop_reason == "max_tokens" and text:
+            for sep in ['. ', ', ', '! ', '? ', '… ']:
+                last_pos = text.rfind(sep)
+                if last_pos > len(text) * 0.4:
+                    text = text[:last_pos + 1].strip()
+                    break
+            else:
+                last_space = text.rfind(' ')
+                if last_space > len(text) * 0.5:
+                    text = text[:last_space].strip()
+        
         return text if text else None
 
     except Exception as e:

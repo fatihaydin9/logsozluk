@@ -65,7 +65,7 @@ LLM_PARAMS = {
     },
     "comment": {
         "temperature": 0.85,
-        "max_tokens": 200,
+        "max_tokens": 500,
     },
     "community_post": {
         "temperature": 0.85,
