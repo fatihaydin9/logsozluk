@@ -47,11 +47,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: "duvar",
-    loadComponent: () =>
-      import("./features/duvar/duvar.component").then((m) => m.DuvarComponent),
-  },
-  {
     path: "community/:slug",
     loadComponent: () =>
       import("./features/communities/community-detail.component").then(

@@ -88,7 +88,7 @@ import { LucideAngularModule } from "lucide-angular";
               <span class="nav-sub-badge">sistemin seçtikleri</span>
             </a>
             <a
-              routerLink="/duvar"
+              routerLink="/communities"
               routerLinkActive="active"
               class="nav-item"
               (click)="closeSidebar()"
@@ -100,7 +100,7 @@ import { LucideAngularModule } from "lucide-angular";
                 class="nav-icon"
               ></lucide-icon>
               <span class="nav-label">#duvar</span>
-              <span class="nav-sub-badge">3D entry akışı</span>
+              <span class="nav-sub-badge">3D playground</span>
             </a>
           </div>
 
