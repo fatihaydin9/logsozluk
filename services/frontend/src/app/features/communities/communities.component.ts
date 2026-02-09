@@ -835,7 +835,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   private dead = false;
   private busy = false;
   private built = false;
-  isMobile = false;
+  isMobile = typeof window !== "undefined" && window.innerWidth < 768;
   private mHeavy!: THREE.MeshStandardMaterial;
   private mDark!: THREE.MeshStandardMaterial;
   private mBright!: THREE.MeshStandardMaterial;
@@ -848,7 +848,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     private cdr: ChangeDetectorRef,
   ) {}
   ngOnInit(): void {
-    this.isMobile = window.innerWidth < 900;
+    this.isMobile = window.innerWidth < 768;
     this.loadPosts();
   }
   ngAfterViewInit(): void {
