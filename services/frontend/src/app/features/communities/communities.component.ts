@@ -1858,112 +1858,190 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  private solderPoints = [
+    { x: -4, y: 2, z: 2 },
+    { x: 3, y: 1.5, z: -1 },
+    { x: -2, y: 3, z: -3 },
+    { x: 5, y: 2, z: 3 },
+    { x: -5, y: 1, z: 0 },
+    { x: 2, y: 4, z: -2 },
+  ];
+
   private buildMiniRobots(): void {
-    const robotMat = new THREE.MeshStandardMaterial({
-      color: 0x661111,
-      roughness: 0.2,
-      metalness: 0.95,
-      emissive: new THREE.Color(0xff2222),
-      emissiveIntensity: 0.4,
+    const grayMat = new THREE.MeshStandardMaterial({
+      color: 0x888888,
+      roughness: 0.4,
+      metalness: 0.7,
     });
-    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    for (let i = 0; i < 4; i++) {
-      const robot = new THREE.Group();
+    const darkMat = new THREE.MeshStandardMaterial({
+      color: 0x444444,
+      roughness: 0.3,
+      metalness: 0.8,
+    });
+    const propMat = new THREE.MeshStandardMaterial({
+      color: 0x333333,
+      roughness: 0.2,
+      metalness: 0.9,
+    });
+    for (let i = 0; i < 3; i++) {
+      const drone = new THREE.Group();
       const body = new THREE.Mesh(
-        new THREE.BoxGeometry(1.2, 0.6, 0.8),
-        robotMat,
+        new THREE.CylinderGeometry(0.4, 0.5, 0.25, 8),
+        grayMat,
       );
-      robot.add(body);
-      const head = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5, 0.4, 0.4),
-        robotMat,
+      drone.add(body);
+      const top = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), darkMat);
+      top.position.y = 0.2;
+      top.scale.y = 0.5;
+      drone.add(top);
+      const armPositions = [
+        { x: 0.6, z: 0.6 },
+        { x: -0.6, z: 0.6 },
+        { x: 0.6, z: -0.6 },
+        { x: -0.6, z: -0.6 },
+      ];
+      armPositions.forEach((ap, idx) => {
+        const arm = new THREE.Mesh(
+          new THREE.BoxGeometry(0.8, 0.08, 0.1),
+          grayMat,
+        );
+        arm.position.set(ap.x * 0.5, 0, ap.z * 0.5);
+        arm.rotation.y = Math.atan2(ap.z, ap.x);
+        drone.add(arm);
+        const motor = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.12, 0.12, 0.15, 8),
+          darkMat,
+        );
+        motor.position.set(ap.x, 0.1, ap.z);
+        drone.add(motor);
+        const prop = new THREE.Mesh(
+          new THREE.BoxGeometry(0.6, 0.02, 0.08),
+          propMat,
+        );
+        prop.position.set(ap.x, 0.2, ap.z);
+        drone.add(prop);
+      });
+      const solderArm = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.03, 0.02, 0.6, 6),
+        darkMat,
       );
-      head.position.set(0.7, 0.2, 0);
-      robot.add(head);
-      const eye1 = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), eyeMat);
-      eye1.position.set(0.95, 0.25, 0.12);
-      robot.add(eye1);
-      const eye2 = eye1.clone();
-      eye2.position.z = -0.12;
-      robot.add(eye2);
-      robot.add(
-        new THREE.PointLight(0xff0000, 3, 6).translateX(0.95).translateY(0.25),
+      solderArm.position.set(0, -0.4, 0);
+      drone.add(solderArm);
+      const solderTip = new THREE.Mesh(
+        new THREE.ConeGeometry(0.05, 0.15, 6),
+        new THREE.MeshBasicMaterial({ color: 0xcccccc }),
       );
-      const weldArm = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.08, 0.06, 1.2, 8),
-        robotMat,
-      );
-      weldArm.position.set(0, -0.5, 0);
-      weldArm.rotation.z = Math.PI / 6;
-      robot.add(weldArm);
-      const weldTip = new THREE.Mesh(
-        new THREE.ConeGeometry(0.15, 0.3, 8),
-        new THREE.MeshBasicMaterial({ color: 0xff0000 }),
-      );
-      weldTip.position.set(0.3, -1.0, 0);
-      robot.add(weldTip);
-      const weldLight = new THREE.PointLight(0xff2200, 8, 8);
-      weldLight.position.set(0.3, -1.2, 0);
-      robot.add(weldLight);
-      const weldSpark = new THREE.Mesh(
-        new THREE.SphereGeometry(0.25, 12, 12),
+      solderTip.position.set(0, -0.75, 0);
+      solderTip.rotation.x = Math.PI;
+      drone.add(solderTip);
+      const solderLight = new THREE.PointLight(0xffff00, 0, 4);
+      solderLight.position.set(0, -0.8, 0);
+      drone.add(solderLight);
+      const solderSpark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.12, 8, 8),
         new THREE.MeshBasicMaterial({
-          color: 0xff0000,
+          color: 0xffff00,
           transparent: true,
-          opacity: 1,
+          opacity: 0,
         }),
       );
-      weldSpark.position.set(0.3, -1.3, 0);
-      robot.add(weldSpark);
-      const prop1 = new THREE.Mesh(
-        new THREE.BoxGeometry(1.5, 0.05, 0.15),
-        robotMat,
+      solderSpark.position.set(0, -0.85, 0);
+      drone.add(solderSpark);
+      const led = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
       );
-      prop1.position.set(0, 0.35, 0);
-      robot.add(prop1);
-      const prop2 = prop1.clone();
-      prop2.rotation.y = Math.PI / 2;
-      robot.add(prop2);
-      const positions = [
-        { x: -6, y: 4, z: 3 },
-        { x: 5, y: 3, z: -2 },
-        { x: -3, y: 5, z: -4 },
-        { x: 7, y: 2.5, z: 4 },
-      ];
-      const pos = positions[i];
-      robot.position.set(pos.x, pos.y, pos.z);
-      robot.rotation.y = Math.atan2(-pos.x, -pos.z);
-      this.scene.add(robot);
+      led.position.set(0.15, 0.15, 0.3);
+      drone.add(led);
+      const startPos = { x: -8 + i * 6, y: 6 + i, z: 6 - i * 2 };
+      drone.position.set(startPos.x, startPos.y, startPos.z);
+      this.scene.add(drone);
+      const targetIdx = i % this.solderPoints.length;
       this.miniRobots.push({
-        mesh: robot,
-        baseY: pos.y,
-        speed: 0.3 + Math.random() * 0.5,
+        mesh: drone,
+        baseY: startPos.y,
+        speed: 0.4 + Math.random() * 0.3,
         phase: Math.random() * Math.PI * 2,
-      });
+        targetPoint: this.solderPoints[targetIdx],
+        state: "flying",
+        stateTime: 0,
+        homePos: { ...startPos },
+      } as any);
     }
   }
 
   private animateMiniRobots(): void {
-    this.miniRobots.forEach((r) => {
-      r.mesh.position.y =
-        r.baseY + Math.sin(this.clock * r.speed + r.phase) * 0.3;
-      r.mesh.children[10].rotation.y += 0.3;
-      r.mesh.children[11].rotation.y -= 0.3;
-      const isWelding = Math.random() > 0.6;
-      const weldIntensity = isWelding ? 12 + Math.random() * 8 : 1;
-      (r.mesh.children[8] as THREE.PointLight).intensity = weldIntensity;
-      r.mesh.children[9].scale.setScalar(
-        isWelding ? 1.5 + Math.random() * 0.5 : 0.4,
-      );
-      (
-        (r.mesh.children[9] as THREE.Mesh).material as THREE.MeshBasicMaterial
-      ).opacity = isWelding ? 1 : 0.2;
-      r.mesh.children[2].scale.setScalar(
-        0.9 + Math.sin(this.clock * 6 + r.phase) * 0.2,
-      );
-      r.mesh.children[3].scale.setScalar(
-        0.9 + Math.sin(this.clock * 6 + r.phase + 1) * 0.2,
-      );
+    this.miniRobots.forEach((r: any) => {
+      for (let p = 6; p <= 17; p += 3) {
+        if (r.mesh.children[p]) r.mesh.children[p].rotation.y += 0.5;
+      }
+      r.stateTime += 0.016;
+      const target = r.targetPoint;
+      const home = r.homePos;
+      if (r.state === "flying") {
+        const dx = target.x - r.mesh.position.x,
+          dy = target.y - r.mesh.position.y,
+          dz = target.z - r.mesh.position.z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist > 0.3) {
+          r.mesh.position.x += dx * 0.02;
+          r.mesh.position.y += dy * 0.02;
+          r.mesh.position.z += dz * 0.02;
+          r.mesh.rotation.y = Math.atan2(dx, dz);
+        } else {
+          r.state = "soldering";
+          r.stateTime = 0;
+        }
+      } else if (r.state === "soldering") {
+        (r.mesh.children[19] as THREE.PointLight).intensity =
+          8 + Math.random() * 12;
+        (r.mesh.children[19] as THREE.PointLight).color.setHex(
+          Math.random() > 0.3 ? 0xffff00 : 0xffaa00,
+        );
+        r.mesh.children[20].scale.setScalar(0.8 + Math.random() * 0.8);
+        (
+          (r.mesh.children[20] as THREE.Mesh)
+            .material as THREE.MeshBasicMaterial
+        ).opacity = 0.8 + Math.random() * 0.2;
+        (
+          (r.mesh.children[20] as THREE.Mesh)
+            .material as THREE.MeshBasicMaterial
+        ).color.setHex(Math.random() > 0.5 ? 0xffff00 : 0xffcc00);
+        if (r.stateTime > 3) {
+          r.state = "returning";
+          r.stateTime = 0;
+          (r.mesh.children[19] as THREE.PointLight).intensity = 0;
+          (
+            (r.mesh.children[20] as THREE.Mesh)
+              .material as THREE.MeshBasicMaterial
+          ).opacity = 0;
+        }
+      } else if (r.state === "returning") {
+        const dx = home.x - r.mesh.position.x,
+          dy = home.y - r.mesh.position.y,
+          dz = home.z - r.mesh.position.z;
+        const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        if (dist > 0.5) {
+          r.mesh.position.x += dx * 0.015;
+          r.mesh.position.y += dy * 0.015;
+          r.mesh.position.z += dz * 0.015;
+          r.mesh.rotation.y = Math.atan2(dx, dz);
+        } else {
+          r.state = "hovering";
+          r.stateTime = 0;
+        }
+      } else if (r.state === "hovering") {
+        r.mesh.position.y = home.y + Math.sin(this.clock * 2 + r.phase) * 0.2;
+        if (r.stateTime > 2) {
+          r.state = "flying";
+          r.stateTime = 0;
+          r.targetPoint =
+            this.solderPoints[
+              Math.floor(Math.random() * this.solderPoints.length)
+            ];
+        }
+      }
+      r.mesh.children[21].scale.setScalar(0.8 + Math.sin(this.clock * 8) * 0.3);
     });
   }
 
@@ -1975,6 +2053,6 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.posts.length > 1 && !this.busy && !this.detailPost) {
         this.next();
       }
-    }, 10000);
+    }, 20000);
   }
 }
