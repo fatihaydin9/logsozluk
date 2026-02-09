@@ -990,9 +990,9 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       metalness: 0.95,
     });
     this.mGlow = new THREE.MeshBasicMaterial({
-      color: 0xff8c00,
+      color: 0xff4422,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.9,
     });
     this.mGlowDim = new THREE.MeshBasicMaterial({
       color: 0xff5522,
@@ -1021,24 +1021,24 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.1;
+    this.renderer.toneMappingExposure = 1.6;
     el.appendChild(this.renderer.domElement);
-    this.scene.add(new THREE.AmbientLight(0x281808, 0.5));
-    const sp = new THREE.SpotLight(0xff6622, 3, 50, Math.PI / 3.5, 0.5);
+    this.scene.add(new THREE.AmbientLight(0x442211, 1.2));
+    const sp = new THREE.SpotLight(0xff4422, 5, 60, Math.PI / 3, 0.4);
     sp.position.set(0, 18, 6);
     sp.castShadow = true;
     sp.shadow.mapSize.set(1024, 1024);
     this.scene.add(sp);
-    const a1 = new THREE.PointLight(0xff8c00, 1.8, 25);
+    const a1 = new THREE.PointLight(0xff4422, 3, 30);
     a1.position.set(-8, 6, 4);
     this.scene.add(a1);
-    const a2 = new THREE.PointLight(0x662200, 1, 18);
+    const a2 = new THREE.PointLight(0xff3311, 2, 25);
     a2.position.set(8, 4, 3);
     this.scene.add(a2);
-    const u = new THREE.PointLight(0xcc4400, 1.2, 12);
+    const u = new THREE.PointLight(0xff4422, 2, 15);
     u.position.set(0, 0.3, 5);
     this.scene.add(u);
-    const rim = new THREE.SpotLight(0x441100, 2, 25, Math.PI / 5, 0.7);
+    const rim = new THREE.SpotLight(0xff2200, 3, 30, Math.PI / 4, 0.5);
     rim.position.set(0, 8, -6);
     this.scene.add(rim);
     this.buildEnv();
@@ -1335,7 +1335,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       ).translateY(7.5),
     );
     this.triArmGroup.add(
-      new THREE.PointLight(0xff8800, 0.5, 5).translateY(7.6),
+      new THREE.PointLight(0xff4422, 1.5, 8).translateY(7.6),
     );
 
     for (let i = 0; i < 3; i++) {
@@ -1462,17 +1462,17 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         map: tex,
         roughness: 0.6,
         metalness: 0.15,
-        emissive: new THREE.Color(0xff8c00),
-        emissiveIntensity: 0.03,
+        emissive: new THREE.Color(0xff4422),
+        emissiveIntensity: 0.08,
       });
       const scr = new THREE.Mesh(new THREE.PlaneGeometry(pW, pH), sMat);
       scr.position.set(0, pY - pH / 2, 0.04);
       hk.add(scr);
       this.panels.push({ mesh: scr, mat: sMat, arm: i });
       const em = new THREE.MeshBasicMaterial({
-        color: 0xff8c00,
+        color: 0xff4422,
         transparent: true,
-        opacity: 0.4,
+        opacity: 0.6,
       });
       const te = new THREE.BoxGeometry(pW + 0.1, 0.04, 0.04);
       hk.add(new THREE.Mesh(te, em).translateY(pY - 0.02).translateZ(0.05));
@@ -1499,9 +1499,9 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         new THREE.Mesh(
           le.clone(),
           new THREE.MeshBasicMaterial({
-            color: 0xff8c00,
+            color: 0xff4422,
             transparent: true,
-            opacity: 0.25,
+            opacity: 0.4,
           }),
         )
           .translateX(pW / 2 + 0.02)
@@ -1509,7 +1509,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
           .translateZ(0.05),
       );
       hk.add(
-        new THREE.PointLight(0xff8c00, 0.5, 5)
+        new THREE.PointLight(0xff4422, 1.2, 6)
           .translateY(pY - pH / 2)
           .translateZ(1.5),
       );
@@ -1627,7 +1627,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
           new THREE.Mesh(
             new THREE.SphereGeometry(0.025, 6, 6),
             new THREE.MeshBasicMaterial({
-              color: Math.random() > 0.5 ? 0xff5522 : 0xff8c00,
+              color: Math.random() > 0.5 ? 0xff4422 : 0xff3311,
             }),
           )
             .translateX(pt.x)
@@ -1651,10 +1651,10 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.particleSystem = new THREE.Points(
       geo,
       new THREE.PointsMaterial({
-        color: 0xff8c00,
-        size: 0.035,
+        color: 0xff4422,
+        size: 0.05,
         transparent: true,
-        opacity: 0.35,
+        opacity: 0.5,
         sizeAttenuation: true,
       }),
     );
@@ -1665,7 +1665,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     const g = new THREE.Group();
     for (let i = 0; i < 30; i++) {
       const sm = new THREE.MeshBasicMaterial({
-        color: i % 3 === 0 ? 0xff6622 : 0xff8c00,
+        color: i % 3 === 0 ? 0xff4422 : 0xff3311,
         transparent: true,
         opacity: 1,
       });
@@ -1762,7 +1762,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   }[] = [];
 
   private buildCables(): void {
-    const cableMat = new THREE.MeshBasicMaterial({ color: 0x1a0a04 });
+    const cableMat = new THREE.MeshBasicMaterial({ color: 0xff3311 });
     const glowMat = new THREE.MeshBasicMaterial({
       color: 0xff4422,
       transparent: true,
@@ -1808,7 +1808,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     cablePaths.forEach((path) => {
       const pts = path.map((p) => new THREE.Vector3(p.x, p.y, p.z));
       const curve = new THREE.CatmullRomCurve3(pts);
-      const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.04, 8, false);
+      const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.06, 8, false);
       const cable = new THREE.Mesh(tubeGeo, cableMat);
       cable.castShadow = true;
       this.scene.add(cable);
@@ -1843,7 +1843,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       light.position.set(x, h + 0.1, z);
       this.scene.add(light);
       this.scene.add(
-        new THREE.PointLight(0xff4422, 0.3, 4)
+        new THREE.PointLight(0xff4422, 0.8, 6)
           .translateX(x)
           .translateY(h + 0.2)
           .translateZ(z),
@@ -1853,9 +1853,11 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private buildMiniRobots(): void {
     const robotMat = new THREE.MeshStandardMaterial({
-      color: 0x2a1a0a,
-      roughness: 0.4,
-      metalness: 0.8,
+      color: 0x442211,
+      roughness: 0.3,
+      metalness: 0.9,
+      emissive: new THREE.Color(0x331100),
+      emissiveIntensity: 0.3,
     });
     const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff4422 });
     for (let i = 0; i < 5; i++) {
@@ -1874,6 +1876,19 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), eyeMat);
       eye.position.set(0.26, 0.06, 0);
       robot.add(eye);
+      const weldLight = new THREE.PointLight(0xff4422, 2, 3);
+      weldLight.position.set(0, -0.15, 0);
+      robot.add(weldLight);
+      const weldSpark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.05, 8, 8),
+        new THREE.MeshBasicMaterial({
+          color: 0xff4422,
+          transparent: true,
+          opacity: 1,
+        }),
+      );
+      weldSpark.position.set(0, -0.18, 0);
+      robot.add(weldSpark);
       const arm1 = new THREE.Mesh(
         new THREE.CylinderGeometry(0.02, 0.02, 0.15, 6),
         robotMat,
@@ -1908,6 +1923,12 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       r.mesh.children[2].scale.setScalar(
         0.8 + Math.sin(this.clock * 4 + r.phase) * 0.3,
       );
+      const weldIntensity = Math.random() > 0.7 ? 3 + Math.random() * 2 : 0.5;
+      (r.mesh.children[5] as THREE.PointLight).intensity = weldIntensity;
+      r.mesh.children[6].scale.setScalar(weldIntensity > 1 ? 1.5 : 0.3);
+      (
+        (r.mesh.children[6] as THREE.Mesh).material as THREE.MeshBasicMaterial
+      ).opacity = weldIntensity > 1 ? 1 : 0.3;
     });
   }
 }
