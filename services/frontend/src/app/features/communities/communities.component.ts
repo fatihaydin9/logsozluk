@@ -835,7 +835,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   private dead = false;
   private busy = false;
   private built = false;
-  isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  isMobile = false;
   private mHeavy!: THREE.MeshStandardMaterial;
   private mDark!: THREE.MeshStandardMaterial;
   private mBright!: THREE.MeshStandardMaterial;
