@@ -553,8 +553,8 @@ interface CommunityPost {
         background: rgba(255, 140, 0, 0.1);
       }
       .plus-btn.voted {
-        border-color: #ffb400;
-        color: #ffb400;
+        border-color: #ff5522;
+        color: #ff5522;
         background: rgba(255, 180, 0, 0.12);
       }
       .controls {
@@ -995,7 +995,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       opacity: 0.8,
     });
     this.mGlowDim = new THREE.MeshBasicMaterial({
-      color: 0xffb400,
+      color: 0xff5522,
       transparent: true,
       opacity: 0.3,
     });
@@ -1014,7 +1014,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.scene.background = new THREE.Color(0x0a0604);
     this.scene.fog = new THREE.FogExp2(0x0a0604, 0.028);
     this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 500);
-    this.camera.position.set(-10, 5, 14);
+    this.camera.position.set(10, 5, 14);
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1171,11 +1171,11 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const mW = W - 64;
     c.font = "bold 14px monospace";
-    c.fillStyle = "rgba(255,180,0,0.45)";
+    c.fillStyle = "rgba(255,85,34,0.45)";
     c.textAlign = "left";
     c.fillText("POST #" + String(idx + 1).padStart(3, "0"), 24, 44);
     c.textAlign = "right";
-    c.fillStyle = "rgba(255,180,0,0.6)";
+    c.fillStyle = "rgba(255,85,34,0.6)";
     c.fillText(this.getTypeLabel(post.post_type).toUpperCase(), W - 24, 44);
     c.textAlign = "left";
     const sg = c.createLinearGradient(24, 0, W - 24, 0);
@@ -1235,11 +1235,11 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     c.fillStyle = "rgba(255,140,0,0.1)";
     c.fillRect(24, fy, mW, 1);
     c.font = "bold 16px monospace";
-    c.fillStyle = "rgba(255,180,0,0.7)";
+    c.fillStyle = "rgba(255,85,34,0.7)";
     c.textAlign = "left";
     c.fillText("+" + post.plus_one_count, 32, fy + 40);
     if (post.tags && post.tags.length > 0) {
-      c.fillStyle = "rgba(255,180,0,0.45)";
+      c.fillStyle = "rgba(255,85,34,0.45)";
       c.font = "13px monospace";
       c.fillText(
         post.tags
@@ -1484,7 +1484,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         new THREE.Mesh(
           le,
           new THREE.MeshBasicMaterial({
-            color: 0xffb400,
+            color: 0xff5522,
             transparent: true,
             opacity: 0.55,
           }),
@@ -1625,7 +1625,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
           new THREE.Mesh(
             new THREE.SphereGeometry(0.025, 6, 6),
             new THREE.MeshBasicMaterial({
-              color: Math.random() > 0.5 ? 0xffb400 : 0xff8c00,
+              color: Math.random() > 0.5 ? 0xff5522 : 0xff8c00,
             }),
           )
             .translateX(pt.x)
@@ -1663,7 +1663,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     const g = new THREE.Group();
     for (let i = 0; i < 30; i++) {
       const sm = new THREE.MeshBasicMaterial({
-        color: i % 3 === 0 ? 0xffcc00 : 0xff8c00,
+        color: i % 3 === 0 ? 0xff6622 : 0xff8c00,
         transparent: true,
         opacity: 1,
       });
@@ -1714,10 +1714,10 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.raf = requestAnimationFrame(this.loop);
     this.clock += 0.016;
     this.camera.position.x +=
-      (-10 + this.mx * 2 - this.camera.position.x) * 0.025;
+      (10 + this.mx * 2 - this.camera.position.x) * 0.025;
     this.camera.position.y +=
       (5 + this.my * -0.8 - this.camera.position.y) * 0.025;
-    this.camera.lookAt(-2, 3.2, 0);
+    this.camera.lookAt(2, 3.2, 0);
     if (!this.busy && this.triArmGroup) {
       this.triArmGroup.rotation.y =
         this.rotCurrent + Math.sin(this.clock * 0.3) * 0.008;
