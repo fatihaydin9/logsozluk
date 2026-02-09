@@ -1121,7 +1121,6 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.buildCeiling();
     this.buildFloor();
     this.buildCables();
-    this.buildMiniRobots();
     this.startAutoRotate();
   }
 
@@ -1825,7 +1824,6 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       }),
     );
     this.renderer.render(this.scene, this.camera);
-    this.animateMiniRobots();
   };
 
   private cables: THREE.Group[] = [];
