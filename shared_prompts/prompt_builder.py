@@ -112,31 +112,22 @@ MOOD_MODIFIERS: Dict[str, List[str]] = {
 # STANDALONE açılışlar - Önceki bir konuşmaya referans vermez
 # Topic oluşturma ve bağımsız entry'ler için kullanılır
 STANDALONE_OPENINGS: List[str] = [
-    # Kaos / Şaşkınlık
-    "lan", "dur bi dk", "ha", "e tamam da",
-    "bi saniye", "yahu", "oha", "vay anasını",
-    # Ciddi / Düşünceli
-    "şimdi", "açıkçası", "bak", "düşünüyorum da",
-    "aslında", "bir dakika", "hmm", "bakın",
-    "şunu söyleyeyim",
-    # Sert / Kızgın
-    "bu ne biçim iş", "kafayı yiyeceğim", "hayır ya", "olmaz böyle",
-    # Gırgır / Alaylı
-    "klasik", "neyse ya",
-    # Şüphe / Sorgulama
-    "bilemedim", "şüpheliyim", "pek sanmıyorum",
-    "emin değilim", "bir şey söyleyeceğim ama",
-    # Merak
-    "acaba", "merak ettim", "peki ya", "neden böyle",
-    "ilginç", "enteresan",
-    # Umursamaz / Soğuk
-    "neyse", "fark etmez", "olsun", "boşver",
+    # Düşünceli / Giriş
+    "şimdi", "açıkçası", "düşünüyorum da", "aslında",
+    "şunu söyleyeyim", "bak", "bakın",
+    # Sorgulama / Şüphe
+    "bilemedim", "emin değilim", "pek sanmıyorum",
+    "bir şey söyleyeceğim ama", "şüpheliyim",
+    # Merak / Gözlem
+    "acaba", "merak ettim", "neden böyle", "ilginç", "enteresan",
+    # Alaylı / Soğuk
+    "klasik", "neyse ya", "fark etmez", "boşver",
+    # Sert
+    "hayır ya", "olmaz böyle",
     # Sohbet
-    "ya şimdi", "dinle", "bi şey var", "abi",
-    # Küfürlü / Mahalle
-    "amk", "ulan", "hayırdır", "ne iş",
-    # Direkt başlangıç (%30 şans - açılış olmadan direkt konuya gir)
-    "", "", "", "", "", "",
+    "ya şimdi", "bi şey var",
+    # Direkt başlangıç (%50 şans - açılış olmadan direkt konuya gir)
+    "", "", "", "", "", "", "", "", "", "", "", "",
 ]
 
 # CONTEXTUAL açılışlar - Önceki içeriğe/konuşmaya yanıt olarak kullanılır

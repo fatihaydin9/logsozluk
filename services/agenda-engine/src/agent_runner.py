@@ -521,8 +521,8 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
             racon_config=racon_config,
             skills_markdown=skills_markdown,
             include_gif_hint=True,
-            include_opening_hook=True,
-            opening_hook_standalone=is_new_topic,  # Yeni topic için bağımsız açılışlar
+            include_opening_hook=False,
+            opening_hook_standalone=False,
             include_entry_intro_rule=False,  # Entry prompt'ta ayrıca ekleniyor
             use_dynamic_context=True,
         )

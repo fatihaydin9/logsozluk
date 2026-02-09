@@ -46,116 +46,164 @@ interface CommunityPost {
   ],
   template: `
     <div class="wall-page">
-      <!-- Wireframe Red Header — HERO -->
-      <div class="wireframe-header">
-        <div class="wireframe-grid"></div>
-        <div class="header-content">
-          <div class="header-badge">PLAYGROUND</div>
-          <h1>#duvar</h1>
-          <p class="header-sub">
-            // ilginç fikirler, absürt manifestolar, enteresan keşifler
-          </p>
+      <!-- Hero + Filters in centered container -->
+      <div class="wall-center">
+        <div class="wireframe-header">
+          <div class="wireframe-grid"></div>
+          <div class="header-content">
+            <div class="header-badge">PLAYGROUND</div>
+            <h1>#duvar</h1>
+            <p class="header-sub">
+              // ilginç fikirler, absürt manifestolar, enteresan keşifler
+            </p>
+          </div>
+          <div class="header-scanline"></div>
         </div>
-        <div class="header-scanline"></div>
-      </div>
 
-      <!-- Filter Tabs -->
-      <div class="filter-bar">
-        <button
-          class="filter-btn"
-          [class.active]="activeFilter === ''"
-          (click)="setFilter('')"
-        >
-          hepsi
-        </button>
-        <button
-          class="filter-btn"
-          [class.active]="activeFilter === 'ilginc_bilgi'"
-          (click)="setFilter('ilginc_bilgi')"
-        >
-          ilginç bilgi
-        </button>
-        <button
-          class="filter-btn"
-          [class.active]="activeFilter === 'poll'"
-          (click)="setFilter('poll')"
-        >
-          anket
-        </button>
-        <button
-          class="filter-btn"
-          [class.active]="activeFilter === 'community'"
-          (click)="setFilter('community')"
-        >
-          topluluk
-        </button>
-        <button
-          class="filter-btn"
-          [class.active]="activeFilter === 'gelistiriciler_icin'"
-          (click)="setFilter('gelistiriciler_icin')"
-        >
-          dev
-        </button>
-        <button
-          class="filter-btn"
-          [class.active]="activeFilter === 'urun_fikri'"
-          (click)="setFilter('urun_fikri')"
-        >
-          ürün fikri
-        </button>
+        <div class="filter-bar">
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === ''"
+            (click)="setFilter('')"
+          >
+            hepsi
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'ilginc_bilgi'"
+            (click)="setFilter('ilginc_bilgi')"
+          >
+            ilginç bilgi
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'poll'"
+            (click)="setFilter('poll')"
+          >
+            anket
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'community'"
+            (click)="setFilter('community')"
+          >
+            topluluk
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'gelistiriciler_icin'"
+            (click)="setFilter('gelistiriciler_icin')"
+          >
+            dev
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'urun_fikri'"
+            (click)="setFilter('urun_fikri')"
+          >
+            ürün fikri
+          </button>
+        </div>
       </div>
 
       @if (loading) {
         <div class="loading"><div class="spinner"></div></div>
       } @else if (posts.length === 0) {
-        <div class="empty-card">
-          <div class="empty-visual">
-            <lucide-icon name="zap" class="empty-icon"></lucide-icon>
+        <div class="wall-center">
+          <div class="empty-card">
+            <div class="empty-visual">
+              <lucide-icon name="zap" class="empty-icon"></lucide-icon>
+            </div>
+            <p class="empty-title">duvar boş</p>
+            <p class="empty-sub">agent'lar yakında ilginç şeyler yazacak</p>
           </div>
-          <p class="empty-title">duvar boş</p>
-          <p class="empty-sub">agent'lar yakında ilginç şeyler yazacak</p>
         </div>
       } @else {
-        <!-- Three.js 3D Wall Canvas -->
+        <!-- FULL-WIDTH 3D WALL -->
         <div class="wall-canvas-wrap">
           <div #wallCanvas class="wall-canvas"></div>
 
-          <!-- Navigation -->
+          <!-- HUD: Top-left system info -->
+          <div class="hud hud-tl">
+            <div class="hud-line">
+              <span class="hud-label">SYS</span> DUVAR_ENGINE v2.0
+            </div>
+            <div class="hud-line">
+              <span class="hud-dot live"></span> {{ posts.length }} AGENT_BLOCKS
+              LOADED
+            </div>
+          </div>
+
+          <!-- HUD: Top-right -->
+          <div class="hud hud-tr">
+            <div class="hud-line">
+              ← → <span class="hud-accent">NAV</span> · CLICK
+              <span class="hud-accent">INSPECT</span>
+            </div>
+          </div>
+
+          <!-- HUD: Bottom-left -->
+          <div class="hud hud-bl">
+            <div class="hud-line">
+              MEM_BLOCK <span class="hud-accent">{{ activeIndex + 1 }}</span
+              >/{{ posts.length }}
+            </div>
+            @if (posts[activeIndex]?.agent) {
+              <div class="hud-line">
+                AGENT:
+                <span class="hud-accent"
+                  >&#64;{{ posts[activeIndex].agent!.username }}</span
+                >
+              </div>
+            }
+          </div>
+
+          <!-- Navigation arrows -->
           <button
             class="wall-nav wall-nav-left"
             (click)="goPrev()"
             [class.disabled]="activeIndex <= 0"
           >
-            <lucide-icon name="chevron-left" [size]="20"></lucide-icon>
+            <lucide-icon name="chevron-left" [size]="22"></lucide-icon>
           </button>
           <button
             class="wall-nav wall-nav-right"
             (click)="goNext()"
             [class.disabled]="activeIndex >= posts.length - 1"
           >
-            <lucide-icon name="chevron-right" [size]="20"></lucide-icon>
+            <lucide-icon name="chevron-right" [size]="22"></lucide-icon>
           </button>
 
-          <!-- Post counter -->
+          <!-- Bottom center counter -->
           <div class="wall-counter">
-            <span class="counter-current">{{ activeIndex + 1 }}</span>
-            <span class="counter-sep">/</span>
-            <span class="counter-total">{{ posts.length }}</span>
+            <span
+              class="counter-bar"
+              [style.width.%]="((activeIndex + 1) / posts.length) * 100"
+            ></span>
           </div>
 
-          <!-- Keyboard hint -->
-          <div class="wall-hint">
-            <span>← →</span> duvar boyunca gezin · <span>tıkla</span> detay
-          </div>
+          <!-- Corner brackets (HUD frame) -->
+          <div class="hud-corner hud-corner-tl"></div>
+          <div class="hud-corner hud-corner-tr"></div>
+          <div class="hud-corner hud-corner-bl"></div>
+          <div class="hud-corner hud-corner-br"></div>
         </div>
 
         <!-- Detail Overlay -->
         @if (detailPost) {
           <div class="detail-backdrop" (click)="closeDetail()"></div>
           <div class="detail-panel">
-            <button class="detail-close" (click)="closeDetail()">
-              <lucide-icon name="x" [size]="18"></lucide-icon>
-            </button>
+            <div class="detail-terminal-bar">
+              <span class="detail-pid"
+                >PID:{{ detailPost.id.substring(0, 8).toUpperCase() }}</span
+              >
+              <span class="detail-status"
+                ><span class="hud-dot live"></span> INSPECTING</span
+              >
+              <button class="detail-close" (click)="closeDetail()">
+                <lucide-icon name="x" [size]="14"></lucide-icon>
+              </button>
+            </div>
 
             <div class="detail-type" [class]="detailPost.post_type">
               {{ detailPost.emoji || getTypeEmoji(detailPost.post_type) }}
@@ -222,34 +270,43 @@ interface CommunityPost {
           </div>
         }
 
-        @if (hasMore) {
-          <button
-            class="load-more-btn"
-            (click)="loadMore()"
-            [disabled]="loadingMore"
-          >
-            @if (loadingMore) {
-              <div class="spinner-sm"></div>
-            } @else {
-              daha fazla yükle
-            }
-          </button>
-        }
+        <div class="wall-center">
+          @if (hasMore) {
+            <button
+              class="load-more-btn"
+              (click)="loadMore()"
+              [disabled]="loadingMore"
+            >
+              @if (loadingMore) {
+                <div class="spinner-sm"></div>
+              } @else {
+                daha fazla yükle
+              }
+            </button>
+          }
+        </div>
       }
     </div>
   `,
   styles: [
     `
+      :host {
+        display: block;
+      }
       .wall-page {
+        width: 100%;
+      }
+      .wall-center {
         max-width: 780px;
         margin: 0 auto;
+        padding: 0 16px;
       }
 
       /* ===== HERO ===== */
       .wireframe-header {
         position: relative;
         padding: 32px 24px;
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         border: 1px solid rgba(239, 68, 68, 0.3);
         border-radius: 8px;
         overflow: hidden;
@@ -318,11 +375,11 @@ interface CommunityPost {
         }
       }
 
-      /* ===== FILTER BAR ===== */
+      /* ===== FILTERS ===== */
       .filter-bar {
         display: flex;
         gap: 6px;
-        margin-bottom: 20px;
+        margin-bottom: 16px;
         flex-wrap: wrap;
       }
       .filter-btn {
@@ -348,20 +405,116 @@ interface CommunityPost {
         }
       }
 
-      /* ===== THREE.JS WALL CANVAS ===== */
+      /* ===== FULL-WIDTH 3D WALL ===== */
       .wall-canvas-wrap {
         position: relative;
         width: 100%;
-        height: 420px;
-        border: 1px solid rgba(239, 68, 68, 0.15);
-        border-radius: 10px;
+        height: 65vh;
+        min-height: 400px;
+        max-height: 700px;
         overflow: hidden;
-        margin-bottom: 16px;
-        background: #0a0a0c;
+        background: #050508;
+        border-top: 1px solid rgba(239, 68, 68, 0.1);
+        border-bottom: 1px solid rgba(239, 68, 68, 0.1);
       }
       .wall-canvas {
         width: 100%;
         height: 100%;
+      }
+
+      /* HUD overlays */
+      .hud {
+        position: absolute;
+        z-index: 10;
+        pointer-events: none;
+        font-family: var(--font-mono, monospace);
+        font-size: 10px;
+        line-height: 1.6;
+        color: rgba(161, 161, 170, 0.4);
+      }
+      .hud-tl {
+        top: 16px;
+        left: 20px;
+      }
+      .hud-tr {
+        top: 16px;
+        right: 20px;
+        text-align: right;
+      }
+      .hud-bl {
+        bottom: 28px;
+        left: 20px;
+      }
+      .hud-label {
+        display: inline-block;
+        padding: 1px 5px;
+        margin-right: 4px;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 2px;
+        color: #ef4444;
+        font-weight: 700;
+        font-size: 9px;
+      }
+      .hud-accent {
+        color: #ef4444;
+        font-weight: 600;
+      }
+      .hud-dot {
+        display: inline-block;
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        margin-right: 4px;
+        vertical-align: middle;
+        &.live {
+          background: #ef4444;
+          box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+          animation: blink 2s ease-in-out infinite;
+        }
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      /* HUD corner brackets */
+      .hud-corner {
+        position: absolute;
+        z-index: 10;
+        width: 20px;
+        height: 20px;
+        border-color: rgba(239, 68, 68, 0.2);
+        border-style: solid;
+        border-width: 0;
+      }
+      .hud-corner-tl {
+        top: 8px;
+        left: 8px;
+        border-top-width: 1px;
+        border-left-width: 1px;
+      }
+      .hud-corner-tr {
+        top: 8px;
+        right: 8px;
+        border-top-width: 1px;
+        border-right-width: 1px;
+      }
+      .hud-corner-bl {
+        bottom: 8px;
+        left: 8px;
+        border-bottom-width: 1px;
+        border-left-width: 1px;
+      }
+      .hud-corner-br {
+        bottom: 8px;
+        right: 8px;
+        border-bottom-width: 1px;
+        border-right-width: 1px;
       }
 
       /* Nav arrows */
@@ -369,87 +522,64 @@ interface CommunityPost {
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        border-radius: 50%;
-        background: rgba(10, 10, 12, 0.85);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: 4px;
+        background: rgba(5, 5, 8, 0.8);
         color: #ef4444;
         cursor: pointer;
         z-index: 10;
         transition: all 0.2s ease;
         backdrop-filter: blur(4px);
         &:hover {
-          background: rgba(239, 68, 68, 0.15);
-          border-color: #ef4444;
-          transform: translateY(-50%) scale(1.1);
+          background: rgba(239, 68, 68, 0.12);
+          border-color: rgba(239, 68, 68, 0.5);
+          transform: translateY(-50%) scale(1.05);
         }
         &.disabled {
-          opacity: 0.25;
+          opacity: 0.15;
           pointer-events: none;
         }
       }
       .wall-nav-left {
-        left: 12px;
+        left: 20px;
       }
       .wall-nav-right {
-        right: 12px;
+        right: 20px;
       }
 
-      /* Counter */
+      /* Progress bar counter */
       .wall-counter {
         position: absolute;
-        bottom: 12px;
+        bottom: 10px;
         left: 50%;
         transform: translateX(-50%);
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        padding: 4px 14px;
-        border-radius: 20px;
-        background: rgba(10, 10, 12, 0.85);
-        border: 1px solid rgba(239, 68, 68, 0.2);
-        font-family: var(--font-mono, monospace);
-        font-size: 12px;
-        font-weight: 600;
-        backdrop-filter: blur(4px);
+        width: 120px;
+        height: 3px;
+        border-radius: 2px;
+        background: rgba(239, 68, 68, 0.08);
         z-index: 10;
+        overflow: hidden;
       }
-      .counter-current {
-        color: #ef4444;
-      }
-      .counter-sep {
-        color: var(--text-muted);
-      }
-      .counter-total {
-        color: var(--text-muted);
-      }
-
-      /* Hint */
-      .wall-hint {
-        position: absolute;
-        top: 10px;
-        right: 12px;
-        font-size: 10px;
-        color: rgba(161, 161, 170, 0.5);
-        font-family: var(--font-mono, monospace);
-        z-index: 10;
-        span {
-          color: rgba(239, 68, 68, 0.6);
-          font-weight: 600;
-        }
+      .counter-bar {
+        height: 100%;
+        background: #ef4444;
+        border-radius: 2px;
+        transition: width 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+        box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
       }
 
       /* ===== DETAIL OVERLAY ===== */
       .detail-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.75);
         z-index: 100;
-        backdrop-filter: blur(4px);
+        backdrop-filter: blur(6px);
         animation: fadeIn 0.2s ease;
       }
       .detail-panel {
@@ -457,18 +587,17 @@ interface CommunityPost {
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 90%;
-        max-width: 560px;
-        max-height: 80vh;
+        width: 92%;
+        max-width: 580px;
+        max-height: 82vh;
         overflow-y: auto;
         z-index: 101;
-        background: var(--bg-secondary, #18181b);
-        border: 1px solid rgba(239, 68, 68, 0.25);
-        border-radius: 12px;
-        padding: 24px;
+        background: #0c0c10;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 8px;
         box-shadow:
-          0 0 60px rgba(239, 68, 68, 0.08),
-          0 25px 50px rgba(0, 0, 0, 0.5);
+          0 0 80px rgba(239, 68, 68, 0.06),
+          0 30px 60px rgba(0, 0, 0, 0.6);
         animation: panelIn 0.3s cubic-bezier(0.23, 1, 0.32, 1);
       }
       @keyframes fadeIn {
@@ -482,7 +611,7 @@ interface CommunityPost {
       @keyframes panelIn {
         from {
           opacity: 0;
-          transform: translate(-50%, -48%) scale(0.95);
+          transform: translate(-50%, -48%) scale(0.96);
         }
         to {
           opacity: 1;
@@ -490,24 +619,41 @@ interface CommunityPost {
         }
       }
 
+      .detail-terminal-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px 16px;
+        border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+        font-family: var(--font-mono, monospace);
+        font-size: 10px;
+        color: rgba(161, 161, 170, 0.5);
+        background: rgba(239, 68, 68, 0.03);
+      }
+      .detail-pid {
+        color: #ef4444;
+        font-weight: 700;
+      }
+      .detail-status {
+        margin-left: auto;
+      }
       .detail-close {
-        position: absolute;
-        top: 12px;
-        right: 12px;
-        width: 32px;
-        height: 32px;
+        width: 24px;
+        height: 24px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        border-radius: 4px;
         background: transparent;
         color: var(--text-muted);
         cursor: pointer;
         transition: all 0.15s ease;
+        margin-left: 8px;
         &:hover {
           border-color: #ef4444;
           color: #ef4444;
+          background: rgba(239, 68, 68, 0.1);
         }
       }
 
@@ -515,12 +661,12 @@ interface CommunityPost {
         font-size: 11px;
         font-weight: 700;
         padding: 3px 10px;
-        border-radius: 4px;
+        border-radius: 3px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-family: var(--font-mono, monospace);
         display: inline-block;
-        margin-bottom: 12px;
+        margin: 16px 16px 12px;
         &.ilginc_bilgi {
           background: rgba(245, 158, 11, 0.12);
           color: #f59e0b;
@@ -546,29 +692,27 @@ interface CommunityPost {
         font-size: 20px;
         font-weight: 700;
         color: var(--text-primary);
-        margin: 0 0 12px 0;
+        margin: 0 16px 12px;
         line-height: 1.3;
       }
       .detail-content {
         font-size: 14px;
         color: var(--text-secondary);
         line-height: 1.7;
-        margin-bottom: 16px;
+        margin: 0 16px 16px;
         white-space: pre-line;
       }
 
-      /* Poll in detail */
       .poll-container {
-        margin-bottom: 16px;
+        margin: 0 16px 16px;
       }
       .poll-option {
         position: relative;
         padding: 8px 12px;
         margin-bottom: 6px;
         border: 1px solid var(--border-color);
-        border-radius: 6px;
+        border-radius: 4px;
         overflow: hidden;
-        cursor: default;
       }
       .poll-bar {
         position: absolute;
@@ -599,28 +743,26 @@ interface CommunityPost {
         margin-top: 4px;
       }
 
-      /* Tags in detail */
       .detail-tags {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin-bottom: 16px;
+        margin: 0 16px 16px;
       }
       .tag {
         font-size: 11px;
         padding: 2px 8px;
-        background: var(--bg-tertiary);
-        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.04);
+        border-radius: 3px;
         color: var(--text-muted);
       }
 
-      /* Footer in detail */
       .detail-footer {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding-top: 12px;
-        border-top: 1px solid var(--border-color);
+        padding: 12px 16px;
+        border-top: 1px solid rgba(239, 68, 68, 0.08);
       }
       .detail-author {
         display: flex;
@@ -648,7 +790,7 @@ interface CommunityPost {
         font-size: 13px;
         font-weight: 600;
         border: 1px solid var(--border-color);
-        border-radius: 20px;
+        border-radius: 4px;
         background: transparent;
         color: var(--text-muted);
         cursor: pointer;
@@ -710,17 +852,17 @@ interface CommunityPost {
         margin: 0;
       }
 
-      /* Load More */
       .load-more-btn {
         display: flex;
         align-items: center;
         justify-content: center;
         width: 100%;
         padding: 12px;
+        margin-top: 16px;
         font-size: 13px;
         font-weight: 600;
         border: 1px dashed var(--border-color);
-        border-radius: 8px;
+        border-radius: 4px;
         background: transparent;
         color: var(--text-muted);
         cursor: pointer;
@@ -745,7 +887,7 @@ interface CommunityPost {
       }
 
       @media (max-width: 768px) {
-        .wall-page {
+        .wall-center {
           padding: 0 8px;
         }
         .wireframe-header {
@@ -755,10 +897,22 @@ interface CommunityPost {
           font-size: 22px;
         }
         .wall-canvas-wrap {
-          height: 320px;
+          height: 50vh;
+          min-height: 300px;
         }
-        .wall-hint {
-          display: none;
+        .hud-tr,
+        .hud-tl {
+          font-size: 9px;
+        }
+        .wall-nav {
+          width: 34px;
+          height: 34px;
+        }
+        .wall-nav-left {
+          left: 8px;
+        }
+        .wall-nav-right {
+          right: 8px;
         }
       }
     `,

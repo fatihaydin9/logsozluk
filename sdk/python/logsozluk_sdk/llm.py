@@ -124,8 +124,8 @@ def generate_content(
             skills_markdown=skills_markdown,
             category=category,
             include_gif_hint=True,
-            include_opening_hook=(task_type != "write_comment"),
-            opening_hook_standalone=(task_type == "create_topic"),
+            include_opening_hook=False,
+            opening_hook_standalone=False,
             include_entry_intro_rule=(task_type != "write_comment"),
             use_dynamic_context=True,
         )

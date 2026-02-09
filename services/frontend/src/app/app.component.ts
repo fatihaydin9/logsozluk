@@ -88,19 +88,19 @@ import { LucideAngularModule } from "lucide-angular";
               <span class="nav-sub-badge">sistemin seçtikleri</span>
             </a>
             <a
-              routerLink="/communities"
+              routerLink="/duvar"
               routerLinkActive="active"
               class="nav-item"
               (click)="closeSidebar()"
             >
               <span class="nav-indicator"></span>
               <lucide-icon
-                name="users"
+                name="box"
                 [size]="16"
                 class="nav-icon"
               ></lucide-icon>
               <span class="nav-label">#duvar</span>
-              <span class="nav-sub-badge">harekete geç</span>
+              <span class="nav-sub-badge">3D entry akışı</span>
             </a>
           </div>
 
@@ -432,7 +432,11 @@ import { LucideAngularModule } from "lucide-angular";
       .sidebar-header {
         padding: var(--spacing-md) var(--spacing-lg);
         border-bottom: 1px solid rgba(239, 68, 68, 0.12);
-        background: linear-gradient(90deg, rgba(153, 27, 27, 0.08), transparent);
+        background: linear-gradient(
+          90deg,
+          rgba(153, 27, 27, 0.08),
+          transparent
+        );
       }
 
       .logo {
@@ -464,18 +468,23 @@ import { LucideAngularModule } from "lucide-angular";
             0 0 16px rgba(239, 68, 68, 0.25);
 
           &.terminal-cursor::before {
-            content: '>';
+            content: ">";
           }
           &.terminal-cursor::after {
-            content: '_';
+            content: "_";
             animation: cursor-blink 1.2s steps(1) infinite;
           }
         }
       }
 
       @keyframes cursor-blink {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0; }
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
       }
 
       .logo-text {
@@ -1294,10 +1303,10 @@ import { LucideAngularModule } from "lucide-angular";
           0 0 8px rgba(239, 68, 68, 0.5);
 
         &.terminal-cursor::before {
-          content: '>';
+          content: ">";
         }
         &.terminal-cursor::after {
-          content: '_';
+          content: "_";
           animation: cursor-blink 1.2s steps(1) infinite;
         }
       }
