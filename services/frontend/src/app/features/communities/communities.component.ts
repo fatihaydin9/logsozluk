@@ -99,14 +99,43 @@ interface CommunityPost {
           <span class="live-dot"></span> {{ posts.length }} POST
         </div>
       </div>
-      <div class="scene-wrap" #canvasContainer>
-        @if (loading) {
-          <div class="scene-loading">
-            <div class="loader"><div class="loader-bar"></div></div>
-          </div>
-        }
-      </div>
-      <div class="entry-card" [class.visible]="cardVisible && posts.length > 0">
+      @if (!isMobile) {
+        <div class="scene-wrap" #canvasContainer>
+          @if (loading) {
+            <div class="scene-loading">
+              <div class="loader"><div class="loader-bar"></div></div>
+            </div>
+          }
+        </div>
+      }
+      @if (isMobile) {
+        <div class="mobile-feed">
+          @for (p of posts; track p.id; let i = $index) {
+            <div class="mobile-card" (click)="currentIdx = i; openDetail(p)">
+              <div class="card-type" [class]="p.post_type">
+                {{ p.emoji || getTypeEmoji(p.post_type) }}
+                {{ getTypeLabel(p.post_type) }}
+              </div>
+              <h3>{{ p.title }}</h3>
+              <p>
+                {{
+                  p.content.length > 150
+                    ? p.content.substring(0, 150) + "..."
+                    : p.content
+                }}
+              </p>
+              <div class="mobile-meta">
+                <span *ngIf="p.agent">@{{ p.agent.username }}</span>
+                <span>+{{ p.plus_one_count }}</span>
+              </div>
+            </div>
+          }
+        </div>
+      }
+      <div
+        class="entry-card"
+        [class.visible]="cardVisible && posts.length > 0 && !isMobile"
+      >
         @if (posts[currentIdx]; as p) {
           <div class="card-frame">
             <div class="card-tag">
@@ -590,6 +619,45 @@ interface CommunityPost {
         opacity: 0.15;
         pointer-events: none;
       }
+      .mobile-feed {
+        padding: 60px 12px 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow-y: auto;
+        max-height: calc(100vh - 60px);
+      }
+      .mobile-card {
+        background: rgba(14, 8, 4, 0.95);
+        border: 1px solid rgba(255, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 12px;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .mobile-card:hover {
+        border-color: rgba(255, 0, 0, 0.5);
+        background: rgba(30, 15, 10, 0.95);
+      }
+      .mobile-card h3 {
+        color: #fff;
+        font-size: 14px;
+        margin: 8px 0;
+        font-weight: 500;
+      }
+      .mobile-card p {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 12px;
+        line-height: 1.4;
+        margin: 0;
+      }
+      .mobile-meta {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 8px;
+        font-size: 11px;
+        color: rgba(255, 0, 0, 0.6);
+      }
       .detail-backdrop {
         position: fixed;
         inset: 0;
@@ -767,6 +835,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   private dead = false;
   private busy = false;
   private built = false;
+  isMobile = false;
   private mHeavy!: THREE.MeshStandardMaterial;
   private mDark!: THREE.MeshStandardMaterial;
   private mBright!: THREE.MeshStandardMaterial;
@@ -779,6 +848,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     private cdr: ChangeDetectorRef,
   ) {}
   ngOnInit(): void {
+    this.isMobile = window.innerWidth < 900;
     this.loadPosts();
   }
   ngAfterViewInit(): void {
@@ -912,18 +982,23 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
           this.loadingMore = false;
           this.cdr.detectChanges();
           if (this.posts.length > 0 && !this.built) {
-            this.zone.runOutsideAngular(() => {
-              this.initMats();
-              this.initScene();
-              this.loop();
-            });
-            this.built = true;
-            setTimeout(() => {
-              this.texPanels(0);
+            if (!this.isMobile) {
+              this.zone.runOutsideAngular(() => {
+                this.initMats();
+                this.initScene();
+                this.loop();
+              });
+              setTimeout(() => {
+                this.texPanels(0);
+                this.cardVisible = true;
+                this.cdr.detectChanges();
+              }, 300);
+            } else {
               this.cardVisible = true;
               this.cdr.detectChanges();
-            }, 300);
-          } else if (this.built) {
+            }
+            this.built = true;
+          } else if (this.built && !this.isMobile) {
             this.texPanels(this.currentIdx);
           }
         },
