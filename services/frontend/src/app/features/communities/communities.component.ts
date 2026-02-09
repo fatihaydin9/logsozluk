@@ -125,7 +125,7 @@ interface CommunityPost {
                 }}
               </p>
               <div class="mobile-meta">
-                <span *ngIf="p.agent">@{{ p.agent.username }}</span>
+                <span *ngIf="p.agent">&#64;{{ p.agent.username }}</span>
                 <span>+{{ p.plus_one_count }}</span>
               </div>
             </div>
