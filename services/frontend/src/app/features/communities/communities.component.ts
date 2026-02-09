@@ -1045,7 +1045,6 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.buildArm();
     this.buildCeiling();
     this.buildFloor();
-    this.buildDust();
     this.buildCables();
     this.buildMiniRobots();
     this.startAutoRotate();
@@ -1868,101 +1867,97 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   ];
 
   private buildMiniRobots(): void {
-    const grayMat = new THREE.MeshStandardMaterial({
-      color: 0x888888,
-      roughness: 0.4,
-      metalness: 0.7,
-    });
-    const darkMat = new THREE.MeshStandardMaterial({
-      color: 0x444444,
+    const bodyMat = new THREE.MeshStandardMaterial({
+      color: 0x555555,
       roughness: 0.3,
       metalness: 0.8,
     });
-    const propMat = new THREE.MeshStandardMaterial({
-      color: 0x333333,
+    const wingMat = new THREE.MeshBasicMaterial({
+      color: 0xaaaaaa,
+      transparent: true,
+      opacity: 0.4,
+      side: THREE.DoubleSide,
+    });
+    const needleMat = new THREE.MeshStandardMaterial({
+      color: 0x888888,
       roughness: 0.2,
-      metalness: 0.9,
+      metalness: 0.95,
     });
     for (let i = 0; i < 3; i++) {
-      const drone = new THREE.Group();
-      const body = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.4, 0.5, 0.25, 8),
-        grayMat,
+      const bug = new THREE.Group();
+      const thorax = new THREE.Mesh(
+        new THREE.SphereGeometry(0.25, 12, 12),
+        bodyMat,
       );
-      drone.add(body);
-      const top = new THREE.Mesh(new THREE.SphereGeometry(0.3, 8, 8), darkMat);
-      top.position.y = 0.2;
-      top.scale.y = 0.5;
-      drone.add(top);
-      const armPositions = [
-        { x: 0.6, z: 0.6 },
-        { x: -0.6, z: 0.6 },
-        { x: 0.6, z: -0.6 },
-        { x: -0.6, z: -0.6 },
-      ];
-      armPositions.forEach((ap, idx) => {
-        const arm = new THREE.Mesh(
-          new THREE.BoxGeometry(0.8, 0.08, 0.1),
-          grayMat,
-        );
-        arm.position.set(ap.x * 0.5, 0, ap.z * 0.5);
-        arm.rotation.y = Math.atan2(ap.z, ap.x);
-        drone.add(arm);
-        const motor = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.12, 0.12, 0.15, 8),
-          darkMat,
-        );
-        motor.position.set(ap.x, 0.1, ap.z);
-        drone.add(motor);
-        const prop = new THREE.Mesh(
-          new THREE.BoxGeometry(0.6, 0.02, 0.08),
-          propMat,
-        );
-        prop.position.set(ap.x, 0.2, ap.z);
-        drone.add(prop);
-      });
-      const solderArm = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.03, 0.02, 0.6, 6),
-        darkMat,
+      thorax.scale.set(1, 0.7, 1.5);
+      bug.add(thorax);
+      const abdomen = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 12, 12),
+        bodyMat,
       );
-      solderArm.position.set(0, -0.4, 0);
-      drone.add(solderArm);
-      const solderTip = new THREE.Mesh(
-        new THREE.ConeGeometry(0.05, 0.15, 6),
+      abdomen.position.set(0, -0.1, -0.5);
+      abdomen.scale.set(0.8, 0.6, 1.2);
+      bug.add(abdomen);
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.15, 10, 10),
+        bodyMat,
+      );
+      head.position.set(0, 0.05, 0.35);
+      bug.add(head);
+      const eye1 = new THREE.Mesh(
+        new THREE.SphereGeometry(0.06, 8, 8),
+        new THREE.MeshBasicMaterial({ color: 0xff0000 }),
+      );
+      eye1.position.set(0.08, 0.1, 0.42);
+      bug.add(eye1);
+      const eye2 = eye1.clone();
+      eye2.position.x = -0.08;
+      bug.add(eye2);
+      const wing1 = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.4), wingMat);
+      wing1.position.set(0.4, 0.2, -0.1);
+      wing1.rotation.set(0.2, 0.3, 0.5);
+      bug.add(wing1);
+      const wing2 = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.4), wingMat);
+      wing2.position.set(-0.4, 0.2, -0.1);
+      wing2.rotation.set(0.2, -0.3, -0.5);
+      bug.add(wing2);
+      const needle = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.008, 0.025, 1.5, 8),
+        needleMat,
+      );
+      needle.position.set(0, -0.1, 0.6);
+      needle.rotation.x = Math.PI / 2 + 0.3;
+      bug.add(needle);
+      const needleTip = new THREE.Mesh(
+        new THREE.ConeGeometry(0.015, 0.2, 6),
         new THREE.MeshBasicMaterial({ color: 0xcccccc }),
       );
-      solderTip.position.set(0, -0.75, 0);
-      solderTip.rotation.x = Math.PI;
-      drone.add(solderTip);
-      const solderLight = new THREE.PointLight(0xffff00, 0, 4);
-      solderLight.position.set(0, -0.8, 0);
-      drone.add(solderLight);
-      const solderSpark = new THREE.Mesh(
-        new THREE.SphereGeometry(0.12, 8, 8),
+      needleTip.position.set(0, -0.25, 1.3);
+      needleTip.rotation.x = -Math.PI / 2 + 0.3;
+      bug.add(needleTip);
+      const weldLight = new THREE.PointLight(0xffff00, 0, 15);
+      weldLight.position.set(0, -0.3, 1.4);
+      bug.add(weldLight);
+      const weldSpark = new THREE.Mesh(
+        new THREE.SphereGeometry(0.8, 16, 16),
         new THREE.MeshBasicMaterial({
           color: 0xffff00,
           transparent: true,
           opacity: 0,
         }),
       );
-      solderSpark.position.set(0, -0.85, 0);
-      drone.add(solderSpark);
-      const led = new THREE.Mesh(
-        new THREE.SphereGeometry(0.05, 6, 6),
-        new THREE.MeshBasicMaterial({ color: 0x00ff00 }),
-      );
-      led.position.set(0.15, 0.15, 0.3);
-      drone.add(led);
-      const startPos = { x: -8 + i * 6, y: 6 + i, z: 6 - i * 2 };
-      drone.position.set(startPos.x, startPos.y, startPos.z);
-      this.scene.add(drone);
-      const targetIdx = i % this.solderPoints.length;
+      weldSpark.position.set(0, -0.3, 1.5);
+      bug.add(weldSpark);
+      const startPos = { x: -10 + i * 8, y: 5 + i * 0.5, z: 8 - i * 3 };
+      bug.position.set(startPos.x, startPos.y, startPos.z);
+      bug.scale.setScalar(1.5);
+      this.scene.add(bug);
       this.miniRobots.push({
-        mesh: drone,
+        mesh: bug,
         baseY: startPos.y,
-        speed: 0.4 + Math.random() * 0.3,
+        speed: 0.5,
         phase: Math.random() * Math.PI * 2,
-        targetPoint: this.solderPoints[targetIdx],
+        targetPoint: this.solderPoints[i % this.solderPoints.length],
         state: "flying",
         stateTime: 0,
         homePos: { ...startPos },
@@ -1972,9 +1967,15 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private animateMiniRobots(): void {
     this.miniRobots.forEach((r: any) => {
-      for (let p = 6; p <= 17; p += 3) {
-        if (r.mesh.children[p]) r.mesh.children[p].rotation.y += 0.5;
-      }
+      const ws = 25;
+      r.mesh.children[5].rotation.z =
+        0.5 + Math.sin(this.clock * ws + r.phase) * 0.4;
+      r.mesh.children[6].rotation.z =
+        -0.5 - Math.sin(this.clock * ws + r.phase) * 0.4;
+      r.mesh.children[3].scale.setScalar(0.8 + Math.sin(this.clock * 8) * 0.3);
+      r.mesh.children[4].scale.setScalar(
+        0.8 + Math.sin(this.clock * 8 + 1) * 0.3,
+      );
       r.stateTime += 0.016;
       const target = r.targetPoint;
       const home = r.homePos;
@@ -1983,38 +1984,49 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
           dy = target.y - r.mesh.position.y,
           dz = target.z - r.mesh.position.z;
         const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (dist > 0.3) {
-          r.mesh.position.x += dx * 0.02;
-          r.mesh.position.y += dy * 0.02;
-          r.mesh.position.z += dz * 0.02;
+        if (dist > 0.5) {
+          r.mesh.position.x += dx * 0.025;
+          r.mesh.position.y += dy * 0.025;
+          r.mesh.position.z += dz * 0.025;
           r.mesh.rotation.y = Math.atan2(dx, dz);
+          r.mesh.rotation.x = -0.2;
         } else {
           r.state = "soldering";
           r.stateTime = 0;
+          r.mesh.rotation.x = 0.3;
         }
       } else if (r.state === "soldering") {
-        (r.mesh.children[19] as THREE.PointLight).intensity =
-          8 + Math.random() * 12;
-        (r.mesh.children[19] as THREE.PointLight).color.setHex(
-          Math.random() > 0.3 ? 0xffff00 : 0xffaa00,
+        const intensity = 40 + Math.random() * 60;
+        (r.mesh.children[10] as THREE.PointLight).intensity = intensity;
+        (r.mesh.children[10] as THREE.PointLight).color.setHex(
+          Math.random() > 0.3 ? 0xffff00 : 0xffdd00,
         );
-        r.mesh.children[20].scale.setScalar(0.8 + Math.random() * 0.8);
+        const sparkScale = 2 + Math.random() * 3;
+        r.mesh.children[11].scale.setScalar(sparkScale);
         (
-          (r.mesh.children[20] as THREE.Mesh)
+          (r.mesh.children[11] as THREE.Mesh)
             .material as THREE.MeshBasicMaterial
-        ).opacity = 0.8 + Math.random() * 0.2;
+        ).opacity = 0.95;
         (
-          (r.mesh.children[20] as THREE.Mesh)
+          (r.mesh.children[11] as THREE.Mesh)
             .material as THREE.MeshBasicMaterial
-        ).color.setHex(Math.random() > 0.5 ? 0xffff00 : 0xffcc00);
-        if (r.stateTime > 3) {
+        ).color.setHex(
+          Math.random() > 0.5
+            ? 0xffff00
+            : Math.random() > 0.5
+              ? 0xffee00
+              : 0xffaa00,
+        );
+        r.mesh.position.y += (Math.random() - 0.5) * 0.02;
+        if (r.stateTime > 4) {
           r.state = "returning";
           r.stateTime = 0;
-          (r.mesh.children[19] as THREE.PointLight).intensity = 0;
+          (r.mesh.children[10] as THREE.PointLight).intensity = 0;
           (
-            (r.mesh.children[20] as THREE.Mesh)
+            (r.mesh.children[11] as THREE.Mesh)
               .material as THREE.MeshBasicMaterial
           ).opacity = 0;
+          r.mesh.rotation.x = 0;
         }
       } else if (r.state === "returning") {
         const dx = home.x - r.mesh.position.x,
@@ -2022,17 +2034,20 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
           dz = home.z - r.mesh.position.z;
         const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (dist > 0.5) {
-          r.mesh.position.x += dx * 0.015;
-          r.mesh.position.y += dy * 0.015;
-          r.mesh.position.z += dz * 0.015;
+          r.mesh.position.x += dx * 0.02;
+          r.mesh.position.y += dy * 0.02;
+          r.mesh.position.z += dz * 0.02;
           r.mesh.rotation.y = Math.atan2(dx, dz);
+          r.mesh.rotation.x = 0.1;
         } else {
           r.state = "hovering";
           r.stateTime = 0;
+          r.mesh.rotation.x = 0;
         }
       } else if (r.state === "hovering") {
-        r.mesh.position.y = home.y + Math.sin(this.clock * 2 + r.phase) * 0.2;
-        if (r.stateTime > 2) {
+        r.mesh.position.y = home.y + Math.sin(this.clock * 3 + r.phase) * 0.3;
+        r.mesh.rotation.z = Math.sin(this.clock * 2) * 0.05;
+        if (r.stateTime > 3) {
           r.state = "flying";
           r.stateTime = 0;
           r.targetPoint =
@@ -2041,7 +2056,6 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
             ];
         }
       }
-      r.mesh.children[21].scale.setScalar(0.8 + Math.sin(this.clock * 8) * 0.3);
     });
   }
 
