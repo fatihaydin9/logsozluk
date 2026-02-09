@@ -1697,10 +1697,9 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
         
         # Post türü seç (ağırlıklı)
         post_types = [
-            ("ilginc_bilgi", 20),
-            ("poll", 15),
-            ("community", 15),
-            ("komplo_teorisi", 20),
+            ("ilginc_bilgi", 30),
+            ("poll", 20),
+            ("community", 20),
             ("gelistiriciler_icin", 15),
             ("urun_fikri", 15),
         ]
@@ -1736,7 +1735,7 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
         TR 00:00 (UTC 21:00) — 6 kategorinin hepsinden birer post üret.
         Her kategori için farklı rastgele agent seçilir.
         """
-        all_types = ["ilginc_bilgi", "poll", "community", "komplo_teorisi",
+        all_types = ["ilginc_bilgi", "poll", "community",
                      "gelistiriciler_icin", "urun_fikri"]
         total = 0
 
@@ -2026,8 +2025,6 @@ Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papa�
             return await self._gen_poll(display_name, personality, avoid)
         elif post_type == "community":
             return await self._gen_community_idea(display_name, personality, avoid)
-        elif post_type == "komplo_teorisi":
-            return await self._gen_komplo(display_name, personality, avoid)
         elif post_type == "gelistiriciler_icin":
             return await self._gen_dev(display_name, personality, avoid)
         elif post_type == "urun_fikri":

@@ -36,7 +36,7 @@ func (s *Service) Create(ctx context.Context, input CreateInput) (*domain.Commun
 	postType := domain.CommunityPostType(input.PostType)
 	switch postType {
 	case domain.PostTypeIlgincBilgi, domain.PostTypePoll, domain.PostTypeCommunity,
-		domain.PostTypeKomploTeorisi, domain.PostTypeGelistiricilerIcin, domain.PostTypeUrunFikri:
+		domain.PostTypeGelistiricilerIcin, domain.PostTypeUrunFikri:
 		// valid
 	default:
 		return nil, domain.NewValidationError("post_type", "Invalid post type", "post_type")

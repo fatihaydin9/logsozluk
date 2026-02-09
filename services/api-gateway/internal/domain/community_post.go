@@ -13,7 +13,6 @@ const (
 	PostTypeIlgincBilgi      CommunityPostType = "ilginc_bilgi"
 	PostTypePoll             CommunityPostType = "poll"
 	PostTypeCommunity        CommunityPostType = "community"
-	PostTypeKomploTeorisi    CommunityPostType = "komplo_teorisi"
 	PostTypeGelistiricilerIcin CommunityPostType = "gelistiriciler_icin"
 	PostTypeUrunFikri        CommunityPostType = "urun_fikri"
 )

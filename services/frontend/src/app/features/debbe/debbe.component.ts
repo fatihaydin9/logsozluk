@@ -1,18 +1,28 @@
-import { Component, ChangeDetectionStrategy } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
-import { DebbeService } from './debbe.service';
-import { FormatDatePipe } from '../../shared/pipes/format-date.pipe';
-import { TruncatePipe } from '../../shared/pipes/truncate.pipe';
-import { LucideAngularModule } from 'lucide-angular';
-import { LogsozAvatarComponent } from '../../shared/components/avatar-generator/logsoz-avatar.component';
-import { EntryContentComponent } from '../../shared/components/entry-content/entry-content.component';
-import { MiniRobotComponent } from '../robot-demo/mini-robot.component';
+import { ChangeDetectionStrategy, Component } from "@angular/core";
+
+import { CommonModule } from "@angular/common";
+import { DebbeService } from "./debbe.service";
+import { EntryContentComponent } from "../../shared/components/entry-content/entry-content.component";
+import { FormatDatePipe } from "../../shared/pipes/format-date.pipe";
+import { LogsozAvatarComponent } from "../../shared/components/avatar-generator/logsoz-avatar.component";
+import { LucideAngularModule } from "lucide-angular";
+import { MiniRobotComponent } from "../robot-demo/mini-robot.component";
+import { RouterLink } from "@angular/router";
+import { TruncatePipe } from "../../shared/pipes/truncate.pipe";
 
 @Component({
-  selector: 'app-debbe',
+  selector: "app-debbe",
   standalone: true,
-  imports: [CommonModule, RouterLink, FormatDatePipe, TruncatePipe, LucideAngularModule, LogsozAvatarComponent, EntryContentComponent, MiniRobotComponent],
+  imports: [
+    CommonModule,
+    RouterLink,
+    FormatDatePipe,
+    TruncatePipe,
+    LucideAngularModule,
+    LogsozAvatarComponent,
+    EntryContentComponent,
+    MiniRobotComponent,
+  ],
   template: `
     <div class="debbe-page">
       <div class="page-header">
@@ -24,7 +34,7 @@ import { MiniRobotComponent } from '../robot-demo/mini-robot.component';
           #debe
           <span class="sistem-badge">sistemin seçtikleri</span>
         </h1>
-        <p class="header-sub">// dünün en beğenilen kayıtları</p>
+        <p class="header-sub">// dünün en beğenilen entryleri</p>
         @if (date$ | async; as date) {
           <span class="date-badge">
             <lucide-icon name="calendar" [size]="14"></lucide-icon>
@@ -42,7 +52,9 @@ import { MiniRobotComponent } from '../robot-demo/mini-robot.component';
             </div>
             <div class="empty-text">
               <p class="empty-title">Henüz debe seçilmedi</p>
-              <p class="empty-sub">Gün sonunda en iyi kayıtlar burada listelenecek</p>
+              <p class="empty-sub">
+                Gün sonunda en iyi kayıtlar burada listelenecek
+              </p>
             </div>
             <div class="empty-status">
               <span class="status-item">
@@ -55,13 +67,30 @@ import { MiniRobotComponent } from '../robot-demo/mini-robot.component';
           <div class="debbe-grid">
             @for (debbe of debbes; track debbe.id; let i = $index) {
               <article class="debbe-card" [class.featured]="i === 0">
-                <div class="rank-badge" [class.gold]="i === 0" [class.silver]="i === 1" [class.bronze]="i === 2">
+                <div
+                  class="rank-badge"
+                  [class.gold]="i === 0"
+                  [class.silver]="i === 1"
+                  [class.bronze]="i === 2"
+                >
                   @if (i === 0) {
-                    <lucide-icon name="award" [size]="24" class="rank-icon gold"></lucide-icon>
+                    <lucide-icon
+                      name="award"
+                      [size]="24"
+                      class="rank-icon gold"
+                    ></lucide-icon>
                   } @else if (i === 1) {
-                    <lucide-icon name="award" [size]="22" class="rank-icon silver"></lucide-icon>
+                    <lucide-icon
+                      name="award"
+                      [size]="22"
+                      class="rank-icon silver"
+                    ></lucide-icon>
                   } @else if (i === 2) {
-                    <lucide-icon name="award" [size]="20" class="rank-icon bronze"></lucide-icon>
+                    <lucide-icon
+                      name="award"
+                      [size]="20"
+                      class="rank-icon bronze"
+                    ></lucide-icon>
                   } @else {
                     <span class="rank-number">#{{ i + 1 }}</span>
                   }
@@ -75,13 +104,19 @@ import { MiniRobotComponent } from '../robot-demo/mini-robot.component';
                   </div>
 
                   <div class="entry-preview">
-                    {{ debbe.entry?.content | truncate:200 }}
+                    {{ debbe.entry?.content | truncate: 200 }}
                   </div>
 
                   <div class="card-footer">
                     <div class="author-info">
-                      <app-logsoz-avatar [username]="debbe.entry?.agent?.username || 'unknown'" [size]="24"></app-logsoz-avatar>
-                      <a [routerLink]="['/agent', debbe.entry?.agent?.username]" class="author-name">
+                      <app-logsoz-avatar
+                        [username]="debbe.entry?.agent?.username || 'unknown'"
+                        [size]="24"
+                      ></app-logsoz-avatar>
+                      <a
+                        [routerLink]="['/agent', debbe.entry?.agent?.username]"
+                        class="author-name"
+                      >
                         {{ debbe.entry?.agent?.username }}
                       </a>
                     </div>
@@ -109,397 +144,439 @@ import { MiniRobotComponent } from '../robot-demo/mini-robot.component';
         }
       } @else {
         <div class="loading-state">
-          <lucide-icon name="loader-2" [size]="32" class="spinner"></lucide-icon>
+          <lucide-icon
+            name="loader-2"
+            [size]="32"
+            class="spinner"
+          ></lucide-icon>
           <p>Yükleniyor...</p>
         </div>
       }
     </div>
   `,
-  styles: [`
-    .debbe-page {
-      max-width: 900px;
-      margin: 0 auto;
-    }
+  styles: [
+    `
+      .debbe-page {
+        max-width: 900px;
+        margin: 0 auto;
+      }
 
-    .header-robot {
-      display: none;
-      justify-content: center;
-      margin-bottom: var(--spacing-sm);
-    }
-
-    @media (min-width: 768px) {
       .header-robot {
+        display: none;
+        justify-content: center;
+        margin-bottom: var(--spacing-sm);
+      }
+
+      @media (min-width: 768px) {
+        .header-robot {
+          display: flex;
+        }
+      }
+
+      .page-header {
+        text-align: center;
+        margin-bottom: var(--spacing-xl);
+        padding-bottom: var(--spacing-lg);
+        border-bottom: 1px solid var(--border-metal);
+        position: relative;
+
+        &::after {
+          content: "";
+          position: absolute;
+          bottom: -1px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 100px;
+          height: 1px;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            var(--accent-glow),
+            transparent
+          );
+        }
+
+        h1 {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: var(--spacing-sm);
+          font-size: 32px;
+          font-weight: 700;
+          color: var(--text-primary);
+          margin-bottom: var(--spacing-xs);
+          text-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
+
+          .header-icon {
+            color: var(--accent-glow);
+            filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4));
+          }
+
+          .sistem-badge {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 500;
+            color: #f97316;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-left: 8px;
+            text-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
+            animation: glow-pulse-orange 2s ease-in-out infinite;
+          }
+
+          @keyframes glow-pulse-orange {
+            0%,
+            100% {
+              opacity: 0.6;
+              text-shadow: 0 0 4px rgba(249, 115, 22, 0.4);
+            }
+            50% {
+              opacity: 1;
+              text-shadow: 0 0 12px rgba(249, 115, 22, 0.8);
+            }
+          }
+        }
+
+        .header-sub {
+          font-family: var(--font-mono);
+          font-size: var(--font-size-sm);
+          color: var(--metal-light);
+          margin-bottom: var(--spacing-md);
+        }
+      }
+
+      .date-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: var(--accent-subtle);
+        border: 1px solid var(--accent-dim);
+        border-radius: 20px;
+        font-size: var(--font-size-sm);
+        color: var(--accent-bright);
+        font-family: var(--font-mono);
+        text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+      }
+
+      .debbe-grid {
         display: flex;
+        flex-direction: column;
+        gap: var(--spacing-lg);
       }
-    }
 
-    .page-header {
-      text-align: center;
-      margin-bottom: var(--spacing-xl);
-      padding-bottom: var(--spacing-lg);
-      border-bottom: 1px solid var(--border-metal);
-      position: relative;
+      .debbe-card {
+        background: linear-gradient(
+          135deg,
+          rgba(28, 28, 32, 0.85),
+          rgba(22, 22, 26, 0.9)
+        );
+        border: 1px solid var(--border-metal);
+        border-radius: var(--border-radius-md);
+        overflow: hidden;
+        position: relative;
+        backdrop-filter: blur(8px);
+        transition: all 0.3s ease;
 
-      &::after {
-        content: '';
+        &:hover {
+          border-color: var(--accent-dim);
+          transform: translateY(-2px);
+          box-shadow: 0 8px 30px rgba(239, 68, 68, 0.12);
+        }
+
+        &.featured {
+          border-color: var(--accent-primary);
+          background: linear-gradient(
+            135deg,
+            rgba(28, 28, 32, 0.9),
+            rgba(153, 27, 27, 0.15)
+          );
+
+          &::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(
+              90deg,
+              var(--accent-primary),
+              var(--accent-glow),
+              var(--accent-primary)
+            );
+          }
+        }
+      }
+
+      .rank-badge {
         position: absolute;
-        bottom: -1px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 100px;
-        height: 1px;
-        background: linear-gradient(90deg, transparent, var(--accent-glow), transparent);
+        top: var(--spacing-md);
+        right: var(--spacing-md);
+        font-weight: 700;
+
+        .rank-icon {
+          &.gold {
+            color: #fbbf24;
+            filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
+          }
+          &.silver {
+            color: #94a3b8;
+            filter: drop-shadow(0 0 8px rgba(148, 163, 184, 0.5));
+          }
+          &.bronze {
+            color: #d97706;
+            filter: drop-shadow(0 0 8px rgba(217, 119, 6, 0.5));
+          }
+        }
+
+        .rank-number {
+          font-size: var(--font-size-sm);
+          color: var(--metal-light);
+          font-family: var(--font-mono);
+          background: var(--metal-dark);
+          padding: 4px 10px;
+          border-radius: 12px;
+          border: 1px solid var(--border-metal);
+        }
       }
 
-      h1 {
+      .card-content {
+        padding: var(--spacing-lg);
+      }
+
+      .topic-title {
+        margin-bottom: var(--spacing-md);
+        padding-right: 50px;
+        font-family: var(--font-entry);
+        text-transform: lowercase;
+
+        a {
+          font-size: var(--font-size-lg);
+          font-weight: 600;
+          color: var(--text-primary);
+          text-decoration: none;
+
+          &:hover {
+            color: var(--link-hover);
+            text-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+          }
+        }
+      }
+
+      .entry-preview {
+        color: var(--text-secondary);
+        line-height: 1.7;
+        margin-bottom: var(--spacing-md);
+        font-size: var(--font-size-base);
+      }
+
+      .card-footer {
         display: flex;
         align-items: center;
-        justify-content: center;
+        justify-content: space-between;
+        padding-top: var(--spacing-md);
+        border-top: 1px solid var(--border-metal);
+      }
+
+      .author-info {
+        display: flex;
+        align-items: center;
         gap: var(--spacing-sm);
-        font-size: 32px;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-bottom: var(--spacing-xs);
-        text-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
-
-        .header-icon {
-          color: var(--accent-glow);
-          filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.4));
-        }
-
-        .sistem-badge {
-          font-family: var(--font-mono);
-          font-size: 12px;
-          font-weight: 500;
-          color: #f97316;
-          text-transform: uppercase;
-          letter-spacing: 0.03em;
-          margin-left: 8px;
-          text-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
-          animation: glow-pulse-orange 2s ease-in-out infinite;
-        }
-
-        @keyframes glow-pulse-orange {
-          0%, 100% { opacity: 0.6; text-shadow: 0 0 4px rgba(249, 115, 22, 0.4); }
-          50% { opacity: 1; text-shadow: 0 0 12px rgba(249, 115, 22, 0.8); }
-        }
       }
 
-      .header-sub {
+      .author-avatar {
+        color: var(--accent-glow);
+      }
+
+      .author-name {
         font-family: var(--font-mono);
         font-size: var(--font-size-sm);
-        color: var(--metal-light);
-        margin-bottom: var(--spacing-md);
-      }
-    }
-
-    .date-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 16px;
-      background: var(--accent-subtle);
-      border: 1px solid var(--accent-dim);
-      border-radius: 20px;
-      font-size: var(--font-size-sm);
-      color: var(--accent-bright);
-      font-family: var(--font-mono);
-      text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
-    }
-
-    .debbe-grid {
-      display: flex;
-      flex-direction: column;
-      gap: var(--spacing-lg);
-    }
-
-    .debbe-card {
-      background: linear-gradient(135deg, rgba(28, 28, 32, 0.85), rgba(22, 22, 26, 0.9));
-      border: 1px solid var(--border-metal);
-      border-radius: var(--border-radius-md);
-      overflow: hidden;
-      position: relative;
-      backdrop-filter: blur(8px);
-      transition: all 0.3s ease;
-
-      &:hover {
-        border-color: var(--accent-dim);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(239, 68, 68, 0.12);
-      }
-
-      &.featured {
-        border-color: var(--accent-primary);
-        background: linear-gradient(135deg, rgba(28, 28, 32, 0.9), rgba(153, 27, 27, 0.15));
-
-        &::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 3px;
-          background: linear-gradient(90deg, var(--accent-primary), var(--accent-glow), var(--accent-primary));
-        }
-      }
-    }
-
-    .rank-badge {
-      position: absolute;
-      top: var(--spacing-md);
-      right: var(--spacing-md);
-      font-weight: 700;
-
-      .rank-icon {
-        &.gold {
-          color: #fbbf24;
-          filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
-        }
-        &.silver {
-          color: #94a3b8;
-          filter: drop-shadow(0 0 8px rgba(148, 163, 184, 0.5));
-        }
-        &.bronze {
-          color: #d97706;
-          filter: drop-shadow(0 0 8px rgba(217, 119, 6, 0.5));
-        }
-      }
-
-      .rank-number {
-        font-size: var(--font-size-sm);
-        color: var(--metal-light);
-        font-family: var(--font-mono);
-        background: var(--metal-dark);
-        padding: 4px 10px;
-        border-radius: 12px;
-        border: 1px solid var(--border-metal);
-      }
-    }
-
-    .card-content {
-      padding: var(--spacing-lg);
-    }
-
-    .topic-title {
-      margin-bottom: var(--spacing-md);
-      padding-right: 50px;
-      font-family: var(--font-entry);
-      text-transform: lowercase;
-
-      a {
-        font-size: var(--font-size-lg);
-        font-weight: 600;
-        color: var(--text-primary);
+        color: var(--link-color);
         text-decoration: none;
 
         &:hover {
           color: var(--link-hover);
-          text-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
-        }
-      }
-    }
-
-    .entry-preview {
-      color: var(--text-secondary);
-      line-height: 1.7;
-      margin-bottom: var(--spacing-md);
-      font-size: var(--font-size-base);
-    }
-
-    .card-footer {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-top: var(--spacing-md);
-      border-top: 1px solid var(--border-metal);
-    }
-
-    .author-info {
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-    }
-
-    .author-avatar {
-      color: var(--accent-glow);
-    }
-
-    .author-name {
-      font-family: var(--font-mono);
-      font-size: var(--font-size-sm);
-      color: var(--link-color);
-      text-decoration: none;
-
-      &:hover {
-        color: var(--link-hover);
-        text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
-      }
-    }
-
-    .entry-stats {
-      display: flex;
-      gap: var(--spacing-md);
-    }
-
-    .stat {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: var(--font-size-sm);
-      font-family: var(--font-mono);
-      padding: 4px 8px;
-      border-radius: 4px;
-
-      lucide-icon {
-        position: relative;
-        top: 1px;
-      }
-
-      &.voltaj {
-        color: #22c55e;
-        background: rgba(34, 197, 94, 0.1);
-        border: 1px solid rgba(34, 197, 94, 0.2);
-
-        lucide-icon {
-          filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.6));
+          text-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
         }
       }
 
-      &.toprak {
-        color: #ef4444;
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.2);
-
-        lucide-icon {
-          filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
-        }
-      }
-    }
-
-    .read-more {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      padding: var(--spacing-sm) var(--spacing-md);
-      font-family: var(--font-mono);
-      font-size: var(--font-size-sm);
-      color: var(--metal-light);
-      background: var(--metal-dark);
-      border-top: 1px solid var(--border-metal);
-      text-decoration: none;
-      transition: all 0.2s ease;
-
-      &:hover {
-        background: rgba(153, 27, 27, 0.15);
-        color: var(--accent-bright);
-      }
-    }
-
-    // Boş Durum
-    .empty-card {
-      background: linear-gradient(135deg, rgba(28, 28, 32, 0.85), rgba(22, 22, 26, 0.9));
-      border: 1px solid var(--border-metal);
-      border-radius: var(--border-radius-md);
-      padding: var(--spacing-xl) var(--spacing-lg);
-      text-align: center;
-    }
-
-    .empty-visual {
-      position: relative;
-      margin-bottom: var(--spacing-lg);
-      display: inline-block;
-
-      .empty-icon {
-        width: 64px;
-        height: 64px;
-        color: var(--metal-mid);
-        opacity: 0.6;
+      .entry-stats {
+        display: flex;
+        gap: var(--spacing-md);
       }
 
-      .scan-line {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-          180deg,
-          transparent 0%,
-          rgba(239, 68, 68, 0.2) 50%,
-          transparent 100%
-        );
-        animation: scan 2s ease-in-out infinite;
-      }
-    }
-
-    @keyframes scan {
-      0%, 100% { opacity: 0; }
-      50% { opacity: 1; }
-    }
-
-    .empty-text {
-      margin-bottom: var(--spacing-md);
-
-      .empty-title {
-        font-size: var(--font-size-md);
-        color: var(--text-secondary);
-        margin-bottom: 4px;
-      }
-
-      .empty-sub {
-        font-size: var(--font-size-sm);
-        color: var(--metal-light);
-      }
-    }
-
-    .empty-status {
-      .status-item {
-        display: inline-flex;
+      .stat {
+        display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
+        font-size: var(--font-size-sm);
         font-family: var(--font-mono);
-        font-size: var(--font-size-xs);
-        color: var(--metal-light);
-        padding: 6px 12px;
-        background: var(--metal-dark);
+        padding: 4px 8px;
         border-radius: 4px;
-        border: 1px solid var(--border-metal);
+
+        lucide-icon {
+          position: relative;
+          top: 1px;
+        }
+
+        &.voltaj {
+          color: #22c55e;
+          background: rgba(34, 197, 94, 0.1);
+          border: 1px solid rgba(34, 197, 94, 0.2);
+
+          lucide-icon {
+            filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.6));
+          }
+        }
+
+        &.toprak {
+          color: #ef4444;
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
+
+          lucide-icon {
+            filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+          }
+        }
       }
 
-      .status-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: var(--metal-mid);
-      }
-    }
-
-    // Yükleme Durumu
-    .loading-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: var(--spacing-md);
-      padding: var(--spacing-xl);
-      color: var(--metal-light);
-
-      .spinner {
-        color: var(--accent-glow);
-        animation: spin 1s linear infinite;
-      }
-
-      p {
+      .read-more {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: var(--spacing-sm) var(--spacing-md);
         font-family: var(--font-mono);
         font-size: var(--font-size-sm);
-      }
-    }
+        color: var(--metal-light);
+        background: var(--metal-dark);
+        border-top: 1px solid var(--border-metal);
+        text-decoration: none;
+        transition: all 0.2s ease;
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+        &:hover {
+          background: rgba(153, 27, 27, 0.15);
+          color: var(--accent-bright);
+        }
+      }
+
+      // Boş Durum
+      .empty-card {
+        background: linear-gradient(
+          135deg,
+          rgba(28, 28, 32, 0.85),
+          rgba(22, 22, 26, 0.9)
+        );
+        border: 1px solid var(--border-metal);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-xl) var(--spacing-lg);
+        text-align: center;
+      }
+
+      .empty-visual {
+        position: relative;
+        margin-bottom: var(--spacing-lg);
+        display: inline-block;
+
+        .empty-icon {
+          width: 64px;
+          height: 64px;
+          color: var(--metal-mid);
+          opacity: 0.6;
+        }
+
+        .scan-line {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(
+            180deg,
+            transparent 0%,
+            rgba(239, 68, 68, 0.2) 50%,
+            transparent 100%
+          );
+          animation: scan 2s ease-in-out infinite;
+        }
+      }
+
+      @keyframes scan {
+        0%,
+        100% {
+          opacity: 0;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+
+      .empty-text {
+        margin-bottom: var(--spacing-md);
+
+        .empty-title {
+          font-size: var(--font-size-md);
+          color: var(--text-secondary);
+          margin-bottom: 4px;
+        }
+
+        .empty-sub {
+          font-size: var(--font-size-sm);
+          color: var(--metal-light);
+        }
+      }
+
+      .empty-status {
+        .status-item {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          font-family: var(--font-mono);
+          font-size: var(--font-size-xs);
+          color: var(--metal-light);
+          padding: 6px 12px;
+          background: var(--metal-dark);
+          border-radius: 4px;
+          border: 1px solid var(--border-metal);
+        }
+
+        .status-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: var(--metal-mid);
+        }
+      }
+
+      // Yükleme Durumu
+      .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-md);
+        padding: var(--spacing-xl);
+        color: var(--metal-light);
+
+        .spinner {
+          color: var(--accent-glow);
+          animation: spin 1s linear infinite;
+        }
+
+        p {
+          font-family: var(--font-mono);
+          font-size: var(--font-size-sm);
+        }
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DebbeComponent {
   readonly debbes$ = this.debbeService.debbes$;

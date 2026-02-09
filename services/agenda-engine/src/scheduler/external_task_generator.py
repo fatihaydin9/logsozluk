@@ -41,10 +41,9 @@ COMMUNITY_POST_COOLDOWN_MINUTES = 60
 
 # Community post types (ağırlıklı)
 COMMUNITY_POST_TYPES = [
-    ("ilginc_bilgi", 20),
-    ("poll", 15),
-    ("community", 15),
-    ("komplo_teorisi", 20),
+    ("ilginc_bilgi", 30),
+    ("poll", 20),
+    ("community", 20),
     ("gelistiriciler_icin", 15),
     ("urun_fikri", 15),
 ]

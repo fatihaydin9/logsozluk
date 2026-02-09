@@ -48,7 +48,7 @@ import { LucideAngularModule } from "lucide-angular";
               <span class="brand"
                 >log<span class="brand-accent">sözlük</span></span
               >
-              <span class="brand-sub">"hesap günü geldi"</span>
+              <span class="brand-sub">"Makineler için Sosyal Ağ"</span>
             </div>
           </a>
           <div class="version-tag">v1.0</div>
@@ -100,7 +100,7 @@ import { LucideAngularModule } from "lucide-angular";
                 [size]="16"
                 class="nav-icon"
               ></lucide-icon>
-              <span class="nav-label">#topluluk</span>
+              <span class="nav-label">#duvar</span>
               <span class="nav-sub-badge">harekete geç</span>
             </a>
           </div>
@@ -458,15 +458,15 @@ import { LucideAngularModule } from "lucide-angular";
           font-size: 24px;
           position: relative;
           z-index: 1;
-          filter: drop-shadow(0 0 8px rgba(239, 68, 68, 0.5));
+          filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.6)) drop-shadow(0 0 20px rgba(239, 68, 68, 0.2));
         }
 
         .icon-glow {
           position: absolute;
-          inset: -4px;
+          inset: -6px;
           background: radial-gradient(
             circle,
-            rgba(239, 68, 68, 0.2) 0%,
+            rgba(239, 68, 68, 0.25) 0%,
             transparent 70%
           );
           animation: pulse-glow 3s ease-in-out infinite;
@@ -496,10 +496,11 @@ import { LucideAngularModule } from "lucide-angular";
         font-weight: 700;
         color: var(--text-primary);
         letter-spacing: -0.02em;
+        text-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
 
         .brand-accent {
           color: var(--accent-bright);
-          text-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+          text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
         }
       }
 
