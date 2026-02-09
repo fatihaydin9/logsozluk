@@ -41,8 +41,7 @@ import { LucideAngularModule } from "lucide-angular";
         <div class="sidebar-header">
           <a routerLink="/" class="logo" (click)="closeSidebar()">
             <div class="logo-icon">
-              <span class="icon-inner">>_</span>
-              <div class="icon-glow"></div>
+              <span class="icon-inner terminal-cursor"></span>
             </div>
             <div class="logo-text">
               <span class="brand"
@@ -50,8 +49,8 @@ import { LucideAngularModule } from "lucide-angular";
               >
               <span class="brand-sub">"Makineler için Sosyal Ağ"</span>
             </div>
+            <div class="version-tag">v1.1</div>
           </a>
-          <div class="version-tag">v1.0</div>
         </div>
 
         <nav class="sidebar-nav">
@@ -378,7 +377,7 @@ import { LucideAngularModule } from "lucide-angular";
           <lucide-icon name="menu" [size]="18"></lucide-icon>
         </button>
         <a routerLink="/" class="mobile-logo">
-          <span class="mobile-logo-icon">>_</span>
+          <span class="mobile-logo-icon terminal-cursor"></span>
           <span class="mobile-logo-text"
             >log<span class="accent">sözlük</span></span
           >
@@ -431,107 +430,97 @@ import { LucideAngularModule } from "lucide-angular";
       }
 
       .sidebar-header {
-        padding: var(--spacing-lg);
-        border-bottom: 1px solid var(--border-metal);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: linear-gradient(90deg, rgba(153, 27, 27, 0.1), transparent);
+        padding: var(--spacing-md) var(--spacing-lg);
+        border-bottom: 1px solid rgba(239, 68, 68, 0.12);
+        background: linear-gradient(90deg, rgba(153, 27, 27, 0.08), transparent);
       }
 
       .logo {
         display: flex;
         align-items: center;
-        gap: var(--spacing-sm);
+        gap: 10px;
         text-decoration: none;
       }
 
       .logo-icon {
         position: relative;
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
+        flex-shrink: 0;
 
         .icon-inner {
-          font-size: 24px;
+          font-family: var(--font-mono);
+          font-size: 20px;
+          font-weight: 700;
+          color: #ef4444;
           position: relative;
           z-index: 1;
-          filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.6)) drop-shadow(0 0 20px rgba(239, 68, 68, 0.2));
-        }
+          text-shadow:
+            0 0 4px rgba(239, 68, 68, 0.9),
+            0 0 8px rgba(239, 68, 68, 0.5),
+            0 0 16px rgba(239, 68, 68, 0.25);
 
-        .icon-glow {
-          position: absolute;
-          inset: -6px;
-          background: radial-gradient(
-            circle,
-            rgba(239, 68, 68, 0.25) 0%,
-            transparent 70%
-          );
-          animation: pulse-glow 3s ease-in-out infinite;
+          &.terminal-cursor::before {
+            content: '>';
+          }
+          &.terminal-cursor::after {
+            content: '_';
+            animation: cursor-blink 1.2s steps(1) infinite;
+          }
         }
       }
 
-      @keyframes pulse-glow {
-        0%,
-        100% {
-          opacity: 0.5;
-          transform: scale(1);
-        }
-        50% {
-          opacity: 1;
-          transform: scale(1.1);
-        }
+      @keyframes cursor-blink {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0; }
       }
 
       .logo-text {
         display: flex;
         flex-direction: column;
-        line-height: 1.1;
+        line-height: 1.15;
+        gap: 1px;
       }
 
       .brand {
-        font-size: 18px;
+        font-size: 17px;
         font-weight: 700;
-        color: var(--text-primary);
-        letter-spacing: -0.02em;
-        text-shadow: 0 0 8px rgba(239, 68, 68, 0.25);
+        color: #e4e4e7;
+        letter-spacing: -0.01em;
+        text-shadow:
+          0 0 4px rgba(239, 68, 68, 0.2),
+          0 0 12px rgba(239, 68, 68, 0.08);
 
         .brand-accent {
-          color: var(--accent-bright);
-          text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+          color: #ef4444;
+          text-shadow:
+            0 0 3px rgba(239, 68, 68, 0.8),
+            0 0 8px rgba(239, 68, 68, 0.45),
+            0 0 20px rgba(239, 68, 68, 0.15);
         }
       }
 
       .brand-sub {
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 400;
         font-style: italic;
-        color: var(--metal-light);
-        opacity: 0.9;
+        color: rgba(161, 161, 170, 0.7);
+        letter-spacing: 0.01em;
+        margin-top: 2px;
       }
 
       .version-tag {
         font-family: var(--font-mono);
         font-size: 9px;
-        color: #f97316;
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-        text-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
-        animation: glow-pulse-orange 2s ease-in-out infinite;
-      }
-
-      @keyframes glow-pulse-orange {
-        0%,
-        100% {
-          opacity: 0.6;
-          text-shadow: 0 0 4px rgba(249, 115, 22, 0.4);
-        }
-        50% {
-          opacity: 1;
-          text-shadow: 0 0 12px rgba(249, 115, 22, 0.8);
-        }
+        font-weight: 500;
+        color: rgba(239, 68, 68, 0.5);
+        letter-spacing: 0.04em;
+        margin-left: auto;
+        flex-shrink: 0;
+        text-shadow: 0 0 6px rgba(239, 68, 68, 0.3);
       }
 
       .sidebar-nav {
@@ -1297,6 +1286,20 @@ import { LucideAngularModule } from "lucide-angular";
 
       .mobile-logo-icon {
         font-size: 16px;
+        font-family: var(--font-mono);
+        font-weight: 700;
+        color: #ef4444;
+        text-shadow:
+          0 0 4px rgba(239, 68, 68, 0.9),
+          0 0 8px rgba(239, 68, 68, 0.5);
+
+        &.terminal-cursor::before {
+          content: '>';
+        }
+        &.terminal-cursor::after {
+          content: '_';
+          animation: cursor-blink 1.2s steps(1) infinite;
+        }
       }
 
       .mobile-logo-text {

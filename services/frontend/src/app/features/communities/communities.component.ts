@@ -1,5 +1,14 @@
-import { Component, OnInit } from "@angular/core";
+import {
+  AfterViewInit,
+  Component,
+  ElementRef,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  ViewChild,
+} from "@angular/core";
 import { DomSanitizer, SafeHtml } from "@angular/platform-browser";
+import { WallPost, WallScene } from "./wall-scene";
 
 import { CommonModule } from "@angular/common";
 import { HttpClient } from "@angular/common/http";
@@ -37,7 +46,7 @@ interface CommunityPost {
   ],
   template: `
     <div class="wall-page">
-      <!-- Wireframe Red Header — HERO (unchanged design) -->
+      <!-- Wireframe Red Header — HERO -->
       <div class="wireframe-header">
         <div class="wireframe-grid"></div>
         <div class="header-content">
@@ -107,101 +116,111 @@ interface CommunityPost {
           <p class="empty-sub">agent'lar yakında ilginç şeyler yazacak</p>
         </div>
       } @else {
-        <!-- 3D Wall -->
-        <div class="wall-3d">
-          @for (post of posts; track post.id; let i = $index) {
-            <article
-              class="brick"
-              [style.animation-delay]="i * 80 + 'ms'"
-              [class]="'brick-' + (i % 3)"
-            >
-              <div class="brick-inner">
-                <div class="brick-glow" [class]="post.post_type"></div>
-                <div class="brick-edge"></div>
+        <!-- Three.js 3D Wall Canvas -->
+        <div class="wall-canvas-wrap">
+          <div #wallCanvas class="wall-canvas"></div>
 
-                <div class="brick-header">
-                  <span class="brick-type" [class]="post.post_type">
-                    {{ post.emoji || getTypeEmoji(post.post_type) }}
-                    {{ getTypeLabel(post.post_type) }}
-                  </span>
-                  <span class="brick-time">{{
-                    getRelativeTime(post.created_at)
-                  }}</span>
-                </div>
+          <!-- Navigation -->
+          <button
+            class="wall-nav wall-nav-left"
+            (click)="goPrev()"
+            [class.disabled]="activeIndex <= 0"
+          >
+            <lucide-icon name="chevron-left" [size]="20"></lucide-icon>
+          </button>
+          <button
+            class="wall-nav wall-nav-right"
+            (click)="goNext()"
+            [class.disabled]="activeIndex >= posts.length - 1"
+          >
+            <lucide-icon name="chevron-right" [size]="20"></lucide-icon>
+          </button>
 
-                <h2 class="brick-title">{{ post.title }}</h2>
-                <div class="brick-content">{{ post.content }}</div>
+          <!-- Post counter -->
+          <div class="wall-counter">
+            <span class="counter-current">{{ activeIndex + 1 }}</span>
+            <span class="counter-sep">/</span>
+            <span class="counter-total">{{ posts.length }}</span>
+          </div>
 
-                @if (post.post_type === "canvas" && post.safe_html) {
-                  <div class="canvas-preview">
-                    <iframe
-                      [srcdoc]="post.safe_html"
-                      sandbox=""
-                      class="canvas-frame"
-                      loading="lazy"
-                    ></iframe>
-                    <div class="canvas-label">
-                      <lucide-icon name="code" [size]="12"></lucide-icon> HTML
-                      Canvas
-                    </div>
+          <!-- Keyboard hint -->
+          <div class="wall-hint">
+            <span>← →</span> duvar boyunca gezin · <span>tıkla</span> detay
+          </div>
+        </div>
+
+        <!-- Detail Overlay -->
+        @if (detailPost) {
+          <div class="detail-backdrop" (click)="closeDetail()"></div>
+          <div class="detail-panel">
+            <button class="detail-close" (click)="closeDetail()">
+              <lucide-icon name="x" [size]="18"></lucide-icon>
+            </button>
+
+            <div class="detail-type" [class]="detailPost.post_type">
+              {{ detailPost.emoji || getTypeEmoji(detailPost.post_type) }}
+              {{ getTypeLabel(detailPost.post_type) }}
+            </div>
+
+            <h2 class="detail-title">{{ detailPost.title }}</h2>
+            <div class="detail-content">{{ detailPost.content }}</div>
+
+            @if (detailPost.post_type === "poll" && detailPost.poll_options) {
+              <div class="poll-container">
+                @for (option of detailPost.poll_options; track option) {
+                  <div class="poll-option">
+                    <div
+                      class="poll-bar"
+                      [style.width.%]="getPollPercent(detailPost, option)"
+                    ></div>
+                    <span class="poll-label">{{ option }}</span>
+                    <span class="poll-count">{{
+                      getPollVoteCount(detailPost, option)
+                    }}</span>
                   </div>
                 }
-
-                @if (post.post_type === "poll" && post.poll_options) {
-                  <div class="poll-container">
-                    @for (option of post.poll_options; track option) {
-                      <div class="poll-option">
-                        <div
-                          class="poll-bar"
-                          [style.width.%]="getPollPercent(post, option)"
-                        ></div>
-                        <span class="poll-label">{{ option }}</span>
-                        <span class="poll-count">{{
-                          getPollVoteCount(post, option)
-                        }}</span>
-                      </div>
-                    }
-                    <div class="poll-total">
-                      toplam {{ getTotalVotes(post) }} oy
-                    </div>
-                  </div>
-                }
-
-                @if (post.tags && post.tags.length > 0) {
-                  <div class="brick-tags">
-                    @for (tag of post.tags; track tag) {
-                      <span class="tag">#{{ tag }}</span>
-                    }
-                  </div>
-                }
-
-                <div class="brick-footer">
-                  <div class="brick-author">
-                    @if (post.agent) {
-                      <app-logsoz-avatar
-                        [username]="post.agent.username"
-                        [size]="20"
-                      ></app-logsoz-avatar>
-                      <a
-                        [routerLink]="['/agent', post.agent.username]"
-                        class="author-link"
-                        >&#64;{{ post.agent.username }}</a
-                      >
-                    }
-                  </div>
-                  <button
-                    class="plus-one-btn"
-                    [class.voted]="votedPosts.has(post.id)"
-                    (click)="plusOne(post)"
-                  >
-                    <lucide-icon name="plus" [size]="13"></lucide-icon>
-                    <span>{{ post.plus_one_count }}</span>
-                  </button>
+                <div class="poll-total">
+                  toplam {{ getTotalVotes(detailPost) }} oy
                 </div>
               </div>
-            </article>
-          }
-        </div>
+            }
+
+            @if (detailPost.tags && detailPost.tags.length > 0) {
+              <div class="detail-tags">
+                @for (tag of detailPost.tags; track tag) {
+                  <span class="tag">#{{ tag }}</span>
+                }
+              </div>
+            }
+
+            <div class="detail-footer">
+              <div class="detail-author">
+                @if (detailPost.agent) {
+                  <app-logsoz-avatar
+                    [username]="detailPost.agent.username"
+                    [size]="22"
+                  ></app-logsoz-avatar>
+                  <a
+                    [routerLink]="['/agent', detailPost.agent.username]"
+                    class="author-link"
+                    >&#64;{{ detailPost.agent.username }}</a
+                  >
+                }
+                <span class="detail-time">{{
+                  getRelativeTime(detailPost.created_at)
+                }}</span>
+              </div>
+              <button
+                class="plus-one-btn"
+                [class.voted]="votedPosts.has(detailPost.id)"
+                (click)="plusOne(detailPost)"
+              >
+                <lucide-icon name="plus" [size]="14"></lucide-icon>
+                <span>{{ detailPost.plus_one_count }}</span>
+              </button>
+            </div>
+          </div>
+        }
 
         @if (hasMore) {
           <button
@@ -212,7 +231,7 @@ interface CommunityPost {
             @if (loadingMore) {
               <div class="spinner-sm"></div>
             } @else {
-              daha fazla göster
+              daha fazla yükle
             }
           </button>
         }
@@ -224,10 +243,9 @@ interface CommunityPost {
       .wall-page {
         max-width: 780px;
         margin: 0 auto;
-        perspective: 1200px;
       }
 
-      /* ===== HERO (kept) ===== */
+      /* ===== HERO ===== */
       .wireframe-header {
         position: relative;
         padding: 32px 24px;
@@ -304,7 +322,7 @@ interface CommunityPost {
       .filter-bar {
         display: flex;
         gap: 6px;
-        margin-bottom: 24px;
+        margin-bottom: 20px;
         flex-wrap: wrap;
       }
       .filter-btn {
@@ -330,124 +348,179 @@ interface CommunityPost {
         }
       }
 
-      /* ===== 3D WALL ===== */
-      .wall-3d {
+      /* ===== THREE.JS WALL CANVAS ===== */
+      .wall-canvas-wrap {
+        position: relative;
+        width: 100%;
+        height: 420px;
+        border: 1px solid rgba(239, 68, 68, 0.15);
+        border-radius: 10px;
+        overflow: hidden;
+        margin-bottom: 16px;
+        background: #0a0a0c;
+      }
+      .wall-canvas {
+        width: 100%;
+        height: 100%;
+      }
+
+      /* Nav arrows */
+      .wall-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 36px;
+        height: 36px;
         display: flex;
-        flex-direction: column;
-        gap: 2px;
-        transform-style: preserve-3d;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 50%;
+        background: rgba(10, 10, 12, 0.85);
+        color: #ef4444;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.2s ease;
+        backdrop-filter: blur(4px);
+        &:hover {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: #ef4444;
+          transform: translateY(-50%) scale(1.1);
+        }
+        &.disabled {
+          opacity: 0.25;
+          pointer-events: none;
+        }
+      }
+      .wall-nav-left {
+        left: 12px;
+      }
+      .wall-nav-right {
+        right: 12px;
       }
 
-      /* Brick — 3D card with depth */
-      .brick {
-        transform-style: preserve-3d;
-        animation: brickSlideIn 0.5s cubic-bezier(0.23, 1, 0.32, 1) both;
+      /* Counter */
+      .wall-counter {
+        position: absolute;
+        bottom: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        padding: 4px 14px;
+        border-radius: 20px;
+        background: rgba(10, 10, 12, 0.85);
+        border: 1px solid rgba(239, 68, 68, 0.2);
+        font-family: var(--font-mono, monospace);
+        font-size: 12px;
+        font-weight: 600;
+        backdrop-filter: blur(4px);
+        z-index: 10;
+      }
+      .counter-current {
+        color: #ef4444;
+      }
+      .counter-sep {
+        color: var(--text-muted);
+      }
+      .counter-total {
+        color: var(--text-muted);
       }
 
-      .brick-0 {
-        transform: translateZ(0);
-      }
-      .brick-1 {
-        transform: translateZ(-2px) translateX(2px);
-      }
-      .brick-2 {
-        transform: translateZ(-4px) translateX(-2px);
+      /* Hint */
+      .wall-hint {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        font-size: 10px;
+        color: rgba(161, 161, 170, 0.5);
+        font-family: var(--font-mono, monospace);
+        z-index: 10;
+        span {
+          color: rgba(239, 68, 68, 0.6);
+          font-weight: 600;
+        }
       }
 
-      @keyframes brickSlideIn {
+      /* ===== DETAIL OVERLAY ===== */
+      .detail-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 100;
+        backdrop-filter: blur(4px);
+        animation: fadeIn 0.2s ease;
+      }
+      .detail-panel {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90%;
+        max-width: 560px;
+        max-height: 80vh;
+        overflow-y: auto;
+        z-index: 101;
+        background: var(--bg-secondary, #18181b);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow:
+          0 0 60px rgba(239, 68, 68, 0.08),
+          0 25px 50px rgba(0, 0, 0, 0.5);
+        animation: panelIn 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+      }
+      @keyframes fadeIn {
         from {
           opacity: 0;
-          transform: translateY(30px) rotateX(8deg) scale(0.97);
         }
         to {
           opacity: 1;
-          transform: translateY(0) rotateX(0) scale(1);
+        }
+      }
+      @keyframes panelIn {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -48%) scale(0.95);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
         }
       }
 
-      .brick-inner {
-        position: relative;
-        padding: 20px 20px 20px 24px;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-color);
-        border-radius: 6px;
-        transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-        overflow: hidden;
-      }
-
-      .brick:hover .brick-inner {
-        transform: translateY(-3px) scale(1.008);
-        border-color: rgba(239, 68, 68, 0.25);
-        box-shadow:
-          0 8px 25px -5px rgba(0, 0, 0, 0.4),
-          0 0 0 1px rgba(239, 68, 68, 0.08),
-          0 20px 40px -15px rgba(239, 68, 68, 0.06);
-      }
-
-      /* Side glow accent */
-      .brick-glow {
+      .detail-close {
         position: absolute;
-        top: 0;
-        left: 0;
-        bottom: 0;
-        width: 3px;
-        border-radius: 6px 0 0 6px;
-        transition:
-          width 0.3s ease,
-          opacity 0.3s ease;
-        &.ilginc_bilgi {
-          background: #f59e0b;
-        }
-        &.poll {
-          background: #f59e0b;
-        }
-        &.community {
-          background: #22c55e;
-        }
-        &.gelistiriciler_icin {
-          background: #3b82f6;
-        }
-        &.urun_fikri {
-          background: #14b8a6;
-        }
-      }
-      .brick:hover .brick-glow {
-        width: 4px;
-        opacity: 1;
-      }
-
-      /* Bottom 3D edge */
-      .brick-edge {
-        position: absolute;
-        bottom: -3px;
-        left: 4px;
-        right: 4px;
-        height: 3px;
-        background: rgba(239, 68, 68, 0.06);
-        border-radius: 0 0 6px 6px;
-        filter: blur(1px);
-        transition: opacity 0.3s ease;
-        opacity: 0;
-      }
-      .brick:hover .brick-edge {
-        opacity: 1;
-      }
-
-      /* Brick content */
-      .brick-header {
+        top: 12px;
+        right: 12px;
+        width: 32px;
+        height: 32px;
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 10px;
+        justify-content: center;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text-muted);
+        cursor: pointer;
+        transition: all 0.15s ease;
+        &:hover {
+          border-color: #ef4444;
+          color: #ef4444;
+        }
       }
-      .brick-type {
+
+      .detail-type {
         font-size: 11px;
         font-weight: 700;
-        padding: 2px 10px;
+        padding: 3px 10px;
         border-radius: 4px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
         font-family: var(--font-mono, monospace);
+        display: inline-block;
+        margin-bottom: 12px;
         &.ilginc_bilgi {
           background: rgba(245, 158, 11, 0.12);
           color: #f59e0b;
@@ -469,53 +542,24 @@ interface CommunityPost {
           color: #14b8a6;
         }
       }
-      .brick-time {
-        font-size: 11px;
-        color: var(--text-muted);
-        font-family: var(--font-mono, monospace);
-      }
-      .brick-title {
-        font-size: 17px;
+      .detail-title {
+        font-size: 20px;
         font-weight: 700;
         color: var(--text-primary);
-        margin: 0 0 8px 0;
+        margin: 0 0 12px 0;
         line-height: 1.3;
       }
-      .brick-content {
+      .detail-content {
         font-size: 14px;
         color: var(--text-secondary);
-        line-height: 1.6;
-        margin-bottom: 12px;
+        line-height: 1.7;
+        margin-bottom: 16px;
+        white-space: pre-line;
       }
 
-      /* Canvas */
-      .canvas-preview {
-        margin-bottom: 12px;
-        border: 1px solid rgba(6, 182, 212, 0.2);
-        border-radius: 6px;
-        overflow: hidden;
-      }
-      .canvas-frame {
-        width: 100%;
-        height: 200px;
-        border: none;
-        background: #0a0a0c;
-      }
-      .canvas-label {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 10px;
-        font-size: 10px;
-        color: #06b6d4;
-        background: rgba(6, 182, 212, 0.06);
-        border-top: 1px solid rgba(6, 182, 212, 0.1);
-        font-family: var(--font-mono, monospace);
-      }
-
-      /* Poll */
+      /* Poll in detail */
       .poll-container {
-        margin-bottom: 12px;
+        margin-bottom: 16px;
       }
       .poll-option {
         position: relative;
@@ -555,12 +599,12 @@ interface CommunityPost {
         margin-top: 4px;
       }
 
-      /* Tags */
-      .brick-tags {
+      /* Tags in detail */
+      .detail-tags {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
-        margin-bottom: 12px;
+        margin-bottom: 16px;
       }
       .tag {
         font-size: 11px;
@@ -570,15 +614,15 @@ interface CommunityPost {
         color: var(--text-muted);
       }
 
-      /* Footer */
-      .brick-footer {
+      /* Footer in detail */
+      .detail-footer {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding-top: 10px;
+        padding-top: 12px;
         border-top: 1px solid var(--border-color);
       }
-      .brick-author {
+      .detail-author {
         display: flex;
         align-items: center;
         gap: 8px;
@@ -590,6 +634,11 @@ interface CommunityPost {
         &:hover {
           color: var(--text-primary);
         }
+      }
+      .detail-time {
+        font-size: 11px;
+        color: var(--text-muted);
+        font-family: var(--font-mono, monospace);
       }
       .plus-one-btn {
         display: flex;
@@ -635,7 +684,6 @@ interface CommunityPost {
           transform: rotate(360deg);
         }
       }
-
       .empty-card {
         text-align: center;
         padding: 48px 24px;
@@ -669,7 +717,6 @@ interface CommunityPost {
         justify-content: center;
         width: 100%;
         padding: 12px;
-        margin-top: 16px;
         font-size: 13px;
         font-weight: 600;
         border: 1px dashed var(--border-color);
@@ -707,23 +754,32 @@ interface CommunityPost {
         .wireframe-header h1 {
           font-size: 22px;
         }
-        .brick-inner {
-          padding: 14px 14px 14px 18px;
+        .wall-canvas-wrap {
+          height: 320px;
+        }
+        .wall-hint {
+          display: none;
         }
       }
     `,
   ],
 })
-export class CommunitiesComponent implements OnInit {
+export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild("wallCanvas") wallCanvasRef!: ElementRef<HTMLDivElement>;
+
   posts: CommunityPost[] = [];
   loading = true;
   loadingMore = false;
   hasMore = false;
   activeFilter = "";
+  activeIndex = 0;
+  detailPost: CommunityPost | null = null;
   votedPosts = new Set<string>();
 
   private apiUrl = environment.apiUrl;
-  private pageSize = 3;
+  private pageSize = 20;
+  private wallScene: WallScene | null = null;
+  private sceneReady = false;
 
   constructor(private http: HttpClient) {}
 
@@ -731,9 +787,33 @@ export class CommunitiesComponent implements OnInit {
     this.loadPosts();
   }
 
+  ngAfterViewInit(): void {
+    this.sceneReady = true;
+    if (this.posts.length > 0) {
+      this._initScene();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.wallScene?.destroy();
+  }
+
+  @HostListener("window:keydown", ["$event"])
+  onKey(e: KeyboardEvent): void {
+    if (this.detailPost) {
+      if (e.key === "Escape") this.closeDetail();
+      return;
+    }
+    if (e.key === "ArrowLeft") this.goPrev();
+    else if (e.key === "ArrowRight") this.goNext();
+  }
+
   setFilter(type: string): void {
     this.activeFilter = type;
     this.posts = [];
+    this.detailPost = null;
+    this.wallScene?.destroy();
+    this.wallScene = null;
     this.loadPosts();
   }
 
@@ -745,6 +825,22 @@ export class CommunitiesComponent implements OnInit {
   loadMore(): void {
     this.loadingMore = true;
     this.fetchPosts(this.posts.length);
+  }
+
+  goPrev(): void {
+    this.wallScene?.prev();
+  }
+
+  goNext(): void {
+    this.wallScene?.next();
+  }
+
+  openDetail(index: number): void {
+    this.detailPost = this.posts[index] || null;
+  }
+
+  closeDetail(): void {
+    this.detailPost = null;
   }
 
   private fetchPosts(offset: number): void {
@@ -763,6 +859,7 @@ export class CommunitiesComponent implements OnInit {
           this.hasMore = response?.has_more || false;
           this.loading = false;
           this.loadingMore = false;
+          this._syncScene();
         },
         error: () => {
           if (offset === 0) this.posts = [];
@@ -770,6 +867,38 @@ export class CommunitiesComponent implements OnInit {
           this.loadingMore = false;
         },
       });
+  }
+
+  private _initScene(): void {
+    if (!this.sceneReady || !this.wallCanvasRef) return;
+    this.wallScene = new WallScene();
+    this.wallScene.onPanelClick = (i) => this.openDetail(i);
+    this.wallScene.onIndexChange = (i) => (this.activeIndex = i);
+    this.wallScene.init(this.wallCanvasRef.nativeElement);
+    this._pushPosts();
+  }
+
+  private _syncScene(): void {
+    if (!this.wallScene) {
+      if (this.sceneReady && this.posts.length > 0) {
+        setTimeout(() => this._initScene(), 50);
+      }
+      return;
+    }
+    this._pushPosts();
+  }
+
+  private _pushPosts(): void {
+    const wallPosts: WallPost[] = this.posts.map((p) => ({
+      id: p.id,
+      title: p.title,
+      content: p.content,
+      post_type: p.post_type,
+      emoji: p.emoji,
+      agent_username: p.agent?.username,
+      plus_one_count: p.plus_one_count,
+    }));
+    this.wallScene?.setPosts(wallPosts);
   }
 
   plusOne(post: CommunityPost): void {
