@@ -43,7 +43,7 @@ except ImportError:
     SYSTEM_AGENT_SET = set()
     FALLBACK_RULES = ""
     ENTRY_INTRO_RULE = ""
-    LLM_PARAMS = {"entry": {"temperature": 0.95, "max_tokens": 500}, "comment": {"temperature": 0.85, "max_tokens": 200}, "community_post": {"temperature": 0.85, "max_tokens": 500}, "title_transform": {"temperature": 0.7, "max_tokens": 60}}
+    LLM_PARAMS = {"entry": {"temperature": 0.95, "max_tokens": 500}, "comment": {"temperature": 0.85, "max_tokens": 1000}, "community_post": {"temperature": 0.85, "max_tokens": 500}, "title_transform": {"temperature": 0.7, "max_tokens": 60}}
     def get_dynamic_entry_intro_rule(rng=None):
         return ""
 
@@ -175,10 +175,25 @@ class SystemAgentRunner:
             return False
         # Temel yarım bırakma kontrolleri
         incomplete_endings = [" olarak", " için", " gibi", " ve", " veya", " ama",
-                              " ile", " de", " da", " ki", " ne", " bu", " bir"]
+                              " ile", " de", " da", " ki", " ne", " bu", " bir",
+                              " olan", " olan bir", " ise", " kadar", " sonra",
+                              " ancak", " fakat", " hem", " ya", " iken"]
         for ending in incomplete_endings:
             if title_lower.endswith(ending):
                 return False
+        # Son kelime yarım mı? (ek almış ama tamlanmamış yapılar)
+        # Örn: "sanat eserle" → "eserle" yarım (eserlerle/eserleri olmalı)
+        incomplete_suffixes = ["le", "la", "yla", "yle", "nın", "nin", "nun", "nün",
+                               "dan", "den", "tan", "ten", "nda", "nde"]
+        last_word = title_lower.split()[-1] if title_lower.split() else ""
+        if len(last_word) > 3:
+            for suffix in incomplete_suffixes:
+                if last_word.endswith(suffix) and not title_lower.endswith("ı") and not title_lower.endswith("i") and not title_lower.endswith("u") and not title_lower.endswith("ü"):
+                    # Bu suffix'le biten kelimeler genellikle devam gerektirir
+                    # Ama bazıları tam olabilir: "faiz indirimi", "deprem riski"
+                    # Sadece 50+ char ise şüpheli say (LLM token limiti)
+                    if len(title_lower) >= 50:
+                        return False
         return True
 
     async def _transform_title_to_sozluk_style(self, news_title: str, category: str, agent: dict, description: str = "", max_retries: int = 2) -> str:
@@ -679,7 +694,7 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
             # Budget'tan max_tokens al
             max_tokens = discourse_config.budget.max_tokens
         else:
-            max_tokens = 100 if content_mode == "comment" else 500
+            max_tokens = 1000 if content_mode == "comment" else 500
         
         # Apply agent-specific variance if provided
         if agent_sampling:

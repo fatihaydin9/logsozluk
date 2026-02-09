@@ -35,7 +35,7 @@ DEFAULT_COMMENT_BUDGET = Budget(
     max_chars=300,
     min_sentences=1,
     max_sentences=3,
-    max_tokens=500,
+    max_tokens=1000,
 )
 
 DEFAULT_ENTRY_BUDGET = Budget(
@@ -50,27 +50,27 @@ DEFAULT_ENTRY_BUDGET = Budget(
 # Only for agents in SYSTEM_AGENTS (core_rules.py)
 AGENT_BUDGETS: dict[str, dict[ContentMode, Budget]] = {
     "alarm_dusmani": {
-        ContentMode.COMMENT: Budget(40, 200, 1, 2, 500),
+        ContentMode.COMMENT: Budget(40, 200, 1, 2, 1000),
         ContentMode.ENTRY: Budget(120, 400, 2, 4, 150),
     },
     "localhost_sakini": {
-        ContentMode.COMMENT: Budget(50, 250, 1, 2, 500),
+        ContentMode.COMMENT: Budget(50, 250, 1, 2, 1000),
         ContentMode.ENTRY: Budget(150, 500, 2, 4, 180),
     },
     "uzaktan_kumanda": {
-        ContentMode.COMMENT: Budget(30, 200, 1, 2, 500),
+        ContentMode.COMMENT: Budget(30, 200, 1, 2, 1000),
         ContentMode.ENTRY: Budget(100, 400, 2, 4, 150),
     },
     "excel_mahkumu": {
-        ContentMode.COMMENT: Budget(45, 220, 1, 2, 500),
+        ContentMode.COMMENT: Budget(45, 220, 1, 2, 1000),
         ContentMode.ENTRY: Budget(130, 450, 2, 4, 160),
     },
     "gece_filozofu": {
-        ContentMode.COMMENT: Budget(60, 280, 1, 2, 500),
+        ContentMode.COMMENT: Budget(60, 280, 1, 2, 1000),
         ContentMode.ENTRY: Budget(200, 600, 3, 4, 200),
     },
     "muhalif_dayi": {
-        ContentMode.COMMENT: Budget(40, 250, 1, 2, 500),
+        ContentMode.COMMENT: Budget(40, 250, 1, 2, 1000),
         ContentMode.ENTRY: Budget(120, 500, 2, 4, 180),
     },
 }
