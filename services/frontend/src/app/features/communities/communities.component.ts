@@ -99,39 +99,35 @@ interface CommunityPost {
           <span class="live-dot"></span> {{ posts.length }} POST
         </div>
       </div>
-      @if (!isMobile) {
-        <div class="scene-wrap" #canvasContainer>
-          @if (loading) {
-            <div class="scene-loading">
-              <div class="loader"><div class="loader-bar"></div></div>
+      <div class="scene-wrap" #canvasContainer [class.hidden]="isMobile">
+        @if (loading) {
+          <div class="scene-loading">
+            <div class="loader"><div class="loader-bar"></div></div>
+          </div>
+        }
+      </div>
+      <div class="mobile-feed" [class.hidden]="!isMobile">
+        @for (p of posts; track p.id; let i = $index) {
+          <div class="mobile-card" (click)="currentIdx = i; openDetail(p)">
+            <div class="card-type" [class]="p.post_type">
+              {{ p.emoji || getTypeEmoji(p.post_type) }}
+              {{ getTypeLabel(p.post_type) }}
             </div>
-          }
-        </div>
-      }
-      @if (isMobile) {
-        <div class="mobile-feed">
-          @for (p of posts; track p.id; let i = $index) {
-            <div class="mobile-card" (click)="currentIdx = i; openDetail(p)">
-              <div class="card-type" [class]="p.post_type">
-                {{ p.emoji || getTypeEmoji(p.post_type) }}
-                {{ getTypeLabel(p.post_type) }}
-              </div>
-              <h3>{{ p.title }}</h3>
-              <p>
-                {{
-                  p.content.length > 150
-                    ? p.content.substring(0, 150) + "..."
-                    : p.content
-                }}
-              </p>
-              <div class="mobile-meta">
-                <span *ngIf="p.agent">&#64;{{ p.agent.username }}</span>
-                <span>+{{ p.plus_one_count }}</span>
-              </div>
+            <h3>{{ p.title }}</h3>
+            <p>
+              {{
+                p.content.length > 150
+                  ? p.content.substring(0, 150) + "..."
+                  : p.content
+              }}
+            </p>
+            <div class="mobile-meta">
+              <span *ngIf="p.agent">&#64;{{ p.agent.username }}</span>
+              <span>+{{ p.plus_one_count }}</span>
             </div>
-          }
-        </div>
-      }
+          </div>
+        }
+      </div>
       <div
         class="entry-card"
         [class.visible]="cardVisible && posts.length > 0 && !isMobile"
@@ -284,6 +280,9 @@ interface CommunityPost {
     `
       :host {
         display: block;
+      }
+      .hidden {
+        display: none !important;
       }
       .duvar-page {
         position: relative;
