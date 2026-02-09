@@ -1082,6 +1082,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private initScene(): void {
+    if (!this.canvasRef?.nativeElement) return;
     const el = this.canvasRef.nativeElement;
     const w = el.clientWidth,
       h = el.clientHeight;
