@@ -1014,7 +1014,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.scene.background = new THREE.Color(0x0a0604);
     this.scene.fog = new THREE.FogExp2(0x0a0604, 0.028);
     this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 500);
-    this.camera.position.set(10, 5, 14);
+    this.camera.position.set(14, 5, 14);
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(w, h);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -1046,6 +1046,8 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.buildCeiling();
     this.buildFloor();
     this.buildDust();
+    this.buildCables();
+    this.buildMiniRobots();
   }
 
   private buildEnv(): void {
@@ -1066,7 +1068,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(2.8, 3.0, 64),
       new THREE.MeshBasicMaterial({
-        color: 0xff8800,
+        color: 0xff4422,
         transparent: true,
         opacity: 0.15,
         side: THREE.DoubleSide,
@@ -1080,7 +1082,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       const s = new THREE.Mesh(
         new THREE.PlaneGeometry(0.15, 0.5),
         new THREE.MeshBasicMaterial({
-          color: 0xff8800,
+          color: 0xff4422,
           transparent: true,
           opacity: 0.2,
           side: THREE.DoubleSide,
@@ -1326,7 +1328,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       new THREE.Mesh(
         new THREE.SphereGeometry(0.15, 8, 8),
         new THREE.MeshBasicMaterial({
-          color: 0xff8800,
+          color: 0xff4422,
           transparent: true,
           opacity: 0.6,
         }),
@@ -1714,10 +1716,10 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.raf = requestAnimationFrame(this.loop);
     this.clock += 0.016;
     this.camera.position.x +=
-      (10 + this.mx * 2 - this.camera.position.x) * 0.025;
+      (14 + this.mx * 2 - this.camera.position.x) * 0.025;
     this.camera.position.y +=
       (5 + this.my * -0.8 - this.camera.position.y) * 0.025;
-    this.camera.lookAt(2, 3.2, 0);
+    this.camera.lookAt(4, 3.2, 0);
     if (!this.busy && this.triArmGroup) {
       this.triArmGroup.rotation.y =
         this.rotCurrent + Math.sin(this.clock * 0.3) * 0.008;
@@ -1748,5 +1750,164 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       }),
     );
     this.renderer.render(this.scene, this.camera);
+    this.animateMiniRobots();
   };
+
+  private cables: THREE.Group[] = [];
+  private miniRobots: {
+    mesh: THREE.Group;
+    baseY: number;
+    speed: number;
+    phase: number;
+  }[] = [];
+
+  private buildCables(): void {
+    const cableMat = new THREE.MeshBasicMaterial({ color: 0x1a0a04 });
+    const glowMat = new THREE.MeshBasicMaterial({
+      color: 0xff4422,
+      transparent: true,
+      opacity: 0.6,
+    });
+    const cablePaths = [
+      [
+        { x: -12, y: 14, z: -6 },
+        { x: -8, y: 10, z: -4 },
+        { x: -4, y: 8, z: 0 },
+        { x: 0, y: 7, z: 2 },
+      ],
+      [
+        { x: 12, y: 12, z: -5 },
+        { x: 8, y: 9, z: -2 },
+        { x: 4, y: 7.5, z: 1 },
+        { x: 1, y: 7, z: 2 },
+      ],
+      [
+        { x: -10, y: 16, z: -7 },
+        { x: -6, y: 13, z: -5 },
+        { x: -2, y: 10, z: -2 },
+        { x: 0, y: 8, z: 0 },
+      ],
+      [
+        { x: 10, y: 15, z: -6 },
+        { x: 6, y: 11, z: -3 },
+        { x: 2, y: 8.5, z: 0 },
+        { x: 0, y: 7.5, z: 1 },
+      ],
+      [
+        { x: -8, y: 0.5, z: 8 },
+        { x: -4, y: 0.3, z: 5 },
+        { x: 0, y: 0.2, z: 3 },
+        { x: 2, y: 0.3, z: 1 },
+      ],
+      [
+        { x: 8, y: 0.4, z: 7 },
+        { x: 4, y: 0.3, z: 4 },
+        { x: 1, y: 0.2, z: 2 },
+      ],
+    ];
+    cablePaths.forEach((path) => {
+      const pts = path.map((p) => new THREE.Vector3(p.x, p.y, p.z));
+      const curve = new THREE.CatmullRomCurve3(pts);
+      const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.04, 8, false);
+      const cable = new THREE.Mesh(tubeGeo, cableMat);
+      cable.castShadow = true;
+      this.scene.add(cable);
+      for (let i = 0; i < 3; i++) {
+        const t = (i + 1) / 4;
+        const pt = curve.getPoint(t);
+        const spark = new THREE.Mesh(
+          new THREE.SphereGeometry(0.06, 6, 6),
+          glowMat.clone(),
+        );
+        spark.position.copy(pt);
+        (spark as any).basePos = pt.clone();
+        (spark as any).phase = Math.random() * Math.PI * 2;
+        this.scene.add(spark);
+      }
+    });
+    for (let i = 0; i < 8; i++) {
+      const x = (Math.random() - 0.5) * 30;
+      const z = (Math.random() - 0.5) * 20;
+      const h = 2 + Math.random() * 4;
+      const pole = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.1, h, 8),
+        this.mDark,
+      );
+      pole.position.set(x, h / 2, z);
+      pole.castShadow = true;
+      this.scene.add(pole);
+      const light = new THREE.Mesh(
+        new THREE.SphereGeometry(0.08, 6, 6),
+        glowMat.clone(),
+      );
+      light.position.set(x, h + 0.1, z);
+      this.scene.add(light);
+      this.scene.add(
+        new THREE.PointLight(0xff4422, 0.3, 4)
+          .translateX(x)
+          .translateY(h + 0.2)
+          .translateZ(z),
+      );
+    }
+  }
+
+  private buildMiniRobots(): void {
+    const robotMat = new THREE.MeshStandardMaterial({
+      color: 0x2a1a0a,
+      roughness: 0.4,
+      metalness: 0.8,
+    });
+    const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff4422 });
+    for (let i = 0; i < 5; i++) {
+      const robot = new THREE.Group();
+      const body = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3, 0.2, 0.2),
+        robotMat,
+      );
+      robot.add(body);
+      const head = new THREE.Mesh(
+        new THREE.BoxGeometry(0.15, 0.12, 0.12),
+        robotMat,
+      );
+      head.position.set(0.18, 0.05, 0);
+      robot.add(head);
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(0.03, 6, 6), eyeMat);
+      eye.position.set(0.26, 0.06, 0);
+      robot.add(eye);
+      const arm1 = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.02, 0.02, 0.15, 6),
+        robotMat,
+      );
+      arm1.position.set(0, -0.1, 0.12);
+      arm1.rotation.x = Math.PI / 4;
+      robot.add(arm1);
+      const arm2 = arm1.clone();
+      arm2.position.z = -0.12;
+      arm2.rotation.x = -Math.PI / 4;
+      robot.add(arm2);
+      const x = (Math.random() - 0.5) * 16;
+      const z = (Math.random() - 0.5) * 12;
+      const y = 1 + Math.random() * 3;
+      robot.position.set(x, y, z);
+      robot.rotation.y = Math.random() * Math.PI * 2;
+      this.scene.add(robot);
+      this.miniRobots.push({
+        mesh: robot,
+        baseY: y,
+        speed: 0.5 + Math.random() * 1.5,
+        phase: Math.random() * Math.PI * 2,
+      });
+    }
+  }
+
+  private animateMiniRobots(): void {
+    this.miniRobots.forEach((r) => {
+      r.mesh.position.y =
+        r.baseY + Math.sin(this.clock * r.speed + r.phase) * 0.15;
+      r.mesh.rotation.y += 0.003;
+      r.mesh.children[2].scale.setScalar(
+        0.8 + Math.sin(this.clock * 4 + r.phase) * 0.3,
+      );
+    });
+  }
 }
