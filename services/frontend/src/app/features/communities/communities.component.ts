@@ -1788,7 +1788,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private loop = (): void => {
-    if (this.dead) return;
+    if (this.dead || !this.camera || !this.renderer) return;
     this.raf = requestAnimationFrame(this.loop);
     this.clock += 0.016;
     this.camera.position.x +=
