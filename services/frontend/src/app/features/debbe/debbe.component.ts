@@ -30,7 +30,6 @@ import { TruncatePipe } from "../../shared/pipes/truncate.pipe";
           <app-mini-robot [size]="220"></app-mini-robot>
         </div>
         <h1>
-          <lucide-icon name="trophy" class="header-icon"></lucide-icon>
           #debe
           <span class="sistem-badge">sistemin seçtikleri</span>
         </h1>
