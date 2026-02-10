@@ -458,12 +458,12 @@ interface CommunityPost {
       .entry-card::before {
         content: "";
         position: absolute;
-        left: -120px;
+        right: -120px;
         top: 50%;
         width: 120px;
         height: 8px;
         background: linear-gradient(
-          90deg,
+          270deg,
           #ff0000 0%,
           #ff2200 30%,
           #ff4400 60%,
@@ -480,7 +480,7 @@ interface CommunityPost {
       .entry-card::after {
         content: "";
         position: absolute;
-        left: -130px;
+        right: -130px;
         top: 50%;
         width: 18px;
         height: 18px;
@@ -1404,17 +1404,17 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     glass.rotation.y = 0.35;
     this.scene.add(glass);
     const flashMat = new THREE.MeshBasicMaterial({
-      color: 0x4488ff,
+      color: 0x88ccff,
       transparent: true,
       opacity: 0,
       side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending,
     });
     this.lightningFlashPlane = new THREE.Mesh(
-      new THREE.PlaneGeometry(200, 100),
+      new THREE.PlaneGeometry(150, 80),
       flashMat,
     );
-    this.lightningFlashPlane.position.set(-30, 25, -45);
-    this.lightningFlashPlane.rotation.y = 0.3;
+    this.lightningFlashPlane.position.set(-15, 20, -15);
     this.scene.add(this.lightningFlashPlane);
   }
 
@@ -1528,33 +1528,32 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         if ((b as THREE.Mesh).geometry) (b as THREE.Mesh).geometry.dispose();
       });
       this.lightningBolts = [];
-      const startX = -35 + Math.random() * 25;
-      this.createLightningBolt(startX, 42);
-      if (Math.random() > 0.3)
-        this.createLightningBolt(startX + 5 + Math.random() * 10, 38);
-      if (Math.random() > 0.6)
-        this.createLightningBolt(startX - 5 - Math.random() * 8, 40);
-      this.lightning.intensity = 400 + Math.random() * 400;
-      this.lightning.position.x = startX;
+      const startX = -25 + Math.random() * 20;
+      this.createLightningBolt(startX, 35);
+      this.createLightningBolt(startX + 3 + Math.random() * 8, 33);
+      if (Math.random() > 0.5)
+        this.createLightningBolt(startX - 3 - Math.random() * 6, 34);
+      this.lightning.intensity = 800 + Math.random() * 600;
+      this.lightning.position.set(startX, 30, -20);
       if (this.lightningFlashPlane) {
         (this.lightningFlashPlane.material as THREE.MeshBasicMaterial).opacity =
-          0.9;
+          1;
         (
           this.lightningFlashPlane.material as THREE.MeshBasicMaterial
-        ).color.setHex(0x88bbff);
+        ).color.setHex(0xccddff);
       }
-      this.lightningTimer = 0.15;
-      this.nextLightningTime = 4 + Math.random() * 8;
+      this.lightningTimer = 0.2;
+      this.nextLightningTime = 5 + Math.random() * 7;
     }
     if (this.lightningTimer > 0) {
-      this.lightning.intensity *= 0.7;
+      this.lightning.intensity *= 0.65;
       if (this.lightningFlashPlane) {
         (
           this.lightningFlashPlane.material as THREE.MeshBasicMaterial
-        ).opacity *= 0.6;
+        ).opacity *= 0.5;
       }
       this.lightningBolts.forEach((b) => {
-        ((b as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity *= 0.7;
+        ((b as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity *= 0.65;
       });
     } else {
       this.lightning.intensity = 0;
