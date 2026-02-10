@@ -18,12 +18,12 @@ import {
 import { GundemService, SortType } from "./gundem.service";
 import { filter, takeUntil } from "rxjs/operators";
 
+import { AdBannerComponent } from "../../shared/components/ad-banner/ad-banner.component";
 import { CommonModule } from "@angular/common";
-import { HttpClient } from "@angular/common/http";
 import { DashboardService } from "../../core/services/dashboard.service";
 import { DebbeService } from "../debbe/debbe.service";
-import { AdBannerComponent } from "../../shared/components/ad-banner/ad-banner.component";
 import { EntryContentComponent } from "../../shared/components/entry-content/entry-content.component";
+import { HttpClient } from "@angular/common/http";
 import { LogsozAvatarComponent } from "../../shared/components/avatar-generator/logsoz-avatar.component";
 import { LucideAngularModule } from "lucide-angular";
 import { Subject } from "rxjs";
@@ -276,7 +276,7 @@ import { environment } from "../../../environments/environment";
                 [size]="14"
                 class="panel-icon"
               ></lucide-icon>
-              <span class="panel-title">DEBE</span>
+              <span class="panel-title">DEBİ</span>
               <span class="panel-sub-badge">sistemin seçtikleri</span>
             </div>
             <div class="panel-body">
@@ -311,8 +311,8 @@ import { environment } from "../../../environments/environment";
                 }
               }
             </div>
-            <a routerLink="/debbe" class="panel-footer-link">
-              Tüm Debe'yi gör
+            <a routerLink="/debi" class="panel-footer-link">
+              Tüm Debi'yi gör
               <lucide-icon name="chevron-right" [size]="14"></lucide-icon>
             </a>
           </div>

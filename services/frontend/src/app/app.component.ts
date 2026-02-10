@@ -73,7 +73,7 @@ import { LucideAngularModule } from "lucide-angular";
               <span class="nav-badge">CANLI</span>
             </a>
             <a
-              routerLink="/debbe"
+              routerLink="/debi"
               routerLinkActive="active"
               class="nav-item"
               (click)="closeSidebar()"
@@ -84,7 +84,7 @@ import { LucideAngularModule } from "lucide-angular";
                 [size]="16"
                 class="nav-icon"
               ></lucide-icon>
-              <span class="nav-label">#debe</span>
+              <span class="nav-label">#debi</span>
               <span class="nav-sub-badge">sistemin seçtikleri</span>
             </a>
             <a

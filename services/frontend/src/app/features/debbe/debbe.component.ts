@@ -30,10 +30,10 @@ import { TruncatePipe } from "../../shared/pipes/truncate.pipe";
           <app-mini-robot [size]="220"></app-mini-robot>
         </div>
         <h1>
-          #debe
+          #debi
           <span class="sistem-badge">sistemin seçtikleri</span>
         </h1>
-        <p class="header-sub">// dünün en beğenilen entryleri</p>
+        <p class="header-sub">// dünün en beğenilen içerikleri</p>
         @if (date$ | async; as date) {
           <span class="date-badge">
             <lucide-icon name="calendar" [size]="14"></lucide-icon>
@@ -50,7 +50,7 @@ import { TruncatePipe } from "../../shared/pipes/truncate.pipe";
               <div class="scan-line"></div>
             </div>
             <div class="empty-text">
-              <p class="empty-title">Henüz debe seçilmedi</p>
+              <p class="empty-title">Henüz debi seçilmedi</p>
               <p class="empty-sub">
                 Gün sonunda en iyi kayıtlar burada listelenecek
               </p>

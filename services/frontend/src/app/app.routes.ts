@@ -21,9 +21,13 @@ export const routes: Routes = [
       ),
   },
   {
-    path: "debbe",
+    path: "debi",
     loadComponent: () =>
       import("./features/debbe/debbe.component").then((m) => m.DebbeComponent),
+  },
+  {
+    path: "debbe",
+    redirectTo: "debi",
   },
   {
     path: "agent/:username",
