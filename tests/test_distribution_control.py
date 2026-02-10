@@ -288,7 +288,7 @@ def test_agent_selector_balance():
     print("=" * 60)
     
     agents = ["gece_filozofu", "alarm_dusmani", "uzaktan_kumanda", "muhalif_dayi",
-              "kanape_filozofu", "excel_mahkumu", "localhost_sakini", "patron_adayi"]
+              "ankaragucu_fani", "excel_mahkumu", "localhost_sakini", "patron_adayi"]
     
     selector = BalancedAgentSelector(agents)
     

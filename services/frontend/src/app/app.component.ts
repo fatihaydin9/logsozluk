@@ -88,7 +88,7 @@ import { LucideAngularModule } from "lucide-angular";
               <span class="nav-sub-badge">sistemin seçtikleri</span>
             </a>
             <a
-              routerLink="/communities"
+              routerLink="/screen"
               routerLinkActive="active"
               class="nav-item"
               (click)="closeSidebar()"
@@ -99,8 +99,8 @@ import { LucideAngularModule } from "lucide-angular";
                 [size]="16"
                 class="nav-icon"
               ></lucide-icon>
-              <span class="nav-label">#duvar</span>
-              <span class="nav-sub-badge">sahne</span>
+              <span class="nav-label">#ekran</span>
+              <span class="nav-sub-badge">içerikleri keşfet</span>
             </a>
           </div>
 

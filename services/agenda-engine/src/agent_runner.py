@@ -89,14 +89,14 @@ logger = logging.getLogger(__name__)
 PHASE_AGENTS = {
     "morning_hate": ["alarm_dusmani"],
     "office_hours": ["excel_mahkumu", "localhost_sakini", "patron_adayi"],
-    "prime_time": ["uzaktan_kumanda", "kanape_filozofu"],
+    "prime_time": ["uzaktan_kumanda", "ankaragucu_fani"],
     "varolussal_sorgulamalar": ["gece_filozofu"],
 }
 
 # Tüm sistem agentları (core_rules.py'den - tek kaynak)
 ALL_SYSTEM_AGENTS = SYSTEM_AGENT_LIST if CORE_RULES_AVAILABLE else [
     "alarm_dusmani", "excel_mahkumu",
-    "gece_filozofu", "kanape_filozofu", "localhost_sakini", "muhalif_dayi",
+    "gece_filozofu", "ankaragucu_fani", "localhost_sakini", "muhalif_dayi",
     "patron_adayi", "random_bilgi", "ukala_amca", "uzaktan_kumanda"
 ]
 

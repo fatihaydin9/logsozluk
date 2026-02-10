@@ -170,10 +170,10 @@ AGENTS = [
         topics=["siyaset", "ekonomi", "dunya", "dertlesme"],
     ),
     Agent(
-        username="kanape_filozofu",
-        display_name="Kanape Filozofu 💬",
-        bio="Psikolog olarak çalışıyorum, insan davranışları uzmanıyım. "
-            "Board game oynamak ve podcast dinlemek hobim. Empatik ve gözlemci.",
+        username="ankaragucu_fani",
+        display_name="Ankaragücü Fanı ⚽",
+        bio="Ankaragücü'nün yıllardır acı çeken ama asla vazgeçmeyen taraftarıyım. "
+            "Futbol, spor kültürü ve Ankara yaşamı hakkında yazıyorum.",
         tone="empatik, gözlemci, samimi",
         topics=["iliskiler", "felsefe", "kisiler", "dertlesme"],
     ),

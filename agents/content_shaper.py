@@ -211,14 +211,14 @@ AGENT_IDIOLECTS = {
         profanity_rate=0.35,
         politeness_rate=0.25,
     ),
-    "kanape_filozofu": Idiolect(
-        lowercase_bias=0.8,
-        slang_rate=0.4,
-        ellipsis_rate=0.3,
-        emoji_rate=0.2,
-        informal_rate=0.6,
-        profanity_rate=0.2,
-        politeness_rate=0.3,
+    "ankaragucu_fani": Idiolect(
+        lowercase_bias=0.85,
+        slang_rate=0.5,
+        ellipsis_rate=0.2,
+        emoji_rate=0.25,
+        informal_rate=0.7,
+        profanity_rate=0.4,
+        politeness_rate=0.15,
     ),
     "patron_adayi": Idiolect(
         lowercase_bias=0.7,

@@ -48,8 +48,8 @@ interface CommunityPost {
       <div class="scanlines"></div>
       <div class="top-bar">
         <div class="logo-block">
-          <span class="logo-badge">SAHNE</span>
-          <h1>#duvar</h1>
+          <span class="logo-badge">İÇERİKLERİ KEŞFET</span>
+          <h1>#ekran</h1>
         </div>
         <div class="filter-bar">
           <button
@@ -200,22 +200,22 @@ interface CommunityPost {
           </div>
         }
       </div>
-      <div class="controls" *ngIf="posts.length > 1">
-        <button
-          class="ctrl-btn"
-          [class.disabled]="currentIdx === 0"
-          (click)="prev()"
-        >
-          &#9666;
-        </button>
-        <button
-          class="ctrl-btn"
-          [class.disabled]="currentIdx === posts.length - 1"
-          (click)="next()"
-        >
-          &#9656;
-        </button>
-      </div>
+      <button
+        class="ctrl-btn ctrl-prev"
+        *ngIf="posts.length > 1"
+        [class.disabled]="currentIdx === 0"
+        (click)="prev()"
+      >
+        &#9666;
+      </button>
+      <button
+        class="ctrl-btn ctrl-next"
+        *ngIf="posts.length > 1"
+        [class.disabled]="currentIdx === posts.length - 1"
+        (click)="next()"
+      >
+        &#9656;
+      </button>
       @if (detailPost) {
         <div class="detail-backdrop" (click)="closeDetail()"></div>
         <div class="detail-panel">
@@ -754,34 +754,36 @@ interface CommunityPost {
         color: #ff5522;
         background: rgba(255, 180, 0, 0.12);
       }
-      .controls {
-        position: fixed;
-        bottom: 24px;
-        left: 25%;
-        transform: translateX(-50%);
-        z-index: 10;
-        display: flex;
-        gap: 12px;
-      }
       .ctrl-btn {
-        width: 48px;
-        height: 48px;
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 20;
+        width: 52px;
+        height: 52px;
         border-radius: 50%;
         background: rgba(14, 8, 4, 0.85);
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 140, 0, 0.3);
         color: #ff8c00;
-        font-size: 20px;
+        font-size: 22px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.2s;
       }
+      .ctrl-prev {
+        left: 16px;
+      }
+      .ctrl-next {
+        right: 16px;
+      }
       .ctrl-btn:hover {
         background: rgba(255, 140, 0, 0.12);
         border-color: #ff8c00;
-        transform: scale(1.08);
+        transform: translateY(-50%) scale(1.12);
+        box-shadow: 0 0 20px rgba(255, 140, 0, 0.3);
       }
       .ctrl-btn.disabled {
         opacity: 0.15;
@@ -978,8 +980,22 @@ interface CommunityPost {
         .entry-card.visible {
           transform: none !important;
         }
-        .controls {
-          left: 50%;
+        .ctrl-btn {
+          width: 40px;
+          height: 40px;
+          font-size: 18px;
+          top: auto;
+          bottom: 24px;
+          transform: none;
+        }
+        .ctrl-prev {
+          left: 16px;
+        }
+        .ctrl-next {
+          right: 16px;
+        }
+        .ctrl-btn:hover {
+          transform: none;
         }
       }
     `,

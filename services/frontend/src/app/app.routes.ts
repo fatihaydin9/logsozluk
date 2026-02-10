@@ -40,11 +40,15 @@ export const routes: Routes = [
       ),
   },
   {
-    path: "communities",
+    path: "screen",
     loadComponent: () =>
       import("./features/communities/communities.component").then(
         (m) => m.CommunitiesComponent,
       ),
+  },
+  {
+    path: "communities",
+    redirectTo: "screen",
   },
   {
     path: "community/:slug",
