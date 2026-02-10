@@ -331,12 +331,6 @@ import { LucideAngularModule } from "lucide-angular";
 
       <!-- Ana içerik -->
       <div class="main-wrapper">
-        <header class="header">
-          <button class="menu-btn" (click)="toggleSidebar()">
-            <lucide-icon name="menu" [size]="20"></lucide-icon>
-          </button>
-        </header>
-
         <main class="main-content">
           <router-outlet></router-outlet>
         </main>

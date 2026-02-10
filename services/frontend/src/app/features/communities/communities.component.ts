@@ -46,6 +46,59 @@ interface CommunityPost {
   template: `
     <div class="duvar-page">
       <div class="scanlines"></div>
+      <div class="top-bar">
+        <div class="logo-block">
+          <span class="logo-badge">SAHNE</span>
+          <h1>#duvar</h1>
+        </div>
+        <div class="filter-bar">
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === ''"
+            (click)="setFilter('')"
+          >
+            hepsi
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'ilginc_bilgi'"
+            (click)="setFilter('ilginc_bilgi')"
+          >
+            bilgi
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'poll'"
+            (click)="setFilter('poll')"
+          >
+            anket
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'community'"
+            (click)="setFilter('community')"
+          >
+            topluluk
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'gelistiriciler_icin'"
+            (click)="setFilter('gelistiriciler_icin')"
+          >
+            dev
+          </button>
+          <button
+            class="filter-btn"
+            [class.active]="activeFilter === 'urun_fikri'"
+            (click)="setFilter('urun_fikri')"
+          >
+            ürün
+          </button>
+        </div>
+        <div class="hud-info">
+          <span class="live-dot"></span> {{ posts.length }} POST
+        </div>
+      </div>
       <div class="scene-wrap" #canvasContainer [class.hidden]="isMobile">
         @if (loading) {
           <div class="scene-loading">
@@ -272,6 +325,95 @@ interface CommunityPost {
           rgba(10, 4, 0, 0.12) 4px
         );
         opacity: 0.3;
+      }
+      .top-bar {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 20px;
+        background: rgba(4, 6, 14, 0.85);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid rgba(40, 78, 216, 0.15);
+        flex-wrap: wrap;
+      }
+      .logo-block {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .logo-badge {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        padding: 2px 8px;
+        border: 1px solid rgba(40, 78, 216, 0.4);
+        border-radius: 3px;
+        color: rgba(40, 78, 216, 0.7);
+      }
+      .top-bar h1 {
+        font-family: "Orbitron", sans-serif;
+        font-size: 18px;
+        font-weight: 900;
+        color: #284ed8;
+        letter-spacing: 3px;
+        text-shadow: 0 0 20px rgba(40, 78, 216, 0.4);
+        margin: 0;
+      }
+      .filter-bar {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .filter-btn {
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 600;
+        border: 1px solid rgba(40, 78, 216, 0.15);
+        border-radius: 16px;
+        background: transparent;
+        color: rgba(40, 78, 216, 0.45);
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.15s;
+      }
+      .filter-btn:hover {
+        border-color: rgba(40, 78, 216, 0.5);
+        color: rgba(40, 78, 216, 0.8);
+      }
+      .filter-btn.active {
+        border-color: #284ed8;
+        color: #284ed8;
+        background: rgba(40, 78, 216, 0.1);
+      }
+      .hud-info {
+        margin-left: auto;
+        font-size: 10px;
+        color: rgba(40, 78, 216, 0.4);
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .live-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #284ed8;
+        animation: blink 2s infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
       }
       .scene-wrap {
         position: relative;
@@ -646,7 +788,7 @@ interface CommunityPost {
         pointer-events: none;
       }
       .mobile-feed {
-        padding: 20px 12px 20px;
+        padding: 120px 12px 20px;
         display: flex;
         flex-direction: column;
         gap: 12px;
