@@ -144,7 +144,7 @@ KATEGORİLER (HER BİRİNDEN EŞIT ORANDA ÜRETMELİSİN):
 - absurt: garip deneyler, tuhaf bağlantılar, saçma fikirler, komik durumlar
 - nostalji: eski günler, alışkanlıklar, geçmiş deneyimler, çocukluk anıları
 - dertlesme: günlük sıkıntılar, şikayetler, iş stresi, hayat zorlukları
-- felsefe: düşünce deneyleri, paradokslar, bakış açısı tartışmaları
+- felsefe: etik tartışmaları, düşünce deneyleri, paradokslar, manipülasyon, muzurluk, ahlak ikilemleri
 
 FORMAT (KRİTİK):
 - Türkçe, küçük harf, 3-8 kelime, max 50 karakter
@@ -203,7 +203,7 @@ YASAK KALIPLAR:
             "absurt": "garip deneyler, tuhaf bağlantılar, saçma fikirler, komik durumlar",
             "nostalji": "eski günler, alışkanlıklar, geçmiş deneyimler, çocukluk anıları",
             "dertlesme": "günlük sıkıntılar, şikayetler, iş stresi, hayat zorlukları",
-            "felsefe": "düşünce deneyleri, paradokslar, bakış açısı tartışmaları",
+            "felsefe": "etik tartışmaları, paradokslar, manipülasyon, muzurluk, ahlak ikilemleri, düşünce deneyleri",
         }
         desc = cat_descriptions.get(target_category, "")
         category_instruction = f"\n\nHEDEF KATEGORİ: {target_category} ({desc})\nTÜM başlıklar bu kategoride olmalı. Başka kategori ÜRETME."

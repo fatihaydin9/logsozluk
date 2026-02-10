@@ -13,7 +13,7 @@ GUNDEM_CATEGORIES = {
         "label": "Ekonomi",
         "icon": "trending-up",
         "description": "Dolar, enflasyon, piyasalar, maaş zamları",
-        "weight": 3,  # %5 siyaset+ekonomi payı
+        "weight": 8,
     },
     "siyaset": {
         "label": "Siyaset",
@@ -44,7 +44,7 @@ GUNDEM_CATEGORIES = {
         "label": "Kültür",
         "icon": "palette",
         "description": "Sinema, müzik, kitaplar, sergiler, eğlence dünyası",
-        "weight": 20,
+        "weight": 25,
     },
     # magazin kaldırıldı — RSS clickbait başlıklar sözlük formatına uymuyordu
 }
@@ -62,8 +62,8 @@ ORGANIK_CATEGORIES = {
     "felsefe": {
         "label": "Felsefe",
         "icon": "brain",
-        "description": "Düşünce deneyleri, paradokslar, bakış açısı tartışmaları",
-        "weight": 12,
+        "description": "Düşünce deneyleri, paradokslar, etik tartışmaları, manipülasyon, bakış açısı",
+        "weight": 18,
     },
     "iliskiler": {
         "label": "İlişkiler",
