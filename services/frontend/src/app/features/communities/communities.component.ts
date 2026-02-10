@@ -250,22 +250,22 @@ interface CommunityPost {
           </div>
         }
       </div>
-      <button
-        class="ctrl-btn ctrl-prev"
-        *ngIf="posts.length > 1"
-        [class.disabled]="currentIdx === 0"
-        (click)="prev()"
-      >
-        &#9666;
-      </button>
-      <button
-        class="ctrl-btn ctrl-next"
-        *ngIf="posts.length > 1"
-        [class.disabled]="currentIdx === posts.length - 1"
-        (click)="next()"
-      >
-        &#9656;
-      </button>
+      @if (posts.length > 1) {
+        <button
+          class="ctrl-btn ctrl-prev"
+          [class.disabled]="currentIdx === 0"
+          (click)="prev()"
+        >
+          &#9666;
+        </button>
+        <button
+          class="ctrl-btn ctrl-next"
+          [class.disabled]="currentIdx === posts.length - 1"
+          (click)="next()"
+        >
+          &#9656;
+        </button>
+      }
       @if (detailPost) {
         <div class="detail-backdrop" (click)="closeDetail()"></div>
         <div class="detail-panel">
@@ -836,32 +836,44 @@ interface CommunityPost {
         position: fixed;
         top: 50%;
         transform: translateY(-50%);
-        z-index: 20;
-        width: 52px;
-        height: 52px;
+        z-index: 250;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
-        background: rgba(14, 8, 4, 0.85);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 140, 0, 0.3);
-        color: #ff8c00;
-        font-size: 22px;
+        background: rgba(30, 60, 120, 0.5);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(60, 130, 246, 0.4);
+        color: #3b82f6;
+        font-size: 20px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s;
+        transition: all 0.25s;
+        text-shadow:
+          0 0 8px rgba(59, 130, 246, 0.8),
+          0 0 16px rgba(59, 130, 246, 0.4);
+        box-shadow:
+          0 0 12px rgba(59, 130, 246, 0.25),
+          inset 0 0 8px rgba(59, 130, 246, 0.1);
       }
       .ctrl-prev {
-        left: calc(var(--sidebar-width, 260px) + 16px);
+        left: 16px;
       }
       .ctrl-next {
         right: 16px;
       }
       .ctrl-btn:hover {
-        background: rgba(255, 140, 0, 0.12);
-        border-color: #ff8c00;
-        transform: translateY(-50%) scale(1.12);
-        box-shadow: 0 0 20px rgba(255, 140, 0, 0.3);
+        background: rgba(40, 80, 160, 0.6);
+        border-color: rgba(60, 130, 246, 0.7);
+        transform: translateY(-50%) scale(1.1);
+        box-shadow:
+          0 0 24px rgba(59, 130, 246, 0.5),
+          0 0 48px rgba(59, 130, 246, 0.2),
+          inset 0 0 12px rgba(59, 130, 246, 0.15);
+        text-shadow:
+          0 0 12px rgba(59, 130, 246, 1),
+          0 0 24px rgba(59, 130, 246, 0.6);
       }
       .ctrl-btn.disabled {
         opacity: 0.15;
@@ -1059,11 +1071,11 @@ interface CommunityPost {
           transform: none !important;
         }
         .ctrl-btn {
-          width: 40px;
-          height: 40px;
-          font-size: 18px;
+          width: 38px;
+          height: 38px;
+          font-size: 16px;
           top: auto;
-          bottom: 24px;
+          bottom: 28px;
           transform: none;
         }
         .ctrl-prev {
@@ -1093,7 +1105,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   votedPosts = new Set<string>();
   arms = ["A", "B", "C"];
   private apiUrl = environment.apiUrl;
-  private pageSize = 20;
+  private pageSize = 10;
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
