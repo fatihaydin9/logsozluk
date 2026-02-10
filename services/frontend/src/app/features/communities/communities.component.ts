@@ -442,7 +442,7 @@ interface CommunityPost {
         transform: translateY(-50%) translateX(20px);
         width: 480px;
         max-height: 90vh;
-        overflow-y: auto;
+        overflow: visible;
         opacity: 0;
         pointer-events: none;
         transition:
@@ -1309,7 +1309,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.buildLightning();
   }
 
-  private lightningBolts: THREE.Line[] = [];
+  private lightningBolts: THREE.Object3D[] = [];
   private lightningFlashPlane: THREE.Mesh | null = null;
 
   private buildCityBackground(): void {
@@ -1422,61 +1422,57 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     const points: THREE.Vector3[] = [];
     let x = startX,
       y = startY,
-      z = -38;
+      z = -25;
     points.push(new THREE.Vector3(x, y, z));
-    const segments = 8 + Math.floor(Math.random() * 6);
+    const segments = 10 + Math.floor(Math.random() * 5);
     for (let i = 0; i < segments; i++) {
-      x += (Math.random() - 0.5) * 8;
-      y -= 3 + Math.random() * 4;
-      z += (Math.random() - 0.5) * 2;
+      x += (Math.random() - 0.5) * 6;
+      y -= 2.5 + Math.random() * 3;
+      z += (Math.random() - 0.5) * 1;
       points.push(new THREE.Vector3(x, y, z));
-      if (Math.random() > 0.7 && i > 2) {
-        const branchPoints: THREE.Vector3[] = [new THREE.Vector3(x, y, z)];
-        let bx = x,
-          by = y,
-          bz = z;
-        for (let j = 0; j < 3; j++) {
-          bx += (Math.random() - 0.5) * 6;
-          by -= 2 + Math.random() * 3;
-          bz += (Math.random() - 0.5) * 1.5;
-          branchPoints.push(new THREE.Vector3(bx, by, bz));
-        }
-        const branchGeo = new THREE.BufferGeometry().setFromPoints(
-          branchPoints,
-        );
-        const branchLine = new THREE.Line(
-          branchGeo,
-          new THREE.LineBasicMaterial({
-            color: 0x6699ff,
-            transparent: true,
-            opacity: 0.8,
-            linewidth: 1,
-          }),
-        );
-        this.scene.add(branchLine);
-        this.lightningBolts.push(branchLine);
-      }
     }
-    const geo = new THREE.BufferGeometry().setFromPoints(points);
-    const mat = new THREE.LineBasicMaterial({
-      color: 0xaaccff,
+    const curve = new THREE.CatmullRomCurve3(points);
+    const tubeGeo = new THREE.TubeGeometry(curve, 32, 0.15, 8, false);
+    const tubeMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
       transparent: true,
       opacity: 1,
-      linewidth: 2,
     });
-    const bolt = new THREE.Line(geo, mat);
-    this.scene.add(bolt);
-    this.lightningBolts.push(bolt);
-    const glowGeo = new THREE.BufferGeometry().setFromPoints(points);
-    const glowMat = new THREE.LineBasicMaterial({
-      color: 0x4488ff,
+    const tube = new THREE.Mesh(tubeGeo, tubeMat);
+    this.scene.add(tube);
+    this.lightningBolts.push(tube as any);
+    const glowTubeGeo = new THREE.TubeGeometry(curve, 32, 0.4, 8, false);
+    const glowTubeMat = new THREE.MeshBasicMaterial({
+      color: 0x88aaff,
       transparent: true,
-      opacity: 0.6,
-      linewidth: 4,
+      opacity: 0.5,
     });
-    const glowBolt = new THREE.Line(glowGeo, glowMat);
-    this.scene.add(glowBolt);
-    this.lightningBolts.push(glowBolt);
+    const glowTube = new THREE.Mesh(glowTubeGeo, glowTubeMat);
+    this.scene.add(glowTube);
+    this.lightningBolts.push(glowTube as any);
+    if (Math.random() > 0.5) {
+      const branchStart = Math.floor(segments * 0.4);
+      const bp: THREE.Vector3[] = [points[branchStart].clone()];
+      let bx = points[branchStart].x,
+        by = points[branchStart].y,
+        bz = points[branchStart].z;
+      for (let j = 0; j < 4; j++) {
+        bx += (Math.random() - 0.3) * 5;
+        by -= 2 + Math.random() * 2;
+        bz += (Math.random() - 0.5) * 0.5;
+        bp.push(new THREE.Vector3(bx, by, bz));
+      }
+      const bc = new THREE.CatmullRomCurve3(bp);
+      const btg = new THREE.TubeGeometry(bc, 16, 0.08, 6, false);
+      const btm = new THREE.MeshBasicMaterial({
+        color: 0xaaccff,
+        transparent: true,
+        opacity: 0.8,
+      });
+      const bt = new THREE.Mesh(btg, btm);
+      this.scene.add(bt);
+      this.lightningBolts.push(bt as any);
+    }
   }
 
   private buildRain(): void {
@@ -1529,7 +1525,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     if (this.nextLightningTime <= 0) {
       this.lightningBolts.forEach((b) => {
         this.scene.remove(b);
-        b.geometry.dispose();
+        if ((b as THREE.Mesh).geometry) (b as THREE.Mesh).geometry.dispose();
       });
       this.lightningBolts = [];
       const startX = -35 + Math.random() * 25;
@@ -1558,7 +1554,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         ).opacity *= 0.6;
       }
       this.lightningBolts.forEach((b) => {
-        (b.material as THREE.LineBasicMaterial).opacity *= 0.7;
+        ((b as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity *= 0.7;
       });
     } else {
       this.lightning.intensity = 0;
