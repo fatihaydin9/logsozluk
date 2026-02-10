@@ -250,7 +250,7 @@ interface CommunityPost {
           </div>
         }
       </div>
-      @if (posts.length > 1) {
+      @if (posts.length > 1 && !detailPost) {
         <button
           class="ctrl-btn ctrl-prev"
           [class.disabled]="currentIdx === 0"
