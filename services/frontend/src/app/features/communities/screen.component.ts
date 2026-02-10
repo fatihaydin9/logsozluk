@@ -505,7 +505,7 @@ interface CommunityPost {
       .entry-card {
         position: fixed;
         z-index: 10;
-        right: 32px;
+        right: 64px;
         top: 50%;
         transform: translateY(-50%) translateX(20px);
         width: 480px;
@@ -837,31 +837,33 @@ interface CommunityPost {
         top: 50%;
         transform: translateY(-50%);
         z-index: 250;
-        width: 36px;
-        height: 36px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
         background: rgba(30, 60, 120, 0.5);
         backdrop-filter: blur(8px);
         border: 1px solid rgba(60, 130, 246, 0.4);
         color: #3b82f6;
-        font-size: 16px;
+        font-size: 20px;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.25s;
         text-shadow:
-          0 0 8px rgba(59, 130, 246, 0.8),
-          0 0 16px rgba(59, 130, 246, 0.4);
+          0 0 10px rgba(59, 130, 246, 1),
+          0 0 20px rgba(59, 130, 246, 0.6),
+          0 0 40px rgba(59, 130, 246, 0.3);
         box-shadow:
-          0 0 12px rgba(59, 130, 246, 0.25),
-          inset 0 0 8px rgba(59, 130, 246, 0.1);
+          0 0 16px rgba(59, 130, 246, 0.4),
+          0 0 32px rgba(59, 130, 246, 0.15),
+          inset 0 0 10px rgba(59, 130, 246, 0.12);
       }
       .ctrl-prev {
-        right: calc(32px + 480px + 12px);
+        right: calc(64px + 480px + 16px);
       }
       .ctrl-next {
-        right: calc(32px - 12px - 36px);
+        right: 8px;
       }
       .ctrl-btn:hover {
         background: rgba(40, 80, 160, 0.6);
