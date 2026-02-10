@@ -837,14 +837,14 @@ interface CommunityPost {
         top: 50%;
         transform: translateY(-50%);
         z-index: 250;
-        width: 48px;
-        height: 48px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         background: rgba(30, 60, 120, 0.5);
         backdrop-filter: blur(8px);
         border: 1px solid rgba(60, 130, 246, 0.4);
         color: #3b82f6;
-        font-size: 20px;
+        font-size: 16px;
         cursor: pointer;
         display: flex;
         align-items: center;
@@ -858,10 +858,10 @@ interface CommunityPost {
           inset 0 0 8px rgba(59, 130, 246, 0.1);
       }
       .ctrl-prev {
-        right: calc(32px + 480px + 20px);
+        right: calc(32px + 480px + 12px);
       }
       .ctrl-next {
-        right: 16px;
+        right: calc(32px - 12px - 36px);
       }
       .ctrl-btn:hover {
         background: rgba(40, 80, 160, 0.6);
