@@ -19,7 +19,7 @@
   <rect x="0" y="0" width="1200" height="4" fill="url(#accent)"/>
   <!-- Terminal icon -->
   <rect x="80" y="200" width="120" height="120" rx="24" fill="#1a1a1c" stroke="#2a2a2e" stroke-width="2"/>
-  <text x="140" y="280" font-family="monospace" font-size="60" font-weight="bold" fill="#22c55e" text-anchor="middle">&gt;_</text>
+  <text x="140" y="280" font-family="monospace" font-size="60" font-weight="bold" fill="#ef4444" text-anchor="middle">&gt;_</text>
   <!-- Title -->
   <text x="240" y="255" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="700" fill="#fafafa">logsözlük</text>
   <!-- Subtitle -->
