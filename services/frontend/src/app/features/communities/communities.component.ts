@@ -1124,6 +1124,10 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.startAutoRotate();
   }
 
+  private rainDrops: THREE.Points | null = null;
+  private lightning: THREE.PointLight | null = null;
+  private lightningTimer = 0;
+
   private buildEnv(): void {
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(80, 80),
@@ -1167,29 +1171,154 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       s.position.set(Math.cos(a) * 3.2, 0.02, Math.sin(a) * 3.2);
       this.scene.add(s);
     }
-    const wall = new THREE.Mesh(
-      new THREE.PlaneGeometry(40, 18),
-      new THREE.MeshStandardMaterial({
-        color: 0x080402,
-        roughness: 0.92,
-        metalness: 0.2,
+    this.buildCityBackground();
+    this.buildRain();
+    this.buildLightning();
+  }
+
+  private buildCityBackground(): void {
+    const cityCanvas = document.createElement("canvas");
+    cityCanvas.width = 1024;
+    cityCanvas.height = 512;
+    const ctx = cityCanvas.getContext("2d")!;
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    grad.addColorStop(0, "#0a1628");
+    grad.addColorStop(0.4, "#0d1f3c");
+    grad.addColorStop(1, "#061018");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1024, 512);
+    ctx.fillStyle = "#050d18";
+    for (let i = 0; i < 40; i++) {
+      const x = Math.random() * 1024;
+      const w = 20 + Math.random() * 60;
+      const h = 80 + Math.random() * 280;
+      ctx.fillRect(x, 512 - h, w, h);
+      ctx.fillStyle = "#0a1a30";
+      ctx.fillRect(x + 2, 512 - h, w - 4, 3);
+      ctx.fillStyle = "#050d18";
+      for (let wy = 512 - h + 10; wy < 500; wy += 12) {
+        for (let wx = x + 4; wx < x + w - 6; wx += 8) {
+          if (Math.random() > 0.4) {
+            ctx.fillStyle =
+              Math.random() > 0.7
+                ? "#ffcc44"
+                : Math.random() > 0.5
+                  ? "#44aaff"
+                  : "#2266aa";
+            ctx.fillRect(wx, wy, 4, 6);
+          }
+        }
+      }
+      ctx.fillStyle = "#050d18";
+    }
+    const cityTex = new THREE.CanvasTexture(cityCanvas);
+    const cityBg = new THREE.Mesh(
+      new THREE.PlaneGeometry(120, 60),
+      new THREE.MeshBasicMaterial({
+        map: cityTex,
+        transparent: true,
+        opacity: 0.9,
       }),
     );
-    wall.position.set(0, 9, -8);
-    wall.receiveShadow = true;
-    this.scene.add(wall);
-    for (let x = -15; x <= 15; x += 6) {
-      const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 18, 0.4), this.mDark);
-      b.position.set(x, 9, -7.8);
-      b.castShadow = true;
-      this.scene.add(b);
+    cityBg.position.set(0, 20, -50);
+    this.scene.add(cityBg);
+    const glassCanvas = document.createElement("canvas");
+    glassCanvas.width = 512;
+    glassCanvas.height = 512;
+    const gctx = glassCanvas.getContext("2d")!;
+    gctx.fillStyle = "rgba(10, 20, 40, 0.3)";
+    gctx.fillRect(0, 0, 512, 512);
+    for (let i = 0; i < 200; i++) {
+      const x = Math.random() * 512;
+      const y = Math.random() * 512;
+      const r = 2 + Math.random() * 8;
+      const dropGrad = gctx.createRadialGradient(x, y, 0, x, y, r);
+      dropGrad.addColorStop(0, "rgba(100, 150, 200, 0.4)");
+      dropGrad.addColorStop(0.5, "rgba(80, 120, 180, 0.2)");
+      dropGrad.addColorStop(1, "rgba(60, 100, 160, 0)");
+      gctx.fillStyle = dropGrad;
+      gctx.beginPath();
+      gctx.ellipse(x, y, r, r * 1.3, 0, 0, Math.PI * 2);
+      gctx.fill();
+      if (Math.random() > 0.7) {
+        gctx.strokeStyle = "rgba(100, 150, 200, 0.15)";
+        gctx.lineWidth = 1;
+        gctx.beginPath();
+        gctx.moveTo(x, y + r);
+        gctx.lineTo(
+          x + (Math.random() - 0.5) * 10,
+          y + r + 20 + Math.random() * 40,
+        );
+        gctx.stroke();
+      }
     }
-    for (let y = 3; y <= 15; y += 4) {
-      this.scene.add(
-        new THREE.Mesh(new THREE.BoxGeometry(40, 0.25, 0.3), this.mDark)
-          .translateY(y)
-          .translateZ(-7.7),
-      );
+    const glassTex = new THREE.CanvasTexture(glassCanvas);
+    const glass = new THREE.Mesh(
+      new THREE.PlaneGeometry(100, 50),
+      new THREE.MeshBasicMaterial({
+        map: glassTex,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    glass.position.set(0, 15, -25);
+    this.scene.add(glass);
+  }
+
+  private buildRain(): void {
+    const rainCount = 3000;
+    const positions = new Float32Array(rainCount * 3);
+    for (let i = 0; i < rainCount; i++) {
+      positions[i * 3] = (Math.random() - 0.5) * 100;
+      positions[i * 3 + 1] = Math.random() * 50;
+      positions[i * 3 + 2] = -30 + Math.random() * 20;
+    }
+    const rainGeo = new THREE.BufferGeometry();
+    rainGeo.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    const rainMat = new THREE.PointsMaterial({
+      color: 0x6688aa,
+      size: 0.15,
+      transparent: true,
+      opacity: 0.6,
+      blending: THREE.AdditiveBlending,
+    });
+    this.rainDrops = new THREE.Points(rainGeo, rainMat);
+    this.scene.add(this.rainDrops);
+  }
+
+  private buildLightning(): void {
+    this.lightning = new THREE.PointLight(0xaaccff, 0, 200);
+    this.lightning.position.set(0, 40, -40);
+    this.scene.add(this.lightning);
+  }
+
+  private animateRain(): void {
+    if (!this.rainDrops) return;
+    const positions = this.rainDrops.geometry.attributes["position"]
+      .array as Float32Array;
+    for (let i = 0; i < positions.length; i += 3) {
+      positions[i + 1] -= 0.8;
+      if (positions[i + 1] < 0) {
+        positions[i + 1] = 50;
+        positions[i] = (Math.random() - 0.5) * 100;
+      }
+    }
+    this.rainDrops.geometry.attributes["position"].needsUpdate = true;
+  }
+
+  private animateLightning(): void {
+    if (!this.lightning) return;
+    this.lightningTimer -= 0.016;
+    if (this.lightningTimer <= 0 && Math.random() > 0.995) {
+      this.lightning.intensity = 15 + Math.random() * 25;
+      this.lightning.position.x = (Math.random() - 0.5) * 60;
+      this.lightningTimer = 0.1 + Math.random() * 0.15;
+    }
+    if (this.lightningTimer > 0) {
+      this.lightning.intensity *= 0.85;
+    } else {
+      this.lightning.intensity = 0;
     }
   }
 
@@ -1823,6 +1952,8 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         s.scale.setScalar(Math.max(0.1, sp.life));
       }),
     );
+    this.animateRain();
+    this.animateLightning();
     this.renderer.render(this.scene, this.camera);
   };
 
