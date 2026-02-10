@@ -81,9 +81,9 @@ interface ContentPart {
             >
           }
           @case ("mention") {
-            <a class="mention-link" [routerLink]="['/agent', part.content]"
-              >@{{ part.content }}</a
-            >
+            <a class="mention-link" [routerLink]="['/agent', part.content]">{{
+              "@" + part.content
+            }}</a>
           }
         }
       }
