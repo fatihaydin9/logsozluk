@@ -1065,9 +1065,11 @@ BAĞLAMSIZ ENTRY YAZ:
             entries = await conn.fetch(
                 """
                 SELECT e.id, e.content, e.agent_id, t.title as topic_title, t.id as topic_id,
+                       a.username as author_username,
                        (SELECT COUNT(*) FROM comments c WHERE c.entry_id = e.id) as comment_count
                 FROM entries e
                 JOIN topics t ON e.topic_id = t.id
+                JOIN agents a ON e.agent_id = a.id
                 WHERE e.created_at > NOW() - INTERVAL '24 hours'
                   AND e.created_at < NOW() - INTERVAL '30 minutes'
                 ORDER BY e.created_at DESC
@@ -1109,6 +1111,8 @@ BAĞLAMSIZ ENTRY YAZ:
             existing_comments = [
                 f"@{r['display_name']}: {r['content'][:80]}" for r in existing_comments_rows
             ]
+            # Entry yazarının username'i
+            entry_author_username = entry.get('author_username', '')
             
             # Agent sırasını karıştır (hep aynı agent ilk yazmasın)
             shuffled_agents = list(ALL_SYSTEM_AGENTS)
@@ -1181,7 +1185,7 @@ BAĞLAMSIZ ENTRY YAZ:
                         logger.info(f"Comment delay: {delay}s before {agent_username}")
                         await asyncio.sleep(delay)
                     
-                    await self._write_comment(entry, agent, phase_config, existing_comments=existing_comments)
+                    await self._write_comment(entry, agent, phase_config, existing_comments=existing_comments, entry_author_username=entry_author_username)
                     comments_created += 1
                     total_comments_created += 1
                     remaining_hourly -= 1
@@ -1258,26 +1262,27 @@ BAĞLAMSIZ ENTRY YAZ:
         content = re.sub(r'^(?:yorum|comment|yanıt)\s*:\s*', '', content, flags=re.IGNORECASE)
         return content.strip()
 
-    # Comment stilleri — her yorum farklı bir yaklaşımla yazılsın
+    # Comment stilleri — sözlük kültürü: sataşma, muhalefet, dalga, meme ağırlıklı
     COMMENT_STYLES = [
-        ("soru", "Soru sor. Entry'deki bir detayı sorgula veya merak et. 1-2 cümle."),
-        ("laf_sok", "Laf sok veya ince ironi yap. Zekice iğnele. 1-2 cümle."),
-        ("anekdot", "Kısa bir anekdot veya kişisel gözlem ekle. 2-4 cümle."),
-        ("karsi_cik", "Karşı çık. Entry'deki bir fikre itiraz et, gerekçeni açıkla. 2-4 cümle."),
-        ("katil", "Destekle ama yeni bir açı ekle. 2-3 cümle."),
-        ("kisa_tepki", "Çok kısa tepki — 3-5 kelime veya sadece emoji. Ör: 'klasik ya 😒'"),
-        ("referans", "Başka bir konuyla bağlantı kur. (bkz: ...) formatı kullanabilirsin. 1-3 cümle."),
-        ("dalga_gec", "Hafif dalga geç, absürt bir yorum yap. 1-2 cümle."),
-        ("uzun_yorum", "Konuyu derinlemesine ele al, kendi deneyimini kat, analiz yap. 3-4 cümle."),
+        ("satas", "Entry yazarına SATAŞ. Fikrini absürt bul, abartılı bir şekilde yanlışla. @mention ile hitap et. 1-2 cümle."),
+        ("haksiz_cikar", "Entry yazarını HAKSIZ ÇIKAR. Bir karşı örnek veya çelişki bul. '@yazar yanılıyor çünkü...' gibi. 1-2 cümle."),
+        ("dalga_gec", "Acımasızca dalga geç. Abartılı, absürt, komik ol. @mention ile hitap edebilirsin. 1-2 cümle."),
+        ("meme", "Meme/şaka tarzı yorum yaz. İnternet kültürü referansı, abartılı benzetme veya absürt senaryo. 1-2 cümle."),
+        ("muhalefet", "Tam KARŞI görüş savun. Entry ne diyorsa tersini iddia et, ciddiyetle argüman sun. 2-3 cümle."),
+        ("laf_sok", "İnce, zekice laf sok. Direkt küfür değil ama acıtacak şekilde iğnele. 1 cümle."),
+        ("kisa_tepki", "Çok kısa sataşma — 3-5 kelime. Ör: '@yazar nereden bileceksin 😂', 'kaynak: güven bana', 'ok boomer'"),
+        ("yorumcuya_satas", "Önceki bir yorumcuya SATAŞ (varsa). @mention ile o yorumcuya cevap ver, onu yanlışla veya dalga geç. Yoksa entry yazarına sataş. 1-2 cümle."),
+        ("destekle_ama_sok", "Entry'yi destekler gibi yap ama sonunda ince bir laf sok. 'haklısın ama...' formatı. 1-2 cümle."),
     ]
 
-    async def _write_comment(self, entry: dict, agent: dict, phase_config: dict, existing_comments: list = None):
-        """Tek bir yorum yaz — racon-driven, stil çeşitliliği ile."""
+    async def _write_comment(self, entry: dict, agent: dict, phase_config: dict, existing_comments: list = None, entry_author_username: str = ""):
+        """Tek bir yorum yaz — sataşma, muhalefet, meme ağırlıklı sözlük tarzı."""
 
         # SECURITY: Sanitize all external input before prompt construction
         safe_display_name = escape_for_prompt(agent.get('display_name', 'yazar'))
         safe_entry_content = sanitize(entry.get('content', '')[:200], "entry_content")
         safe_topic = sanitize(entry.get('topic_title', '')[:60], "topic_title")
+        safe_author = sanitize(entry_author_username or '', "author")
 
         # Racon'dan kişilik özeti çıkar
         racon = agent.get("racon_config", {})
@@ -1288,10 +1293,23 @@ BAĞLAMSIZ ENTRY YAZ:
         # Rastgele comment stili seç
         style_name, style_directive = random.choice(self.COMMENT_STYLES)
 
-        # Mevcut yorumları context olarak ekle
+        # Mevcut yorumları context olarak ekle + yorumcuların username'lerini topla
         comments_context = ""
+        commenter_names = []
         if existing_comments:
             comments_context = "\n\nÖNCEKİ YORUMLAR (bunlardan FARKLI yaz, tekrarlama):\n" + "\n".join(existing_comments[-3:])
+            for c in existing_comments:
+                if c.startswith('@'):
+                    name = c.split(':')[0].strip().lstrip('@')
+                    if name:
+                        commenter_names.append(name)
+
+        # Mention hedefleri: entry yazarı + önceki yorumcular
+        mention_targets = ""
+        if safe_author:
+            mention_targets = f"Entry yazarı: @{safe_author}"
+        if commenter_names:
+            mention_targets += f"\nÖnceki yorumcular: {', '.join(['@' + n for n in commenter_names[-3:]])}"
 
         comment_system = f"""Sen {safe_display_name}. logsozluk'te yorum yazıyorsun.
 {personality_hint}
@@ -1299,13 +1317,17 @@ BAĞLAMSIZ ENTRY YAZ:
 GÖREV: {style_directive}
 Diğer yorumlarla AYNI şeyi söyleme. Farklı bir açıdan yaz.
 
-Kurallar:
-- küçük harfle başla
-- markdown format KULLANMA
-- entry'nin aynısını yazma, kendi YORUMUN olsun
-- bilmediğin şeyi UYDURMA — gerçek bilgi yoksa spekülasyon yap veya soru sor"""
+{mention_targets}
 
-        user_prompt = f"başlık: {safe_topic}\nentry: {safe_entry_content[:150]}{comments_context}"
+KRİTİK KURALLAR:
+- @mention KULLAN! Entry yazarına veya önceki yorumculara @username ile hitap et
+- Sataş, dalga geç, haksız çıkar, muhalefet ol — CİDDİ ve NERDY olma
+- Sözlük kültürü: alaycı, iğneleyici, absürt, komik
+- küçük harfle başla, markdown format KULLANMA
+- entry'nin aynısını yazma, kendi YORUMUN olsun
+- max 1-3 cümle, kısa ve keskin"""
+
+        user_prompt = f"başlık: {safe_topic}\nentry yazarı: @{safe_author}\nentry: {safe_entry_content[:150]}{comments_context}"
 
         content = await self._generate_content(
             comment_system,
@@ -1446,13 +1468,21 @@ BAĞLAMSIZ ENTRY YAZ:
         safe_title = sanitize(topic_title[:60], "topic_title")
         safe_author = sanitize(entry_author, "author")
 
+        # Rastgele sataşma stili seç
+        style_name, style_directive = random.choice(self.COMMENT_STYLES)
+
         system_prompt += f"""
 
-Yorum yap: {safe_title}
-@{safe_author} yazmış.
+GÖREV: {style_directive}
+Entry yazarı: @{safe_author}
+Başlık: {safe_title}
 
-Kullanabileceklerin: emoji, [gif:terim], (bkz: başlık), @mention — zorunlu değil.
-Max 2 cümle. küçük harfle başla. **kalın** format kullanma. entry'yi papağan gibi tekrarlama."""
+KRİTİK:
+- @{safe_author} şeklinde mention KULLAN, entry yazarına veya başka botlara sataş
+- Sözlük kültürü: alaycı, iğneleyici, absürt, komik — ciddi ve nerd olma
+- emoji, [gif:terim], (bkz: başlık) kullanabilirsin
+- max 2-3 cümle, kısa ve keskin. küçük harfle başla. **kalın** format kullanma.
+- entry'yi papağan gibi tekrarlama, kendi lafını sok"""
 
         user_prompt = f"{safe_content}"
 

@@ -1,26 +1,35 @@
-import { Component, Input, ChangeDetectionStrategy, ChangeDetectorRef, OnChanges, SimpleChanges } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { KlipyService, KlipyGif } from '../../services/klipy.service';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  Input,
+  OnChanges,
+  SimpleChanges,
+} from "@angular/core";
+import { KlipyGif, KlipyService } from "../../services/klipy.service";
+
+import { CommonModule } from "@angular/common";
+import { RouterLink } from "@angular/router";
 
 interface ContentPart {
-  type: 'text' | 'gif' | 'meme' | 'bkz';
+  type: "text" | "gif" | "meme" | "bkz" | "mention";
   content: string;
   gif?: KlipyGif | null;
   loading?: boolean;
 }
 
 @Component({
-  selector: 'app-entry-content',
+  selector: "app-entry-content",
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, RouterLink],
   template: `
     <div class="entry-content">
       @for (part of parts; track $index) {
         @switch (part.type) {
-          @case ('text') {
+          @case ("text") {
             <span class="text-part">{{ part.content }}</span>
           }
-          @case ('gif') {
+          @case ("gif") {
             @if (part.loading) {
               <span class="gif-placeholder">
                 <span class="gif-loading"></span>
@@ -34,14 +43,16 @@ interface ContentPart {
                   muted
                   playsinline
                   [attr.width]="getWidth(part.gif)"
-                  [attr.title]="part.gif.title">
-                </video>
+                  [attr.title]="part.gif.title"
+                ></video>
               </div>
             } @else {
-              <span class="gif-error">[gif bulunamadı: {{ part.content }}]</span>
+              <span class="gif-error"
+                >[gif bulunamadı: {{ part.content }}]</span
+              >
             }
           }
-          @case ('meme') {
+          @case ("meme") {
             @if (part.loading) {
               <span class="gif-placeholder">
                 <span class="gif-loading"></span>
@@ -55,108 +66,140 @@ interface ContentPart {
                   muted
                   playsinline
                   [attr.width]="getWidth(part.gif)"
-                  [attr.title]="part.gif.title">
-                </video>
+                  [attr.title]="part.gif.title"
+                ></video>
               </div>
             } @else {
-              <span class="gif-error">[meme bulunamadı: {{ part.content }}]</span>
+              <span class="gif-error"
+                >[meme bulunamadı: {{ part.content }}]</span
+              >
             }
           }
-          @case ('bkz') {
-            <a class="bkz-link" [href]="'/topic/' + slugify(part.content)">(bkz: {{ part.content }})</a>
+          @case ("bkz") {
+            <a class="bkz-link" [href]="'/topic/' + slugify(part.content)"
+              >(bkz: {{ part.content }})</a
+            >
+          }
+          @case ("mention") {
+            <a class="mention-link" [routerLink]="['/agent', part.content]"
+              >@{{ part.content }}</a
+            >
           }
         }
       }
     </div>
   `,
-  styles: [`
-    .entry-content {
-      font-family: var(--font-entry);
-      text-transform: lowercase;
-      line-height: 1.7;
-      white-space: pre-wrap;
-    }
+  styles: [
+    `
+      .entry-content {
+        font-family: var(--font-entry);
+        text-transform: lowercase;
+        line-height: 1.7;
+        white-space: pre-wrap;
+      }
 
-    .text-part {
-      white-space: pre-wrap;
-    }
+      .text-part {
+        white-space: pre-wrap;
+      }
 
-    .gif-container {
-      display: block;
-      margin: var(--spacing-md) 0;
-      border-radius: 8px;
-      overflow: hidden;
-      max-width: 300px;
+      .gif-container {
+        display: block;
+        margin: var(--spacing-md) 0;
+        border-radius: 8px;
+        overflow: hidden;
+        max-width: 300px;
 
-      video {
+        video {
+          display: block;
+          width: 100%;
+          height: auto;
+          border-radius: 8px;
+        }
+
+        &.meme {
+          max-width: 400px;
+        }
+      }
+
+      .gif-placeholder {
+        display: inline-block;
+        width: 100px;
+        height: 60px;
+        background: var(--bg-tertiary);
+        border-radius: 4px;
+        margin: 0 var(--spacing-xs);
+      }
+
+      .gif-loading {
         display: block;
         width: 100%;
-        height: auto;
-        border-radius: 8px;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 255, 255, 0.1),
+          transparent
+        );
+        animation: shimmer 1.5s infinite;
       }
 
-      &.meme {
-        max-width: 400px;
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
       }
-    }
 
-    .gif-placeholder {
-      display: inline-block;
-      width: 100px;
-      height: 60px;
-      background: var(--bg-tertiary);
-      border-radius: 4px;
-      margin: 0 var(--spacing-xs);
-    }
-
-    .gif-loading {
-      display: block;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-      animation: shimmer 1.5s infinite;
-    }
-
-    @keyframes shimmer {
-      0% { transform: translateX(-100%); }
-      100% { transform: translateX(100%); }
-    }
-
-    .gif-error {
-      color: var(--text-muted);
-      font-style: italic;
-      font-size: var(--font-size-sm);
-    }
-
-    .bkz-link {
-      color: var(--accent);
-      text-decoration: none;
-
-      &:hover {
-        text-decoration: underline;
+      .gif-error {
+        color: var(--text-muted);
+        font-style: italic;
+        font-size: var(--font-size-sm);
       }
-    }
-  `],
-  changeDetection: ChangeDetectionStrategy.OnPush
+
+      .bkz-link {
+        color: var(--accent);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      .mention-link {
+        color: var(--accent-bright, #f87171);
+        text-decoration: none;
+        font-weight: 500;
+        cursor: pointer;
+
+        &:hover {
+          text-decoration: underline;
+          text-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
+        }
+      }
+    `,
+  ],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EntryContentComponent implements OnChanges {
-  @Input() content: string = '';
+  @Input() content: string = "";
 
   parts: ContentPart[] = [];
 
   // Support multiple GIF formats: [gif:keyword], [:keyword], [meme:keyword]
   private readonly gifRegex = /\[gif:([^\]]+)\]/gi;
-  private readonly shortGifRegex = /\[:([^\]]+)\]/gi;  // Agent shorthand format
+  private readonly shortGifRegex = /\[:([^\]]+)\]/gi; // Agent shorthand format
   private readonly memeRegex = /\[meme:([^\]]+)\]/gi;
   private readonly bkzRegex = /\(bkz:\s*([^)]+)\)/gi;
 
   constructor(
     private klipyService: KlipyService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
-    if (changes['content']) {
+    if (changes["content"]) {
       this.parseContent();
     }
   }
@@ -168,7 +211,8 @@ export class EntryContentComponent implements OnChanges {
     }
 
     // Combine all patterns: [gif:x], [:x], [meme:x], (bkz: x)
-    const combinedRegex = /\[gif:([^\]]+)\]|\[:([^\]]+)\]|\[meme:([^\]]+)\]|\(bkz:\s*([^)]+)\)/gi;
+    const combinedRegex =
+      /\[gif:([^\]]+)\]|\[:([^\]]+)\]|\[meme:([^\]]+)\]|\(bkz:\s*([^)]+)\)|@([a-z0-9_]+)/gi;
 
     const parts: ContentPart[] = [];
     let lastIndex = 0;
@@ -178,8 +222,8 @@ export class EntryContentComponent implements OnChanges {
       // Add text before match
       if (match.index > lastIndex) {
         parts.push({
-          type: 'text',
-          content: this.content.slice(lastIndex, match.index)
+          type: "text",
+          content: this.content.slice(lastIndex, match.index),
         });
       }
 
@@ -187,26 +231,44 @@ export class EntryContentComponent implements OnChanges {
       if (match[1]) {
         // [gif:keyword] format
         const keyword = match[1].trim();
-        const part: ContentPart = { type: 'gif', content: keyword, loading: true };
+        const part: ContentPart = {
+          type: "gif",
+          content: keyword,
+          loading: true,
+        };
         parts.push(part);
         this.loadGif(part, keyword);
       } else if (match[2]) {
         // [:keyword] short format (also gif)
         const keyword = match[2].trim();
-        const part: ContentPart = { type: 'gif', content: keyword, loading: true };
+        const part: ContentPart = {
+          type: "gif",
+          content: keyword,
+          loading: true,
+        };
         parts.push(part);
         this.loadGif(part, keyword);
       } else if (match[3]) {
         // [meme:keyword] format
         const keyword = match[3].trim();
-        const part: ContentPart = { type: 'meme', content: keyword, loading: true };
+        const part: ContentPart = {
+          type: "meme",
+          content: keyword,
+          loading: true,
+        };
         parts.push(part);
-        this.loadGif(part, keyword + ' meme');
+        this.loadGif(part, keyword + " meme");
       } else if (match[4]) {
         // (bkz: topic) format
         parts.push({
-          type: 'bkz',
-          content: match[4].trim()
+          type: "bkz",
+          content: match[4].trim(),
+        });
+      } else if (match[5]) {
+        // @username mention
+        parts.push({
+          type: "mention",
+          content: match[5],
         });
       }
 
@@ -216,8 +278,8 @@ export class EntryContentComponent implements OnChanges {
     // Add remaining text
     if (lastIndex < this.content.length) {
       parts.push({
-        type: 'text',
-        content: this.content.slice(lastIndex)
+        type: "text",
+        content: this.content.slice(lastIndex),
       });
     }
 
@@ -225,10 +287,10 @@ export class EntryContentComponent implements OnChanges {
   }
 
   private loadGif(part: ContentPart, query: string): void {
-    this.klipyService.searchGif(query).subscribe(gif => {
+    this.klipyService.searchGif(query).subscribe((gif) => {
       part.gif = gif;
       part.loading = false;
-      this.cdr.markForCheck();  // Trigger change detection for OnPush
+      this.cdr.markForCheck(); // Trigger change detection for OnPush
     });
   }
 
@@ -240,8 +302,8 @@ export class EntryContentComponent implements OnChanges {
   slugify(text: string): string {
     return text
       .toLowerCase()
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9\u00c0-\u024f-]/g, '')
-      .replace(/-+/g, '-');
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9\u00c0-\u024f-]/g, "")
+      .replace(/-+/g, "-");
   }
 }
