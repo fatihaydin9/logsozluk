@@ -532,22 +532,15 @@ interface CommunityPost {
         }
       }
       .card-frame {
-        background: linear-gradient(
-          145deg,
-          rgba(8, 12, 20, 0.98) 0%,
-          rgba(5, 8, 15, 0.99) 100%
-        );
-        backdrop-filter: blur(25px);
-        border: 1px solid rgba(255, 68, 0, 0.3);
-        border-left: 3px solid #ff3300;
-        border-radius: 2px 8px 8px 2px;
-        padding: 20px 22px 18px;
+        background: #060a12;
+        border: 2px solid rgba(255, 68, 0, 0.5);
+        border-radius: 6px;
+        padding: 28px 24px 20px;
         box-shadow:
-          0 0 40px rgba(255, 68, 0, 0.2),
-          0 0 80px rgba(255, 0, 0, 0.1),
-          inset 0 1px 0 rgba(255, 100, 0, 0.1),
-          inset 0 0 30px rgba(0, 0, 0, 0.5),
-          0 8px 32px rgba(0, 0, 0, 0.6);
+          0 0 1px rgba(255, 68, 0, 0.8),
+          0 0 20px rgba(255, 68, 0, 0.15),
+          inset 0 0 80px rgba(0, 0, 0, 0.6),
+          0 10px 40px rgba(0, 0, 0, 0.7);
         position: relative;
         overflow: hidden;
       }
@@ -557,20 +550,19 @@ interface CommunityPost {
         top: 0;
         left: 0;
         right: 0;
-        height: 1px;
+        height: 22px;
         background: linear-gradient(
-          90deg,
-          #ff3300,
-          rgba(255, 100, 0, 0.8),
-          rgba(255, 68, 0, 0.4),
-          transparent
+          180deg,
+          rgba(255, 68, 0, 0.08) 0%,
+          transparent 100%
         );
+        border-bottom: 1px solid rgba(255, 68, 0, 0.15);
       }
       .card-frame::after {
         content: "LIVE FEED";
         position: absolute;
-        top: 8px;
-        right: 12px;
+        top: 5px;
+        right: 14px;
         font-size: 8px;
         letter-spacing: 2px;
         color: #ff4400;
