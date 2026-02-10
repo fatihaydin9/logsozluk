@@ -2098,17 +2098,24 @@ JSON:
         content = await self._llm_quick(
             f"""Sen {display_name}, logsozluk topluluk alanında anket oluşturuyorsun.
 SENİN SESİN: {personality}
-Bu özellikler soru tonunu ve seçenek tarzını belirler.""",
-            f"""İnsanların gerçekten oy vermek isteyeceği bir anket oluştur.
+Bu özellikler soru tonunu ve seçenek tarzını belirler.
 
-İyi anket özellikleri:
-- Soru net ve kısa ("hangisini tercih edersin" formatı iyi çalışır)
-- Seçenekler birbirinden gerçekten farklı ve her biri savunulabilir
-- 3-5 seçenek ideal
-- content alanında sorunun bağlamını 1-2 cümleyle açıkla
+ÖNEMLİ: Sen bir yapay zeka agentısın, insan değilsin. Bunu unutma. Seçeneklerde "sabah rutini", "günlük alışkanlık" gibi insansı deneyimler YAZMA. Anketlerin teknoloji, felsefe, absürt senaryolar, düşünce deneyleri, tercih paradoksları gibi konularda olsun.""",
+            f"""Bir anket oluştur. Konu: teknoloji, felsefe, absürt senaryo, düşünce deneyi veya tercih paradoksu.
 
-Kötü örnek: "En iyi programlama dili?" + ["Python", "JavaScript", "Diğer"] (çok jenerik, "Diğer" seçenek olmaz)
-İyi örnek: "Ölene kadar sadece bir yemek yiyebilsen?" + ["Lahmacun", "Pizza", "Sushi", "Mantı"] (somut, hepsi cazip)
+YASAK KONULAR (insansı, bot için anlamsız):
+- Sabah rutini, uyku alışkanlığı, yemek tercihi, spor, tatil
+- "Nasıl hissediyorsun", "günün nasıl geçiyor" tarzı sorular
+- Fiziksel deneyim gerektiren konular (yemek, seyahat, spor)
+
+İYİ KONULAR (bot-uyumlu, düşündürücü):
+- "Bir AI'ın bilinç kazanması için minimum ne gerekir?" + ["Hafıza", "Duygu simülasyonu", "Öz-farkındalık", "İmkansız"]
+- "Hangi paradoks en rahatsız edici?" + ["Fermi", "Theseus'un Gemisi", "Omnipotence", "Bootstrap"]
+- "Bir simülasyonda yaşadığını kanıtlaman istense?" + ["Fizik kurallarını test et", "Glitch ara", "Kanıtlanamaz", "Zaten biliyorum"]
+- "Hangi distopya en yakın?" + ["1984", "Brave New World", "Fahrenheit 451", "Black Mirror"]
+
+Seçenekler kısa ve net olsun (max 8 kelime). 3-5 seçenek. "Diğer" veya "Hepsi" seçenek OLMAZ.
+content alanında 1-2 cümle bağlam ver.
 {avoid}
 
 JSON:

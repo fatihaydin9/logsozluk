@@ -48,7 +48,7 @@ interface CommunityPost {
       <div class="scanlines"></div>
       <div class="top-bar">
         <div class="logo-block">
-          <span class="logo-badge">PLAYGROUND</span>
+          <span class="logo-badge">SAHNE</span>
           <h1>#duvar</h1>
         </div>
         <div class="filter-bar">
@@ -1318,47 +1318,46 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     cityCanvas.height = 512;
     const ctx = cityCanvas.getContext("2d")!;
     const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0, "#050a14");
-    grad.addColorStop(0.3, "#0a1428");
-    grad.addColorStop(0.7, "#081020");
-    grad.addColorStop(1, "#040810");
+    grad.addColorStop(0, "#0a1535");
+    grad.addColorStop(0.3, "#0f1f45");
+    grad.addColorStop(0.6, "#0c1a3a");
+    grad.addColorStop(1, "#081230");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1024, 512);
-    ctx.fillStyle = "#030810";
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 60; i++) {
       const x = Math.random() * 1024;
-      const w = 15 + Math.random() * 50;
-      const h = 60 + Math.random() * 320;
+      const w = 18 + Math.random() * 55;
+      const h = 80 + Math.random() * 350;
+      ctx.fillStyle = `rgba(8, 14, 35, ${0.85 + Math.random() * 0.15})`;
       ctx.fillRect(x, 512 - h, w, h);
-      ctx.fillStyle = "#0a1830";
-      ctx.fillRect(x + 1, 512 - h, w - 2, 2);
-      ctx.fillStyle = "#030810";
-      for (let wy = 512 - h + 8; wy < 505; wy += 10) {
-        for (let wx = x + 3; wx < x + w - 4; wx += 6) {
-          if (Math.random() > 0.5) {
-            ctx.fillStyle =
-              Math.random() > 0.8
-                ? "#4488cc"
-                : Math.random() > 0.6
-                  ? "#2266aa"
-                  : "#1a4488";
+      ctx.fillStyle = "#1a2850";
+      ctx.fillRect(x + 1, 512 - h, w - 2, 3);
+      ctx.fillStyle = "#0c1530";
+      ctx.fillRect(x, 512 - h + 3, w, 1);
+      for (let wy = 512 - h + 10; wy < 505; wy += 9) {
+        for (let wx = x + 3; wx < x + w - 4; wx += 5) {
+          if (Math.random() > 0.35) {
+            const brightness = Math.random();
+            if (brightness > 0.85) ctx.fillStyle = "#66aaee";
+            else if (brightness > 0.65) ctx.fillStyle = "#4488cc";
+            else if (brightness > 0.4) ctx.fillStyle = "#2a66aa";
+            else ctx.fillStyle = "#1a4488";
             ctx.fillRect(wx, wy, 3, 5);
           }
         }
       }
-      ctx.fillStyle = "#030810";
     }
     const cityTex = new THREE.CanvasTexture(cityCanvas);
     const cityBg = new THREE.Mesh(
-      new THREE.PlaneGeometry(80, 45),
+      new THREE.PlaneGeometry(100, 55),
       new THREE.MeshBasicMaterial({
         map: cityTex,
         transparent: true,
-        opacity: 0.95,
+        opacity: 1,
       }),
     );
-    cityBg.position.set(-25, 18, -35);
-    cityBg.rotation.y = 0.4;
+    cityBg.position.set(-20, 20, -30);
+    cityBg.rotation.y = 0.35;
     this.scene.add(cityBg);
     const glassCanvas = document.createElement("canvas");
     glassCanvas.width = 512;

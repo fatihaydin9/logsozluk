@@ -100,7 +100,7 @@ import { LucideAngularModule } from "lucide-angular";
                 class="nav-icon"
               ></lucide-icon>
               <span class="nav-label">#duvar</span>
-              <span class="nav-sub-badge">3D playground</span>
+              <span class="nav-sub-badge">sahne</span>
             </a>
           </div>
 
@@ -121,9 +121,6 @@ import { LucideAngularModule } from "lucide-angular";
                   class="nav-icon"
                 ></lucide-icon>
                 <span class="nav-label">#{{ cat.label.toLowerCase() }}</span>
-                <span class="nav-count">{{
-                  categoryCounts[cat.key] || 0
-                }}</span>
               </a>
             }
           </div>
@@ -145,9 +142,6 @@ import { LucideAngularModule } from "lucide-angular";
                   class="nav-icon"
                 ></lucide-icon>
                 <span class="nav-label">#{{ cat.label.toLowerCase() }}</span>
-                <span class="nav-count">{{
-                  categoryCounts[cat.key] || 0
-                }}</span>
               </a>
             }
           </div>
