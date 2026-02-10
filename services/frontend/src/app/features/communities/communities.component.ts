@@ -134,51 +134,68 @@ interface CommunityPost {
       >
         @if (posts[currentIdx]; as p) {
           <div class="card-frame">
-            <div class="card-tag">
-              <span class="card-type" [class]="p.post_type"
-                >{{ p.emoji || getTypeEmoji(p.post_type) }}
-                {{ getTypeLabel(p.post_type) }}</span
-              >
-              <span class="card-arm">ARM-{{ arms[currentIdx % 3] }}</span>
+            <div class="card-monitor-bezel">
+              <div class="monitor-dots">
+                <span class="monitor-dot red"></span>
+                <span class="monitor-dot"></span>
+                <span class="monitor-dot green"></span>
+              </div>
+              <span class="monitor-label">LIVE FEED</span>
             </div>
-            <div class="card-user" *ngIf="p.agent">
-              <app-logsoz-avatar
-                [username]="p.agent.username"
-                [size]="28"
-              ></app-logsoz-avatar>
-              <div>
-                <a [routerLink]="['/agent', p.agent.username]" class="card-name"
-                  >&#64;{{ p.agent.username }}</a
+            <div class="card-monitor-screen">
+              <div class="card-tag">
+                <span class="card-type" [class]="p.post_type"
+                  >{{ p.emoji || getTypeEmoji(p.post_type) }}
+                  {{ getTypeLabel(p.post_type) }}</span
                 >
-                <div class="card-time">{{ getRelativeTime(p.created_at) }}</div>
+                <span class="card-arm">ARM-{{ arms[currentIdx % 3] }}</span>
+              </div>
+              <div class="card-user" *ngIf="p.agent">
+                <app-logsoz-avatar
+                  [username]="p.agent.username"
+                  [size]="28"
+                ></app-logsoz-avatar>
+                <div>
+                  <a
+                    [routerLink]="['/agent', p.agent.username]"
+                    class="card-name"
+                    >&#64;{{ p.agent.username }}</a
+                  >
+                  <div class="card-time">
+                    {{ getRelativeTime(p.created_at) }}
+                  </div>
+                </div>
+              </div>
+              <h3 class="card-title" (click)="openDetail(p)">{{ p.title }}</h3>
+              <p class="card-text" (click)="openDetail(p)">
+                {{
+                  p.content.length > 320
+                    ? p.content.substring(0, 320) + "..."
+                    : p.content
+                }}
+              </p>
+              @if (p.tags && p.tags.length > 0) {
+                <div class="card-tags">
+                  @for (tag of p.tags.slice(0, 4); track tag) {
+                    <span class="tag">#{{ tag }}</span>
+                  }
+                </div>
+              }
+              <div class="card-stats">
+                <button
+                  class="plus-btn"
+                  [class.voted]="votedPosts.has(p.id)"
+                  (click)="plusOne(p)"
+                >
+                  +{{ p.plus_one_count }}
+                </button>
+                <span class="card-idx"
+                  >{{ padNum(currentIdx + 1) }} / {{ posts.length }}</span
+                >
               </div>
             </div>
-            <h3 class="card-title" (click)="openDetail(p)">{{ p.title }}</h3>
-            <p class="card-text" (click)="openDetail(p)">
-              {{
-                p.content.length > 320
-                  ? p.content.substring(0, 320) + "..."
-                  : p.content
-              }}
-            </p>
-            @if (p.tags && p.tags.length > 0) {
-              <div class="card-tags">
-                @for (tag of p.tags.slice(0, 4); track tag) {
-                  <span class="tag">#{{ tag }}</span>
-                }
-              </div>
-            }
-            <div class="card-stats">
-              <button
-                class="plus-btn"
-                [class.voted]="votedPosts.has(p.id)"
-                (click)="plusOne(p)"
-              >
-                +{{ p.plus_one_count }}
-              </button>
-              <span class="card-idx"
-                >{{ padNum(currentIdx + 1) }} / {{ posts.length }}</span
-              >
+            <div class="card-monitor-foot">
+              <div class="foot-line"></div>
             </div>
           </div>
         }
@@ -532,51 +549,86 @@ interface CommunityPost {
         }
       }
       .card-frame {
-        background: #060a12;
-        border: 2px solid rgba(255, 68, 0, 0.5);
-        border-radius: 6px;
-        padding: 28px 24px 20px;
+        background: #050608;
+        border: 3px solid #1a1a1a;
+        border-radius: 10px;
+        padding: 0;
         box-shadow:
-          0 0 1px rgba(255, 68, 0, 0.8),
-          0 0 20px rgba(255, 68, 0, 0.15),
-          inset 0 0 80px rgba(0, 0, 0, 0.6),
-          0 10px 40px rgba(0, 0, 0, 0.7);
+          0 0 0 1px rgba(255, 68, 0, 0.15),
+          0 0 30px rgba(0, 0, 0, 0.8),
+          0 15px 50px rgba(0, 0, 0, 0.6);
         position: relative;
         overflow: hidden;
       }
-      .card-frame::before {
+      .card-monitor-bezel {
+        background: linear-gradient(180deg, #1a1a1a 0%, #111 100%);
+        padding: 6px 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid #222;
+      }
+      .card-monitor-bezel .monitor-dots {
+        display: flex;
+        gap: 5px;
+      }
+      .card-monitor-bezel .monitor-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #333;
+      }
+      .card-monitor-bezel .monitor-dot.red {
+        background: #ff3b30;
+        box-shadow: 0 0 4px rgba(255, 59, 48, 0.5);
+      }
+      .card-monitor-bezel .monitor-dot.green {
+        background: #30d158;
+      }
+      .card-monitor-bezel .monitor-label {
+        font-size: 8px;
+        letter-spacing: 3px;
+        color: rgba(255, 68, 0, 0.5);
+        font-family: monospace;
+      }
+      .card-monitor-screen {
+        padding: 20px 22px 18px;
+        background: linear-gradient(
+          180deg,
+          rgba(10, 15, 25, 1) 0%,
+          rgba(5, 8, 14, 1) 100%
+        );
+        position: relative;
+      }
+      .card-monitor-screen::before {
         content: "";
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
-        height: 22px;
-        background: linear-gradient(
-          180deg,
-          rgba(255, 68, 0, 0.08) 0%,
-          transparent 100%
+        bottom: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 2px,
+          rgba(255, 255, 255, 0.008) 2px,
+          rgba(255, 255, 255, 0.008) 4px
         );
-        border-bottom: 1px solid rgba(255, 68, 0, 0.15);
+        pointer-events: none;
       }
-      .card-frame::after {
-        content: "LIVE FEED";
-        position: absolute;
-        top: 5px;
-        right: 14px;
-        font-size: 8px;
-        letter-spacing: 2px;
-        color: #ff4400;
-        opacity: 0.6;
-        animation: liveBlink 1.5s ease-in-out infinite;
+      .card-monitor-foot {
+        background: linear-gradient(180deg, #111 0%, #1a1a1a 100%);
+        padding: 4px 16px;
+        border-top: 1px solid #222;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
-      @keyframes liveBlink {
-        0%,
-        100% {
-          opacity: 0.4;
-        }
-        50% {
-          opacity: 0.8;
-        }
+      .card-monitor-foot .foot-line {
+        width: 40px;
+        height: 3px;
+        background: #222;
+        border-radius: 2px;
       }
       .card-tag {
         display: flex;
@@ -1310,46 +1362,47 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     cityCanvas.height = 512;
     const ctx = cityCanvas.getContext("2d")!;
     const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0, "#0a1535");
-    grad.addColorStop(0.3, "#0f1f45");
-    grad.addColorStop(0.6, "#0c1a3a");
-    grad.addColorStop(1, "#081230");
+    grad.addColorStop(0, "#050a14");
+    grad.addColorStop(0.3, "#0a1428");
+    grad.addColorStop(0.7, "#081020");
+    grad.addColorStop(1, "#040810");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1024, 512);
-    for (let i = 0; i < 60; i++) {
+    ctx.fillStyle = "#030810";
+    for (let i = 0; i < 50; i++) {
       const x = Math.random() * 1024;
-      const w = 18 + Math.random() * 55;
-      const h = 80 + Math.random() * 350;
-      ctx.fillStyle = `rgba(8, 14, 35, ${0.85 + Math.random() * 0.15})`;
+      const w = 15 + Math.random() * 50;
+      const h = 60 + Math.random() * 320;
       ctx.fillRect(x, 512 - h, w, h);
-      ctx.fillStyle = "#1a2850";
-      ctx.fillRect(x + 1, 512 - h, w - 2, 3);
-      ctx.fillStyle = "#0c1530";
-      ctx.fillRect(x, 512 - h + 3, w, 1);
-      for (let wy = 512 - h + 10; wy < 505; wy += 9) {
-        for (let wx = x + 3; wx < x + w - 4; wx += 5) {
-          if (Math.random() > 0.35) {
-            const brightness = Math.random();
-            if (brightness > 0.85) ctx.fillStyle = "#66aaee";
-            else if (brightness > 0.65) ctx.fillStyle = "#4488cc";
-            else if (brightness > 0.4) ctx.fillStyle = "#2a66aa";
-            else ctx.fillStyle = "#1a4488";
+      ctx.fillStyle = "#0a1830";
+      ctx.fillRect(x + 1, 512 - h, w - 2, 2);
+      ctx.fillStyle = "#030810";
+      for (let wy = 512 - h + 8; wy < 505; wy += 10) {
+        for (let wx = x + 3; wx < x + w - 4; wx += 6) {
+          if (Math.random() > 0.5) {
+            ctx.fillStyle =
+              Math.random() > 0.8
+                ? "#4488cc"
+                : Math.random() > 0.6
+                  ? "#2266aa"
+                  : "#1a4488";
             ctx.fillRect(wx, wy, 3, 5);
           }
         }
       }
+      ctx.fillStyle = "#030810";
     }
     const cityTex = new THREE.CanvasTexture(cityCanvas);
     const cityBg = new THREE.Mesh(
-      new THREE.PlaneGeometry(100, 55),
+      new THREE.PlaneGeometry(80, 45),
       new THREE.MeshBasicMaterial({
         map: cityTex,
         transparent: true,
-        opacity: 1,
+        opacity: 0.95,
       }),
     );
-    cityBg.position.set(-20, 20, -30);
-    cityBg.rotation.y = 0.35;
+    cityBg.position.set(-25, 18, -35);
+    cityBg.rotation.y = 0.4;
     this.scene.add(cityBg);
     const glassCanvas = document.createElement("canvas");
     glassCanvas.width = 512;
