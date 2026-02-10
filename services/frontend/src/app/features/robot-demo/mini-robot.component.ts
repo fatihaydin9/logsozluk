@@ -1,13 +1,14 @@
+import * as THREE from "three";
+
 import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
-  ViewChild,
-  AfterViewInit,
-  OnDestroy,
   Input,
-  ChangeDetectionStrategy,
+  OnDestroy,
+  ViewChild,
 } from "@angular/core";
-import * as THREE from "three";
 
 @Component({
   selector: "app-mini-robot",
@@ -102,16 +103,41 @@ export class MiniRobotComponent implements AfterViewInit, OnDestroy {
     rim.rotation.x = Math.PI / 2;
     m.add(rim);
 
-    // --- Side handles (attached to cup body sides, curving outward & up) ---
+    // --- Double-tube side handles with joint rings ---
     for (const side of [-1, 1]) {
-      const curve = new THREE.CubicBezierCurve3(
-        new THREE.Vector3(side * 0.62, 0.15, 0), // lower attach point on cup body
-        new THREE.Vector3(side * 1.3, 0.2, 0), // curve outward
-        new THREE.Vector3(side * 1.35, 0.85, 0), // curve upward
-        new THREE.Vector3(side * 0.72, 0.65, 0), // upper attach point near rim
+      // Outer handle curve
+      const outer = new THREE.CubicBezierCurve3(
+        new THREE.Vector3(side * 0.58, 0.1, 0),
+        new THREE.Vector3(side * 1.25, 0.15, 0),
+        new THREE.Vector3(side * 1.3, 0.85, 0),
+        new THREE.Vector3(side * 0.68, 0.7, 0),
       );
-      const tube = new THREE.TubeGeometry(curve, 12, 0.03, 4, false);
-      m.add(this.w(tube));
+      m.add(this.w(new THREE.TubeGeometry(outer, 16, 0.025, 4, false)));
+      // Inner handle curve (parallel, slightly closer)
+      const inner = new THREE.CubicBezierCurve3(
+        new THREE.Vector3(side * 0.52, 0.05, 0),
+        new THREE.Vector3(side * 1.1, 0.12, 0),
+        new THREE.Vector3(side * 1.15, 0.8, 0),
+        new THREE.Vector3(side * 0.62, 0.65, 0),
+      );
+      m.add(this.w(new THREE.TubeGeometry(inner, 16, 0.025, 4, false)));
+      // Cross-braces connecting the two tubes
+      for (const t of [0.3, 0.5, 0.7]) {
+        const p1 = outer.getPoint(t);
+        const p2 = inner.getPoint(t);
+        const brace = new THREE.CubicBezierCurve3(p1, p1, p2, p2);
+        m.add(this.w(new THREE.TubeGeometry(brace, 2, 0.015, 4, false)));
+      }
+      // Joint ring at lower attachment
+      const lowerJoint = this.w(new THREE.TorusGeometry(0.08, 0.015, 4, 8));
+      lowerJoint.position.set(side * 0.55, 0.08, 0);
+      lowerJoint.rotation.y = Math.PI / 2;
+      m.add(lowerJoint);
+      // Joint ring at upper attachment
+      const upperJoint = this.w(new THREE.TorusGeometry(0.08, 0.015, 4, 8));
+      upperJoint.position.set(side * 0.65, 0.68, 0);
+      upperJoint.rotation.y = Math.PI / 2;
+      m.add(upperJoint);
     }
 
     // --- Stem ---
