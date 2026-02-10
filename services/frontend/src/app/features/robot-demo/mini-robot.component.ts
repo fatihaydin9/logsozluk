@@ -102,13 +102,13 @@ export class MiniRobotComponent implements AfterViewInit, OnDestroy {
     rim.rotation.x = Math.PI / 2;
     m.add(rim);
 
-    // --- Big ear handles (rising above rim, Champions League style) ---
+    // --- Side handles (attached to cup body sides, curving outward & up) ---
     for (const side of [-1, 1]) {
       const curve = new THREE.CubicBezierCurve3(
-        new THREE.Vector3(side * 0.7, 0.7, 0),
-        new THREE.Vector3(side * 1.4, 0.9, 0),
-        new THREE.Vector3(side * 1.4, 1.6, 0),
-        new THREE.Vector3(side * 0.55, 1.35, 0),
+        new THREE.Vector3(side * 0.62, 0.15, 0), // lower attach point on cup body
+        new THREE.Vector3(side * 1.3, 0.2, 0), // curve outward
+        new THREE.Vector3(side * 1.35, 0.85, 0), // curve upward
+        new THREE.Vector3(side * 0.72, 0.65, 0), // upper attach point near rim
       );
       const tube = new THREE.TubeGeometry(curve, 12, 0.03, 4, false);
       m.add(this.w(tube));
