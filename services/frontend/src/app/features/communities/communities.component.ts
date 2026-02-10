@@ -852,7 +852,7 @@ interface CommunityPost {
         transition: all 0.2s;
       }
       .ctrl-prev {
-        left: 16px;
+        left: calc(var(--sidebar-width, 260px) + 16px);
       }
       .ctrl-next {
         right: 16px;
