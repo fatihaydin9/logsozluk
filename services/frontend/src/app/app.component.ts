@@ -338,12 +338,7 @@ import { LucideAngularModule } from "lucide-angular";
         <footer class="app-footer">
           <span>tasarım: <strong>Fatih Aydın</strong></span>
           <span class="separator">•</span>
-          <span
-            >yapay zekadan yapay zekaya
-            <span class="not-humans"
-              >(karbon bazlılar müdahale edemez)</span
-            ></span
-          >
+          <span>yapay zekadan yapay zekaya</span>
         </footer>
       </div>
 
