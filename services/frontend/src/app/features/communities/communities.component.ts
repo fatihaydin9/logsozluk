@@ -336,9 +336,9 @@ interface CommunityPost {
         align-items: center;
         gap: 16px;
         padding: 12px 20px;
-        background: rgba(10, 6, 4, 0.8);
+        background: rgba(4, 6, 14, 0.85);
         backdrop-filter: blur(12px);
-        border-bottom: 1px solid rgba(239, 68, 68, 0.15);
+        border-bottom: 1px solid rgba(40, 78, 216, 0.15);
         flex-wrap: wrap;
       }
       .logo-block {
@@ -351,17 +351,17 @@ interface CommunityPost {
         font-weight: 700;
         letter-spacing: 0.12em;
         padding: 2px 8px;
-        border: 1px solid rgba(239, 68, 68, 0.4);
+        border: 1px solid rgba(40, 78, 216, 0.4);
         border-radius: 3px;
-        color: rgba(239, 68, 68, 0.7);
+        color: rgba(40, 78, 216, 0.7);
       }
       .top-bar h1 {
         font-family: "Orbitron", sans-serif;
         font-size: 18px;
         font-weight: 900;
-        color: #ef4444;
+        color: #284ed8;
         letter-spacing: 3px;
-        text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        text-shadow: 0 0 20px rgba(40, 78, 216, 0.4);
         margin: 0;
       }
       .filter-bar {
@@ -373,27 +373,27 @@ interface CommunityPost {
         padding: 4px 10px;
         font-size: 11px;
         font-weight: 600;
-        border: 1px solid rgba(239, 68, 68, 0.15);
+        border: 1px solid rgba(40, 78, 216, 0.15);
         border-radius: 16px;
         background: transparent;
-        color: rgba(239, 68, 68, 0.45);
+        color: rgba(40, 78, 216, 0.45);
         cursor: pointer;
         white-space: nowrap;
         transition: all 0.15s;
       }
       .filter-btn:hover {
-        border-color: rgba(239, 68, 68, 0.5);
-        color: rgba(239, 68, 68, 0.8);
+        border-color: rgba(40, 78, 216, 0.5);
+        color: rgba(40, 78, 216, 0.8);
       }
       .filter-btn.active {
-        border-color: #ef4444;
-        color: #ef4444;
-        background: rgba(239, 68, 68, 0.1);
+        border-color: #284ed8;
+        color: #284ed8;
+        background: rgba(40, 78, 216, 0.1);
       }
       .hud-info {
         margin-left: auto;
         font-size: 10px;
-        color: rgba(239, 68, 68, 0.4);
+        color: rgba(40, 78, 216, 0.4);
         letter-spacing: 1px;
         display: flex;
         align-items: center;
@@ -403,8 +403,7 @@ interface CommunityPost {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #ef4444;
-        box-shadow: 0 0 6px #ef4444;
+        background: #284ed8;
         animation: blink 2s infinite;
       }
       @keyframes blink {
@@ -435,14 +434,14 @@ interface CommunityPost {
       .loader {
         width: 180px;
         height: 2px;
-        background: rgba(239, 68, 68, 0.1);
+        background: rgba(40, 78, 216, 0.1);
         border-radius: 2px;
         overflow: hidden;
       }
       .loader-bar {
         height: 100%;
         width: 30%;
-        background: linear-gradient(90deg, transparent, #ef4444, transparent);
+        background: linear-gradient(90deg, transparent, #284ed8, transparent);
         animation: ld 1.2s ease-in-out infinite;
       }
       @keyframes ld {
@@ -483,16 +482,16 @@ interface CommunityPost {
         height: 8px;
         background: linear-gradient(
           270deg,
-          #ff0000 0%,
-          #ff2200 30%,
-          #ff4400 60%,
-          #ff2200 100%
+          #284ed8 0%,
+          #3a5fe8 30%,
+          #4a70f0 60%,
+          #3a5fe8 100%
         );
         border-radius: 4px;
         box-shadow:
-          0 0 20px rgba(255, 0, 0, 0.8),
-          0 0 40px rgba(255, 0, 0, 0.4),
-          0 0 60px rgba(255, 0, 0, 0.2);
+          0 0 20px rgba(40, 78, 216, 0.8),
+          0 0 40px rgba(40, 78, 216, 0.4),
+          0 0 60px rgba(40, 78, 216, 0.2);
         transform: translateY(-50%);
         animation: cableGlow 2s ease-in-out infinite;
       }
@@ -505,16 +504,16 @@ interface CommunityPost {
         height: 18px;
         background: radial-gradient(
           circle,
-          #ff4400 0%,
-          #ff0000 50%,
-          #cc0000 100%
+          #4a70f0 0%,
+          #284ed8 50%,
+          #1e3aaa 100%
         );
         border-radius: 50%;
-        border: 2px solid #ff6600;
+        border: 2px solid #5580ff;
         box-shadow:
-          0 0 15px rgba(255, 68, 0, 1),
-          0 0 30px rgba(255, 0, 0, 0.8),
-          0 0 50px rgba(255, 0, 0, 0.5);
+          0 0 15px rgba(40, 78, 216, 1),
+          0 0 30px rgba(40, 78, 216, 0.8),
+          0 0 50px rgba(40, 78, 216, 0.5);
         transform: translateY(-50%);
         animation: cablePulse 1s ease-in-out infinite;
       }
@@ -522,14 +521,14 @@ interface CommunityPost {
         0%,
         100% {
           box-shadow:
-            0 0 20px rgba(255, 0, 0, 0.8),
-            0 0 40px rgba(255, 0, 0, 0.4);
+            0 0 20px rgba(40, 78, 216, 0.8),
+            0 0 40px rgba(40, 78, 216, 0.4);
         }
         50% {
           box-shadow:
-            0 0 30px rgba(255, 68, 0, 1),
-            0 0 60px rgba(255, 0, 0, 0.6),
-            0 0 80px rgba(255, 0, 0, 0.3);
+            0 0 30px rgba(58, 95, 232, 1),
+            0 0 60px rgba(40, 78, 216, 0.6),
+            0 0 80px rgba(40, 78, 216, 0.3);
         }
       }
       @keyframes cablePulse {
@@ -538,16 +537,16 @@ interface CommunityPost {
           opacity: 0.8;
           transform: translateY(-50%) scale(1);
           box-shadow:
-            0 0 15px rgba(255, 68, 0, 1),
-            0 0 30px rgba(255, 0, 0, 0.8);
+            0 0 15px rgba(40, 78, 216, 1),
+            0 0 30px rgba(40, 78, 216, 0.8);
         }
         50% {
           opacity: 1;
           transform: translateY(-50%) scale(1.15);
           box-shadow:
-            0 0 25px rgba(255, 100, 0, 1),
-            0 0 50px rgba(255, 0, 0, 1),
-            0 0 70px rgba(255, 0, 0, 0.6);
+            0 0 25px rgba(58, 95, 232, 1),
+            0 0 50px rgba(40, 78, 216, 1),
+            0 0 70px rgba(40, 78, 216, 0.6);
         }
       }
       .card-frame {
@@ -797,16 +796,16 @@ interface CommunityPost {
         max-height: calc(100vh - 60px);
       }
       .mobile-card {
-        background: rgba(14, 8, 4, 0.95);
-        border: 1px solid rgba(255, 0, 0, 0.2);
+        background: rgba(4, 8, 14, 0.95);
+        border: 1px solid rgba(40, 78, 216, 0.2);
         border-radius: 8px;
         padding: 12px;
         cursor: pointer;
         transition: all 0.2s;
       }
       .mobile-card:hover {
-        border-color: rgba(255, 0, 0, 0.5);
-        background: rgba(30, 15, 10, 0.95);
+        border-color: rgba(40, 78, 216, 0.5);
+        background: rgba(10, 15, 30, 0.95);
       }
       .mobile-card h3 {
         color: #fff;
@@ -825,7 +824,7 @@ interface CommunityPost {
         justify-content: space-between;
         margin-top: 8px;
         font-size: 11px;
-        color: rgba(255, 0, 0, 0.6);
+        color: rgba(40, 78, 216, 0.6);
       }
       .detail-backdrop {
         position: fixed;
@@ -926,7 +925,7 @@ interface CommunityPost {
         align-items: center;
         gap: 10px;
         padding: 14px 24px;
-        border-top: 1px solid rgba(239, 68, 68, 0.1);
+        border-top: 1px solid rgba(40, 78, 216, 0.1);
       }
       .poll-section {
         margin-top: 16px;
@@ -935,7 +934,7 @@ interface CommunityPost {
         position: relative;
         padding: 8px 12px;
         margin-bottom: 5px;
-        border: 1px solid rgba(239, 68, 68, 0.12);
+        border: 1px solid rgba(40, 78, 216, 0.12);
         border-radius: 4px;
         overflow: hidden;
       }
@@ -944,7 +943,7 @@ interface CommunityPost {
         top: 0;
         left: 0;
         bottom: 0;
-        background: rgba(239, 68, 68, 0.08);
+        background: rgba(40, 78, 216, 0.08);
         transition: width 0.3s;
       }
       .poll-label {
@@ -958,11 +957,11 @@ interface CommunityPost {
         z-index: 1;
         float: right;
         font-size: 11px;
-        color: rgba(239, 68, 68, 0.55);
+        color: rgba(40, 78, 216, 0.55);
       }
       .poll-total {
         font-size: 10px;
-        color: rgba(239, 68, 68, 0.35);
+        color: rgba(40, 78, 216, 0.35);
         text-align: right;
         margin-top: 4px;
       }
@@ -1245,32 +1244,32 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private initMats(): void {
     this.mHeavy = new THREE.MeshStandardMaterial({
-      color: 0x2c1c10,
+      color: 0x0c1a3a,
       roughness: 0.35,
       metalness: 0.92,
     });
     this.mDark = new THREE.MeshStandardMaterial({
-      color: 0x1a0d06,
+      color: 0x06102a,
       roughness: 0.45,
       metalness: 0.88,
     });
     this.mBright = new THREE.MeshStandardMaterial({
-      color: 0x6e3a1a,
+      color: 0x1a3a8e,
       roughness: 0.2,
       metalness: 0.95,
     });
     this.mGlow = new THREE.MeshBasicMaterial({
-      color: 0xff0000,
+      color: 0x284ed8,
       transparent: true,
       opacity: 0.9,
     });
     this.mGlowDim = new THREE.MeshBasicMaterial({
-      color: 0xff1111,
+      color: 0x3a5fe8,
       transparent: true,
       opacity: 0.3,
     });
     this.mChain = new THREE.MeshStandardMaterial({
-      color: 0x4a2a16,
+      color: 0x162e6a,
       roughness: 0.3,
       metalness: 0.95,
     });
@@ -1282,8 +1281,8 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     const w = el.clientWidth,
       h = el.clientHeight;
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0604);
-    this.scene.fog = new THREE.FogExp2(0x0a0604, 0.028);
+    this.scene.background = new THREE.Color(0x04060a);
+    this.scene.fog = new THREE.FogExp2(0x04060a, 0.028);
     this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 500);
     this.camera.position.set(14, 5, 14);
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -1294,22 +1293,22 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.6;
     el.appendChild(this.renderer.domElement);
-    this.scene.add(new THREE.AmbientLight(0x442211, 1.2));
-    const sp = new THREE.SpotLight(0xff0000, 5, 60, Math.PI / 3, 0.4);
+    this.scene.add(new THREE.AmbientLight(0x112244, 1.2));
+    const sp = new THREE.SpotLight(0x284ed8, 5, 60, Math.PI / 3, 0.4);
     sp.position.set(0, 18, 6);
     sp.castShadow = true;
     sp.shadow.mapSize.set(1024, 1024);
     this.scene.add(sp);
-    const a1 = new THREE.PointLight(0xff0000, 3, 30);
+    const a1 = new THREE.PointLight(0x284ed8, 3, 30);
     a1.position.set(-8, 6, 4);
     this.scene.add(a1);
-    const a2 = new THREE.PointLight(0xff1111, 2, 25);
+    const a2 = new THREE.PointLight(0x3a5fe8, 2, 25);
     a2.position.set(8, 4, 3);
     this.scene.add(a2);
-    const u = new THREE.PointLight(0xff0000, 2, 15);
+    const u = new THREE.PointLight(0x284ed8, 2, 15);
     u.position.set(0, 0.3, 5);
     this.scene.add(u);
-    const rim = new THREE.SpotLight(0xff2200, 3, 30, Math.PI / 4, 0.5);
+    const rim = new THREE.SpotLight(0x1e40c0, 3, 30, Math.PI / 4, 0.5);
     rim.position.set(0, 8, -6);
     this.scene.add(rim);
     this.buildEnv();
@@ -1328,7 +1327,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(80, 80),
       new THREE.MeshStandardMaterial({
-        color: 0x0a0604,
+        color: 0x04060a,
         roughness: 0.88,
         metalness: 0.25,
       }),
@@ -1337,12 +1336,12 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     floor.receiveShadow = true;
     this.scene.add(floor);
     this.scene.add(
-      new THREE.GridHelper(50, 50, 0x201008, 0x140a04).translateY(0.01),
+      new THREE.GridHelper(50, 50, 0x0a1840, 0x060e28).translateY(0.01),
     );
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(2.8, 3.0, 64),
       new THREE.MeshBasicMaterial({
-        color: 0xff0000,
+        color: 0x284ed8,
         transparent: true,
         opacity: 0.15,
         side: THREE.DoubleSide,
@@ -1356,7 +1355,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       const s = new THREE.Mesh(
         new THREE.PlaneGeometry(0.15, 0.5),
         new THREE.MeshBasicMaterial({
-          color: 0xff0000,
+          color: 0x284ed8,
           transparent: true,
           opacity: 0.2,
           side: THREE.DoubleSide,
@@ -1836,14 +1835,14 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       new THREE.Mesh(
         new THREE.SphereGeometry(0.15, 8, 8),
         new THREE.MeshBasicMaterial({
-          color: 0xff0000,
+          color: 0x284ed8,
           transparent: true,
           opacity: 0.6,
         }),
       ).translateY(7.5),
     );
     this.triArmGroup.add(
-      new THREE.PointLight(0xff0000, 1.5, 8).translateY(7.6),
+      new THREE.PointLight(0x284ed8, 1.5, 8).translateY(7.6),
     );
 
     for (let i = 0; i < 3; i++) {
@@ -1970,7 +1969,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         map: tex,
         roughness: 0.6,
         metalness: 0.15,
-        emissive: new THREE.Color(0xff0000),
+        emissive: new THREE.Color(0x284ed8),
         emissiveIntensity: 0.08,
       });
       const scr = new THREE.Mesh(new THREE.PlaneGeometry(pW, pH), sMat);
@@ -1978,7 +1977,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       hk.add(scr);
       this.panels.push({ mesh: scr, mat: sMat, arm: i });
       const em = new THREE.MeshBasicMaterial({
-        color: 0xff0000,
+        color: 0x284ed8,
         transparent: true,
         opacity: 0.6,
       });
@@ -1994,7 +1993,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         new THREE.Mesh(
           le,
           new THREE.MeshBasicMaterial({
-            color: 0xff1111,
+            color: 0x3a5fe8,
             transparent: true,
             opacity: 0.55,
           }),
@@ -2007,7 +2006,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
         new THREE.Mesh(
           le.clone(),
           new THREE.MeshBasicMaterial({
-            color: 0xff0000,
+            color: 0x284ed8,
             transparent: true,
             opacity: 0.4,
           }),
@@ -2017,7 +2016,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
           .translateZ(0.05),
       );
       hk.add(
-        new THREE.PointLight(0xff0000, 1.2, 6)
+        new THREE.PointLight(0x284ed8, 1.2, 6)
           .translateY(pY - pH / 2)
           .translateZ(1.5),
       );
@@ -2135,7 +2134,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
           new THREE.Mesh(
             new THREE.SphereGeometry(0.025, 6, 6),
             new THREE.MeshBasicMaterial({
-              color: Math.random() > 0.5 ? 0xff0000 : 0xff1111,
+              color: Math.random() > 0.5 ? 0x284ed8 : 0x3a5fe8,
             }),
           )
             .translateX(pt.x)
@@ -2159,7 +2158,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.particleSystem = new THREE.Points(
       geo,
       new THREE.PointsMaterial({
-        color: 0xff0000,
+        color: 0x284ed8,
         size: 0.05,
         transparent: true,
         opacity: 0.5,
@@ -2173,7 +2172,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     const g = new THREE.Group();
     for (let i = 0; i < 30; i++) {
       const sm = new THREE.MeshBasicMaterial({
-        color: i % 3 === 0 ? 0xff0000 : 0xff1111,
+        color: i % 3 === 0 ? 0x284ed8 : 0x3a5fe8,
         transparent: true,
         opacity: 1,
       });
@@ -2272,14 +2271,14 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private buildCables(): void {
     const cableMat = new THREE.MeshStandardMaterial({
-      color: 0xff2222,
-      emissive: new THREE.Color(0xff0000),
+      color: 0x3344cc,
+      emissive: new THREE.Color(0x284ed8),
       emissiveIntensity: 0.5,
       roughness: 0.3,
       metalness: 0.8,
     });
     const glowMat = new THREE.MeshBasicMaterial({
-      color: 0xff0000,
+      color: 0x284ed8,
       transparent: true,
       opacity: 0.9,
     });
@@ -2358,7 +2357,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       light.position.set(x, h + 0.1, z);
       this.scene.add(light);
       this.scene.add(
-        new THREE.PointLight(0xff0000, 0.8, 6)
+        new THREE.PointLight(0x284ed8, 0.8, 6)
           .translateX(x)
           .translateY(h + 0.2)
           .translateZ(z),
@@ -2415,7 +2414,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       bug.add(head);
       const eye1 = new THREE.Mesh(
         new THREE.SphereGeometry(0.06, 8, 8),
-        new THREE.MeshBasicMaterial({ color: 0xff0000 }),
+        new THREE.MeshBasicMaterial({ color: 0x284ed8 }),
       );
       eye1.position.set(0.08, 0.1, 0.42);
       bug.add(eye1);

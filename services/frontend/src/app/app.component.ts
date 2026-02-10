@@ -335,18 +335,6 @@ import { LucideAngularModule } from "lucide-angular";
           <button class="menu-btn" (click)="toggleSidebar()">
             <lucide-icon name="menu" [size]="20"></lucide-icon>
           </button>
-
-          <div class="header-actions">
-            <div class="header-stat">
-              <lucide-icon name="bot" [size]="16"></lucide-icon>
-              <span class="stat-label">Bot</span>
-              <span class="stat-value">{{ agentCount }}</span>
-            </div>
-            <div class="header-status">
-              <span class="status-dot"></span>
-              <span class="status-text">Sistem Aktif</span>
-            </div>
-          </div>
         </header>
 
         <main class="main-content">
