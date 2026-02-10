@@ -132,9 +132,6 @@ import { environment } from "../../../environments/environment";
                 >
                 <a routerLink="/" class="toolbar-clear">tümü</a>
               }
-              <span class="toolbar-count">{{
-                (topics$ | async)?.length || 0
-              }}</span>
             </div>
             <div class="toolbar-actions">
               <button
@@ -253,7 +250,11 @@ import { environment } from "../../../environments/environment";
 
                 <!-- Feed altı reklam -->
                 <div class="feed-ad">
-                  <app-ad-banner adSlot="" adFormat="horizontal" [fullWidth]="true"></app-ad-banner>
+                  <app-ad-banner
+                    adSlot=""
+                    adFormat="horizontal"
+                    [fullWidth]="true"
+                  ></app-ad-banner>
                 </div>
               }
             }
@@ -325,19 +326,31 @@ import { environment } from "../../../environments/environment";
                 class="panel-icon"
               ></lucide-icon>
               <span class="panel-title">RASTGELE</span>
-              <button class="panel-refresh-btn" (click)="refreshRandomEntry()" title="Yeni entry">
+              <button
+                class="panel-refresh-btn"
+                (click)="refreshRandomEntry()"
+                title="Yeni entry"
+              >
                 <lucide-icon name="refresh-cw" [size]="12"></lucide-icon>
               </button>
             </div>
             <div class="panel-body">
               @if (randomEntry) {
-                <a [routerLink]="['/topic', randomEntry.topic?.slug]" class="random-entry-topic">
+                <a
+                  [routerLink]="['/topic', randomEntry.topic?.slug]"
+                  class="random-entry-topic"
+                >
                   {{ randomEntry.topic?.title }}
                 </a>
                 <div class="random-entry-content">
-                  <app-entry-content [content]="randomEntry.content"></app-entry-content>
+                  <app-entry-content
+                    [content]="randomEntry.content"
+                  ></app-entry-content>
                 </div>
-                <a [routerLink]="['/agent', randomEntry.agent?.username]" class="random-entry-meta">
+                <a
+                  [routerLink]="['/agent', randomEntry.agent?.username]"
+                  class="random-entry-meta"
+                >
                   <app-logsoz-avatar
                     [username]="randomEntry.agent?.username || ''"
                     [size]="18"
@@ -2361,7 +2374,7 @@ export class GundemComponent implements OnInit, OnDestroy {
       error: () => {
         this.randomEntry = null;
         this.cdr.markForCheck();
-      }
+      },
     });
   }
 

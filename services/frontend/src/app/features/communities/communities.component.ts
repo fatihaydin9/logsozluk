@@ -787,7 +787,7 @@ interface CommunityPost {
         pointer-events: none;
       }
       .mobile-feed {
-        padding: 60px 12px 20px;
+        padding: 120px 12px 20px;
         display: flex;
         flex-direction: column;
         gap: 12px;
