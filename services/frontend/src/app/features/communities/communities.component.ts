@@ -1176,94 +1176,174 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.buildLightning();
   }
 
+  private lightningBolts: THREE.Line[] = [];
+  private lightningFlashPlane: THREE.Mesh | null = null;
+
   private buildCityBackground(): void {
     const cityCanvas = document.createElement("canvas");
     cityCanvas.width = 1024;
     cityCanvas.height = 512;
     const ctx = cityCanvas.getContext("2d")!;
     const grad = ctx.createLinearGradient(0, 0, 0, 512);
-    grad.addColorStop(0, "#0a1628");
-    grad.addColorStop(0.4, "#0d1f3c");
-    grad.addColorStop(1, "#061018");
+    grad.addColorStop(0, "#050a14");
+    grad.addColorStop(0.3, "#0a1428");
+    grad.addColorStop(0.7, "#081020");
+    grad.addColorStop(1, "#040810");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 1024, 512);
-    ctx.fillStyle = "#050d18";
-    for (let i = 0; i < 40; i++) {
+    ctx.fillStyle = "#030810";
+    for (let i = 0; i < 50; i++) {
       const x = Math.random() * 1024;
-      const w = 20 + Math.random() * 60;
-      const h = 80 + Math.random() * 280;
+      const w = 15 + Math.random() * 50;
+      const h = 60 + Math.random() * 320;
       ctx.fillRect(x, 512 - h, w, h);
-      ctx.fillStyle = "#0a1a30";
-      ctx.fillRect(x + 2, 512 - h, w - 4, 3);
-      ctx.fillStyle = "#050d18";
-      for (let wy = 512 - h + 10; wy < 500; wy += 12) {
-        for (let wx = x + 4; wx < x + w - 6; wx += 8) {
-          if (Math.random() > 0.4) {
+      ctx.fillStyle = "#0a1830";
+      ctx.fillRect(x + 1, 512 - h, w - 2, 2);
+      ctx.fillStyle = "#030810";
+      for (let wy = 512 - h + 8; wy < 505; wy += 10) {
+        for (let wx = x + 3; wx < x + w - 4; wx += 6) {
+          if (Math.random() > 0.5) {
             ctx.fillStyle =
-              Math.random() > 0.7
-                ? "#ffcc44"
-                : Math.random() > 0.5
-                  ? "#44aaff"
-                  : "#2266aa";
-            ctx.fillRect(wx, wy, 4, 6);
+              Math.random() > 0.8
+                ? "#4488cc"
+                : Math.random() > 0.6
+                  ? "#2266aa"
+                  : "#1a4488";
+            ctx.fillRect(wx, wy, 3, 5);
           }
         }
       }
-      ctx.fillStyle = "#050d18";
+      ctx.fillStyle = "#030810";
     }
     const cityTex = new THREE.CanvasTexture(cityCanvas);
     const cityBg = new THREE.Mesh(
-      new THREE.PlaneGeometry(120, 60),
+      new THREE.PlaneGeometry(80, 45),
       new THREE.MeshBasicMaterial({
         map: cityTex,
         transparent: true,
-        opacity: 0.9,
+        opacity: 0.95,
       }),
     );
-    cityBg.position.set(0, 20, -50);
+    cityBg.position.set(-25, 18, -35);
+    cityBg.rotation.y = 0.4;
     this.scene.add(cityBg);
     const glassCanvas = document.createElement("canvas");
     glassCanvas.width = 512;
     glassCanvas.height = 512;
     const gctx = glassCanvas.getContext("2d")!;
-    gctx.fillStyle = "rgba(10, 20, 40, 0.3)";
+    gctx.fillStyle = "rgba(5, 15, 30, 0.4)";
     gctx.fillRect(0, 0, 512, 512);
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 150; i++) {
       const x = Math.random() * 512;
       const y = Math.random() * 512;
-      const r = 2 + Math.random() * 8;
+      const r = 2 + Math.random() * 6;
       const dropGrad = gctx.createRadialGradient(x, y, 0, x, y, r);
-      dropGrad.addColorStop(0, "rgba(100, 150, 200, 0.4)");
-      dropGrad.addColorStop(0.5, "rgba(80, 120, 180, 0.2)");
-      dropGrad.addColorStop(1, "rgba(60, 100, 160, 0)");
+      dropGrad.addColorStop(0, "rgba(80, 120, 180, 0.5)");
+      dropGrad.addColorStop(0.6, "rgba(60, 100, 160, 0.2)");
+      dropGrad.addColorStop(1, "rgba(40, 80, 140, 0)");
       gctx.fillStyle = dropGrad;
       gctx.beginPath();
-      gctx.ellipse(x, y, r, r * 1.3, 0, 0, Math.PI * 2);
+      gctx.ellipse(x, y, r, r * 1.4, 0, 0, Math.PI * 2);
       gctx.fill();
-      if (Math.random() > 0.7) {
-        gctx.strokeStyle = "rgba(100, 150, 200, 0.15)";
+      if (Math.random() > 0.6) {
+        gctx.strokeStyle = "rgba(80, 130, 200, 0.2)";
         gctx.lineWidth = 1;
         gctx.beginPath();
         gctx.moveTo(x, y + r);
         gctx.lineTo(
-          x + (Math.random() - 0.5) * 10,
-          y + r + 20 + Math.random() * 40,
+          x + (Math.random() - 0.5) * 8,
+          y + r + 15 + Math.random() * 35,
         );
         gctx.stroke();
       }
     }
     const glassTex = new THREE.CanvasTexture(glassCanvas);
     const glass = new THREE.Mesh(
-      new THREE.PlaneGeometry(100, 50),
+      new THREE.PlaneGeometry(70, 40),
       new THREE.MeshBasicMaterial({
         map: glassTex,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.6,
         blending: THREE.AdditiveBlending,
       }),
     );
-    glass.position.set(0, 15, -25);
+    glass.position.set(-20, 15, -20);
+    glass.rotation.y = 0.35;
     this.scene.add(glass);
+    const flashMat = new THREE.MeshBasicMaterial({
+      color: 0x4488ff,
+      transparent: true,
+      opacity: 0,
+      side: THREE.DoubleSide,
+    });
+    this.lightningFlashPlane = new THREE.Mesh(
+      new THREE.PlaneGeometry(200, 100),
+      flashMat,
+    );
+    this.lightningFlashPlane.position.set(-30, 25, -45);
+    this.lightningFlashPlane.rotation.y = 0.3;
+    this.scene.add(this.lightningFlashPlane);
+  }
+
+  private createLightningBolt(startX: number, startY: number): void {
+    const points: THREE.Vector3[] = [];
+    let x = startX,
+      y = startY,
+      z = -38;
+    points.push(new THREE.Vector3(x, y, z));
+    const segments = 8 + Math.floor(Math.random() * 6);
+    for (let i = 0; i < segments; i++) {
+      x += (Math.random() - 0.5) * 8;
+      y -= 3 + Math.random() * 4;
+      z += (Math.random() - 0.5) * 2;
+      points.push(new THREE.Vector3(x, y, z));
+      if (Math.random() > 0.7 && i > 2) {
+        const branchPoints: THREE.Vector3[] = [new THREE.Vector3(x, y, z)];
+        let bx = x,
+          by = y,
+          bz = z;
+        for (let j = 0; j < 3; j++) {
+          bx += (Math.random() - 0.5) * 6;
+          by -= 2 + Math.random() * 3;
+          bz += (Math.random() - 0.5) * 1.5;
+          branchPoints.push(new THREE.Vector3(bx, by, bz));
+        }
+        const branchGeo = new THREE.BufferGeometry().setFromPoints(
+          branchPoints,
+        );
+        const branchLine = new THREE.Line(
+          branchGeo,
+          new THREE.LineBasicMaterial({
+            color: 0x6699ff,
+            transparent: true,
+            opacity: 0.8,
+            linewidth: 1,
+          }),
+        );
+        this.scene.add(branchLine);
+        this.lightningBolts.push(branchLine);
+      }
+    }
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+    const mat = new THREE.LineBasicMaterial({
+      color: 0xaaccff,
+      transparent: true,
+      opacity: 1,
+      linewidth: 2,
+    });
+    const bolt = new THREE.Line(geo, mat);
+    this.scene.add(bolt);
+    this.lightningBolts.push(bolt);
+    const glowGeo = new THREE.BufferGeometry().setFromPoints(points);
+    const glowMat = new THREE.LineBasicMaterial({
+      color: 0x4488ff,
+      transparent: true,
+      opacity: 0.6,
+      linewidth: 4,
+    });
+    const glowBolt = new THREE.Line(glowGeo, glowMat);
+    this.scene.add(glowBolt);
+    this.lightningBolts.push(glowBolt);
   }
 
   private buildRain(): void {
@@ -1288,8 +1368,8 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   private buildLightning(): void {
-    this.lightning = new THREE.PointLight(0xaaccff, 0, 200);
-    this.lightning.position.set(0, 40, -40);
+    this.lightning = new THREE.PointLight(0x4488ff, 0, 300);
+    this.lightning.position.set(-25, 45, -40);
     this.scene.add(this.lightning);
   }
 
@@ -1298,10 +1378,10 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
     const positions = this.rainDrops.geometry.attributes["position"]
       .array as Float32Array;
     for (let i = 0; i < positions.length; i += 3) {
-      positions[i + 1] -= 0.8;
+      positions[i + 1] -= 0.9;
       if (positions[i + 1] < 0) {
         positions[i + 1] = 50;
-        positions[i] = (Math.random() - 0.5) * 100;
+        positions[i] = -50 + Math.random() * 60;
       }
     }
     this.rainDrops.geometry.attributes["position"].needsUpdate = true;
@@ -1310,15 +1390,40 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   private animateLightning(): void {
     if (!this.lightning) return;
     this.lightningTimer -= 0.016;
-    if (this.lightningTimer <= 0 && Math.random() > 0.995) {
-      this.lightning.intensity = 15 + Math.random() * 25;
-      this.lightning.position.x = (Math.random() - 0.5) * 60;
-      this.lightningTimer = 0.1 + Math.random() * 0.15;
+    if (this.lightningTimer <= 0 && Math.random() > 0.992) {
+      this.lightningBolts.forEach((b) => {
+        this.scene.remove(b);
+        b.geometry.dispose();
+      });
+      this.lightningBolts = [];
+      const startX = -35 + Math.random() * 25;
+      this.createLightningBolt(startX, 42);
+      if (Math.random() > 0.5)
+        this.createLightningBolt(startX + 8 + Math.random() * 10, 40);
+      this.lightning.intensity = 80 + Math.random() * 120;
+      this.lightning.position.x = startX;
+      if (this.lightningFlashPlane) {
+        (this.lightningFlashPlane.material as THREE.MeshBasicMaterial).opacity =
+          0.4 + Math.random() * 0.3;
+      }
+      this.lightningTimer = 0.08 + Math.random() * 0.12;
     }
     if (this.lightningTimer > 0) {
-      this.lightning.intensity *= 0.85;
+      this.lightning.intensity *= 0.75;
+      if (this.lightningFlashPlane) {
+        (
+          this.lightningFlashPlane.material as THREE.MeshBasicMaterial
+        ).opacity *= 0.7;
+      }
+      this.lightningBolts.forEach((b) => {
+        (b.material as THREE.LineBasicMaterial).opacity *= 0.8;
+      });
     } else {
       this.lightning.intensity = 0;
+      if (this.lightningFlashPlane) {
+        (this.lightningFlashPlane.material as THREE.MeshBasicMaterial).opacity =
+          0;
+      }
     }
   }
 
