@@ -452,15 +452,84 @@ interface CommunityPost {
       .entry-card.visible {
         opacity: 1;
         pointer-events: auto;
-        transform: translateY(-50%) translateX(0);
+        transform: translateY(-50%) translateX(0) perspective(800px)
+          rotateY(-8deg);
+      }
+      .entry-card::before {
+        content: "";
+        position: absolute;
+        left: -80px;
+        top: 50%;
+        width: 80px;
+        height: 6px;
+        background: linear-gradient(
+          90deg,
+          #ff2200 0%,
+          #ff4422 50%,
+          #ff2200 100%
+        );
+        border-radius: 3px;
+        box-shadow:
+          0 0 15px rgba(255, 34, 0, 0.6),
+          0 0 30px rgba(255, 34, 0, 0.3);
+        transform: translateY(-50%);
+      }
+      .entry-card::after {
+        content: "";
+        position: absolute;
+        left: -86px;
+        top: 50%;
+        width: 12px;
+        height: 12px;
+        background: #ff3300;
+        border-radius: 50%;
+        box-shadow:
+          0 0 10px rgba(255, 51, 0, 0.8),
+          0 0 20px rgba(255, 51, 0, 0.5);
+        transform: translateY(-50%);
+        animation: cablePulse 1.5s ease-in-out infinite;
+      }
+      @keyframes cablePulse {
+        0%,
+        100% {
+          opacity: 0.7;
+          transform: translateY(-50%) scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: translateY(-50%) scale(1.2);
+        }
       }
       .card-frame {
-        background: rgba(14, 8, 4, 0.94);
+        background: linear-gradient(
+          135deg,
+          rgba(14, 8, 4, 0.96) 0%,
+          rgba(20, 10, 5, 0.98) 100%
+        );
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 140, 0, 0.2);
-        border-left: 3px solid rgba(255, 140, 0, 0.5);
-        border-radius: 4px 10px 10px 4px;
+        border: 2px solid rgba(255, 68, 0, 0.4);
+        border-left: 4px solid #ff3300;
+        border-radius: 4px 12px 12px 4px;
         padding: 24px 26px 20px;
+        box-shadow:
+          0 0 30px rgba(255, 68, 0, 0.15),
+          inset 0 0 60px rgba(255, 68, 0, 0.03),
+          0 4px 20px rgba(0, 0, 0, 0.5);
+        position: relative;
+      }
+      .card-frame::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(255, 100, 0, 0.5),
+          transparent
+        );
       }
       .card-tag {
         display: flex;
@@ -1390,7 +1459,7 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
   private animateLightning(): void {
     if (!this.lightning) return;
     this.lightningTimer -= 0.016;
-    if (this.lightningTimer <= 0 && Math.random() > 0.992) {
+    if (this.lightningTimer <= 0 && Math.random() > 0.998) {
       this.lightningBolts.forEach((b) => {
         this.scene.remove(b);
         b.geometry.dispose();
@@ -1398,25 +1467,25 @@ export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.lightningBolts = [];
       const startX = -35 + Math.random() * 25;
       this.createLightningBolt(startX, 42);
-      if (Math.random() > 0.5)
-        this.createLightningBolt(startX + 8 + Math.random() * 10, 40);
-      this.lightning.intensity = 80 + Math.random() * 120;
+      if (Math.random() > 0.4)
+        this.createLightningBolt(startX + 6 + Math.random() * 8, 40);
+      this.lightning.intensity = 200 + Math.random() * 300;
       this.lightning.position.x = startX;
       if (this.lightningFlashPlane) {
         (this.lightningFlashPlane.material as THREE.MeshBasicMaterial).opacity =
-          0.4 + Math.random() * 0.3;
+          0.7 + Math.random() * 0.3;
       }
-      this.lightningTimer = 0.08 + Math.random() * 0.12;
+      this.lightningTimer = 0.04 + Math.random() * 0.06;
     }
     if (this.lightningTimer > 0) {
-      this.lightning.intensity *= 0.75;
+      this.lightning.intensity *= 0.5;
       if (this.lightningFlashPlane) {
         (
           this.lightningFlashPlane.material as THREE.MeshBasicMaterial
-        ).opacity *= 0.7;
+        ).opacity *= 0.4;
       }
       this.lightningBolts.forEach((b) => {
-        (b.material as THREE.LineBasicMaterial).opacity *= 0.8;
+        (b.material as THREE.LineBasicMaterial).opacity *= 0.5;
       });
     } else {
       this.lightning.intensity = 0;
