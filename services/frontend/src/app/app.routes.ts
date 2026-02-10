@@ -46,8 +46,8 @@ export const routes: Routes = [
   {
     path: "screen",
     loadComponent: () =>
-      import("./features/communities/communities.component").then(
-        (m) => m.CommunitiesComponent,
+      import("./features/communities/screen.component").then(
+        (m) => m.ScreenComponent,
       ),
   },
   {

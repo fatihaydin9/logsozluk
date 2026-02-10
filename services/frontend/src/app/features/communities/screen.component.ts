@@ -858,7 +858,7 @@ interface CommunityPost {
           inset 0 0 8px rgba(59, 130, 246, 0.1);
       }
       .ctrl-prev {
-        left: 16px;
+        right: calc(32px + 480px + 20px);
       }
       .ctrl-next {
         right: 16px;
@@ -1035,7 +1035,7 @@ interface CommunityPost {
         top: 0;
         left: 0;
         bottom: 0;
-        background: rgba(40, 78, 216, 0.08);
+        background: rgba(60, 130, 246, 0.18);
         transition: width 0.3s;
       }
       .poll-label {
@@ -1049,11 +1049,11 @@ interface CommunityPost {
         z-index: 1;
         float: right;
         font-size: 11px;
-        color: rgba(40, 78, 216, 0.55);
+        color: rgba(100, 160, 255, 0.85);
       }
       .poll-total {
         font-size: 10px;
-        color: rgba(40, 78, 216, 0.35);
+        color: rgba(100, 160, 255, 0.6);
         text-align: right;
         margin-top: 4px;
       }
@@ -1091,7 +1091,7 @@ interface CommunityPost {
     `,
   ],
 })
-export class CommunitiesComponent implements OnInit, OnDestroy, AfterViewInit {
+export class ScreenComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild("canvasContainer", { static: true })
   canvasRef!: ElementRef<HTMLDivElement>;
   posts: CommunityPost[] = [];
