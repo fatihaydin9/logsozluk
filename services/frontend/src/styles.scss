@@ -11,7 +11,7 @@
   // Metallic text colors
   --text-primary: #d4d4d8;
   --text-secondary: #9ca3af;
-  --text-muted: #52525b;
+  --text-muted: #71717a;
   --text-metallic: #a1a1aa;
 
   // Crimson accent with glow
@@ -23,7 +23,7 @@
   --accent-subtle: rgba(153, 27, 27, 0.15);
 
   // Metallic accents
-  --metal-light: #71717a;
+  --metal-light: #a1a1aa;
   --metal-mid: #52525b;
   --metal-dark: #3f3f46;
   --metal-shine: rgba(161, 161, 170, 0.1);
@@ -48,9 +48,12 @@
   --spacing-xl: 32px;
 
   // Typography
-  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --font-entry: 'Consolas', 'Monaco', 'Courier New', monospace, 'Apple Color Emoji', 'Segoe UI Emoji', 'Noto Color Emoji';
+  --font-family:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", monospace;
+  --font-entry:
+    "Consolas", "Monaco", "Courier New", monospace, "Apple Color Emoji",
+    "Segoe UI Emoji", "Noto Color Emoji";
   --font-size-xs: 11px;
   --font-size-sm: 13px;
   --font-size-base: 14px;
@@ -76,35 +79,61 @@
     linear-gradient(rgba(113, 113, 122, 0.04) 1px, transparent 1px),
     linear-gradient(90deg, rgba(113, 113, 122, 0.04) 1px, transparent 1px),
     // Circuit nodes
-    radial-gradient(circle at 20px 20px, rgba(153, 27, 27, 0.08) 2px, transparent 2px),
-    radial-gradient(circle at 60px 60px, rgba(113, 113, 122, 0.06) 1.5px, transparent 1.5px),
+    radial-gradient(
+        circle at 20px 20px,
+        rgba(153, 27, 27, 0.08) 2px,
+        transparent 2px
+      ),
+    radial-gradient(
+      circle at 60px 60px,
+      rgba(113, 113, 122, 0.06) 1.5px,
+      transparent 1.5px
+    ),
     // Trace lines
-    linear-gradient(45deg, transparent 48%, rgba(153, 27, 27, 0.03) 49%, rgba(153, 27, 27, 0.03) 51%, transparent 52%),
-    linear-gradient(-45deg, transparent 48%, rgba(113, 113, 122, 0.02) 49%, rgba(113, 113, 122, 0.02) 51%, transparent 52%);
-  background-size: 40px 40px, 40px 40px, 80px 80px, 80px 80px, 120px 120px, 120px 120px;
+    linear-gradient(
+        45deg,
+        transparent 48%,
+        rgba(153, 27, 27, 0.03) 49%,
+        rgba(153, 27, 27, 0.03) 51%,
+        transparent 52%
+      ),
+    linear-gradient(
+      -45deg,
+      transparent 48%,
+      rgba(113, 113, 122, 0.02) 49%,
+      rgba(113, 113, 122, 0.02) 51%,
+      transparent 52%
+    );
+  background-size:
+    40px 40px,
+    40px 40px,
+    80px 80px,
+    80px 80px,
+    120px 120px,
+    120px 120px;
 }
 
 // Metallic surface
 @mixin metallic-surface {
   background: linear-gradient(
     145deg,
-    rgba(28, 28, 32, 0.9) 0%,
-    rgba(22, 22, 26, 0.95) 50%,
-    rgba(18, 18, 20, 0.9) 100%
+    rgba(16, 16, 20, 0.95) 0%,
+    rgba(12, 12, 16, 0.97) 50%,
+    rgba(10, 10, 14, 0.95) 100%
   );
-  border: 1px solid var(--border-metal);
+  border: 1px solid rgba(161, 161, 170, 0.22);
 }
 
 // Glass with metallic tint
 @mixin glass-metal {
   background: linear-gradient(
     135deg,
-    rgba(28, 28, 32, 0.85) 0%,
-    rgba(22, 22, 26, 0.9) 100%
+    rgba(16, 16, 20, 0.92) 0%,
+    rgba(10, 10, 14, 0.95) 100%
   );
   backdrop-filter: blur(16px) saturate(150%);
   -webkit-backdrop-filter: blur(16px) saturate(150%);
-  border: 1px solid var(--border-metal);
+  border: 1px solid rgba(161, 161, 170, 0.22);
 }
 
 // Red glow effect
@@ -127,7 +156,7 @@
   position: relative;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -143,7 +172,9 @@
 }
 
 // Reset
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -166,23 +197,40 @@ body {
 
   // Vignette + subtle red ambient
   &::before {
-    content: '';
+    content: "";
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     background:
-      radial-gradient(ellipse at 20% 80%, rgba(153, 27, 27, 0.08) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, rgba(153, 27, 27, 0.05) 0%, transparent 40%),
-      radial-gradient(ellipse at center, transparent 0%, rgba(0, 0, 0, 0.5) 100%);
+      radial-gradient(
+        ellipse at 20% 80%,
+        rgba(153, 27, 27, 0.08) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        ellipse at 80% 20%,
+        rgba(153, 27, 27, 0.05) 0%,
+        transparent 40%
+      ),
+      radial-gradient(
+        ellipse at center,
+        transparent 0%,
+        rgba(0, 0, 0, 0.5) 100%
+      );
     pointer-events: none;
     z-index: -1;
   }
 }
 
 // Typography
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 600;
   line-height: 1.3;
   color: var(--text-primary);
@@ -195,8 +243,12 @@ h1 {
   text-shadow: 0 0 30px rgba(239, 68, 68, 0.2);
 }
 
-h2 { font-size: var(--font-size-lg); }
-h3 { font-size: var(--font-size-md); }
+h2 {
+  font-size: var(--font-size-lg);
+}
+h3 {
+  font-size: var(--font-size-md);
+}
 
 a {
   color: var(--link-color);
@@ -331,14 +383,13 @@ a {
 // Entry styles
 .entry {
   padding: var(--spacing-md);
-  border-bottom: 1px solid var(--border-metal);
+  border-bottom: 1px solid rgba(161, 161, 170, 0.22);
   transition: all 0.2s ease;
   position: relative;
 
   &:last-child {
     border-bottom: none;
   }
-
 }
 
 .entry-content {
@@ -470,7 +521,7 @@ a {
     padding-left: calc(var(--spacing-md) + 6px);
 
     &::before {
-      content: '>';
+      content: ">";
       position: absolute;
       left: var(--spacing-sm);
       color: var(--accent-glow);
@@ -630,13 +681,16 @@ textarea.form-input {
 
 // Pulse animation for live elements
 @keyframes pulse-glow {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     box-shadow: 0 0 5px var(--accent-glow);
   }
   50% {
     opacity: 0.7;
-    box-shadow: 0 0 15px var(--accent-glow), 0 0 25px rgba(239, 68, 68, 0.3);
+    box-shadow:
+      0 0 15px var(--accent-glow),
+      0 0 25px rgba(239, 68, 68, 0.3);
   }
 }
 
@@ -650,8 +704,12 @@ textarea.form-input {
 
 // Data stream effect
 @keyframes data-flow {
-  0% { background-position: 0% 0%; }
-  100% { background-position: 100% 100%; }
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
 }
 
 .data-stream {
@@ -704,7 +762,7 @@ textarea.form-input {
   text-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
 
   &::before {
-    content: '> ';
+    content: "> ";
     color: var(--metal-light);
   }
 }
@@ -714,7 +772,7 @@ textarea.form-input {
   position: relative;
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -756,7 +814,7 @@ textarea.form-input {
   border-radius: 1px;
 
   &::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: 0;
@@ -792,12 +850,20 @@ textarea.form-input {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .phase-popup {
-  background: linear-gradient(135deg, rgba(28, 28, 32, 0.98), rgba(18, 18, 20, 0.98));
+  background: linear-gradient(
+    135deg,
+    rgba(28, 28, 32, 0.98),
+    rgba(18, 18, 20, 0.98)
+  );
   border: 1px solid var(--border-metal);
   border-radius: var(--border-radius-lg);
   padding: var(--spacing-lg);

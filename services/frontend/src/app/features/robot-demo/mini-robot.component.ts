@@ -80,67 +80,98 @@ export class MiniRobotComponent implements AfterViewInit, OnDestroy {
   private buildMonitor(): THREE.Group {
     const m = new THREE.Group();
 
-    // --- Cup bowl (lathe geometry) ---
+    // --- Champions Trophy Cup (tall, elegant) ---
     const cupPoints: THREE.Vector2[] = [];
-    cupPoints.push(new THREE.Vector2(0.6, -0.8));
-    cupPoints.push(new THREE.Vector2(0.75, -0.5));
-    cupPoints.push(new THREE.Vector2(0.85, 0));
-    cupPoints.push(new THREE.Vector2(0.8, 0.4));
-    cupPoints.push(new THREE.Vector2(0.7, 0.7));
-    cupPoints.push(new THREE.Vector2(0.65, 0.85));
-    cupPoints.push(new THREE.Vector2(0.7, 0.9));
-    const cup = this.w(new THREE.LatheGeometry(cupPoints, 16));
-    cup.position.set(0, 0.4, 0);
+    cupPoints.push(new THREE.Vector2(0.0, -0.6));
+    cupPoints.push(new THREE.Vector2(0.55, -0.6));
+    cupPoints.push(new THREE.Vector2(0.7, -0.4));
+    cupPoints.push(new THREE.Vector2(0.8, -0.1));
+    cupPoints.push(new THREE.Vector2(0.82, 0.2));
+    cupPoints.push(new THREE.Vector2(0.78, 0.5));
+    cupPoints.push(new THREE.Vector2(0.68, 0.75));
+    cupPoints.push(new THREE.Vector2(0.55, 0.95));
+    cupPoints.push(new THREE.Vector2(0.5, 1.05));
+    cupPoints.push(new THREE.Vector2(0.52, 1.1));
+    cupPoints.push(new THREE.Vector2(0.58, 1.12));
+    cupPoints.push(new THREE.Vector2(0.58, 1.18));
+    cupPoints.push(new THREE.Vector2(0.0, 1.18));
+    const cup = this.w(new THREE.LatheGeometry(cupPoints, 20));
+    cup.position.set(0, 0.1, 0);
     m.add(cup);
 
-    // --- Inner rim ---
-    const rim = this.w(new THREE.TorusGeometry(0.68, 0.04, 6, 16));
-    rim.position.set(0, 1.3, 0);
-    rim.rotation.x = Math.PI / 2;
-    m.add(rim);
+    // --- Outer rim (top lip) ---
+    const rimOuter = this.w(new THREE.TorusGeometry(0.57, 0.035, 6, 20));
+    rimOuter.position.set(0, 1.29, 0);
+    rimOuter.rotation.x = Math.PI / 2;
+    m.add(rimOuter);
 
-    // --- Left handle ---
-    const handleL = this.w(new THREE.TorusGeometry(0.35, 0.04, 6, 12, Math.PI));
-    handleL.position.set(-1.05, 0.65, 0);
-    handleL.rotation.y = Math.PI / 2;
-    m.add(handleL);
+    // --- Left handle (big ear) ---
+    const hL = this.w(new THREE.TorusGeometry(0.45, 0.035, 8, 14, Math.PI));
+    hL.position.set(-1.05, 0.55, 0);
+    hL.rotation.y = Math.PI / 2;
+    hL.rotation.z = -0.15;
+    m.add(hL);
 
-    // --- Right handle ---
-    const handleR = this.w(new THREE.TorusGeometry(0.35, 0.04, 6, 12, Math.PI));
-    handleR.position.set(1.05, 0.65, 0);
-    handleR.rotation.y = -Math.PI / 2;
-    m.add(handleR);
+    // --- Right handle (big ear) ---
+    const hR = this.w(new THREE.TorusGeometry(0.45, 0.035, 8, 14, Math.PI));
+    hR.position.set(1.05, 0.55, 0);
+    hR.rotation.y = -Math.PI / 2;
+    hR.rotation.z = 0.15;
+    m.add(hR);
 
-    // --- Stem ---
-    const stem = this.w(new THREE.CylinderGeometry(0.12, 0.18, 0.5, 8));
-    stem.position.set(0, -0.65, 0);
+    // --- Handle connectors (top & bottom) ---
+    for (const side of [-1, 1]) {
+      const cTop = this.w(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 6));
+      cTop.rotation.z = Math.PI / 2;
+      cTop.position.set(side * 0.9, 0.9, 0);
+      m.add(cTop);
+      const cBot = this.w(new THREE.CylinderGeometry(0.04, 0.04, 0.18, 6));
+      cBot.rotation.z = Math.PI / 2;
+      cBot.position.set(side * 0.9, 0.2, 0);
+      m.add(cBot);
+    }
+
+    // --- Decorative band around cup ---
+    const band = this.w(new THREE.TorusGeometry(0.76, 0.025, 6, 20));
+    band.position.set(0, 0.45, 0);
+    band.rotation.x = Math.PI / 2;
+    m.add(band);
+
+    // --- Stem (narrow) ---
+    const stem = this.w(new THREE.CylinderGeometry(0.08, 0.14, 0.4, 8));
+    stem.position.set(0, -0.7, 0);
     m.add(stem);
 
     // --- Stem knob ---
-    const knob = this.w(new THREE.SphereGeometry(0.18, 8, 6));
+    const knob = this.w(new THREE.SphereGeometry(0.14, 8, 6));
     knob.position.set(0, -0.55, 0);
     m.add(knob);
 
-    // --- Base ---
-    const base = this.w(new THREE.CylinderGeometry(0.7, 0.8, 0.15, 12));
-    base.position.set(0, -1.0, 0);
-    m.add(base);
+    // --- Base column ---
+    const baseCol = this.w(new THREE.CylinderGeometry(0.2, 0.35, 0.2, 10));
+    baseCol.position.set(0, -1.0, 0);
+    m.add(baseCol);
+
+    // --- Base plate ---
+    const basePlate = this.w(new THREE.CylinderGeometry(0.65, 0.75, 0.1, 12));
+    basePlate.position.set(0, -1.18, 0);
+    m.add(basePlate);
 
     // --- Base bottom rim ---
-    const baseRim = this.w(new THREE.TorusGeometry(0.78, 0.03, 6, 12));
-    baseRim.position.set(0, -1.08, 0);
+    const baseRim = this.w(new THREE.TorusGeometry(0.73, 0.03, 6, 14));
+    baseRim.position.set(0, -1.24, 0);
     baseRim.rotation.x = Math.PI / 2;
     m.add(baseRim);
 
     // --- Base top rim ---
-    const baseTopRim = this.w(new THREE.TorusGeometry(0.68, 0.03, 6, 12));
-    baseTopRim.position.set(0, -0.92, 0);
+    const baseTopRim = this.w(new THREE.TorusGeometry(0.63, 0.025, 6, 14));
+    baseTopRim.position.set(0, -1.12, 0);
     baseTopRim.rotation.x = Math.PI / 2;
     m.add(baseTopRim);
 
-    // --- Nameplate on base ---
-    const plate = this.w(new THREE.BoxGeometry(0.5, 0.08, 0.04));
-    plate.position.set(0, -0.95, 0.72);
+    // --- Nameplate ---
+    const plate = this.w(new THREE.BoxGeometry(0.45, 0.1, 0.02));
+    plate.position.set(0, -1.15, 0.66);
     m.add(plate);
 
     return m;

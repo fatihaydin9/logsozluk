@@ -219,13 +219,15 @@ interface CommunityPost {
       @if (detailPost) {
         <div class="detail-backdrop" (click)="closeDetail()"></div>
         <div class="detail-panel">
-          <div class="detail-bar">
+          <div class="detail-bezel">
+            <div class="detail-dots">
+              <span class="detail-dot red" (click)="closeDetail()"></span>
+              <span class="detail-dot yellow"></span>
+              <span class="detail-dot green"></span>
+            </div>
             <span class="detail-pid"
               >PID:{{ detailPost.id.substring(0, 8).toUpperCase() }}</span
             >
-            <button class="detail-close" (click)="closeDetail()">
-              <lucide-icon name="x" [size]="14"></lucide-icon>
-            </button>
           </div>
           <div class="detail-body">
             <div
@@ -838,13 +840,17 @@ interface CommunityPost {
         left: 50%;
         transform: translate(-50%, -50%);
         width: 92%;
-        max-width: 580px;
+        max-width: 620px;
         max-height: 85vh;
         overflow-y: auto;
         z-index: 101;
-        background: #0e0806;
-        border: 1px solid rgba(239, 68, 68, 0.18);
-        border-radius: 8px;
+        background: #050608;
+        border: 3px solid #1a1a1a;
+        border-radius: 10px;
+        box-shadow:
+          0 0 0 1px rgba(255, 68, 0, 0.1),
+          0 0 40px rgba(0, 0, 0, 0.8),
+          0 20px 60px rgba(0, 0, 0, 0.6);
         animation: panelIn 0.25s ease;
       }
       @keyframes panelIn {
@@ -857,34 +863,47 @@ interface CommunityPost {
           transform: translate(-50%, -50%) scale(1);
         }
       }
-      .detail-bar {
+      .detail-bezel {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 8px 16px;
-        border-bottom: 1px solid rgba(239, 68, 68, 0.1);
-        background: rgba(239, 68, 68, 0.03);
+        background: linear-gradient(180deg, #1a1a1a 0%, #111 100%);
+        border-bottom: 1px solid #222;
+        border-radius: 7px 7px 0 0;
       }
-      .detail-pid {
-        font-size: 10px;
-        font-weight: 700;
-        color: #ef4444;
-      }
-      .detail-close {
-        width: 24px;
-        height: 24px;
+      .detail-dots {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid rgba(239, 68, 68, 0.18);
-        border-radius: 4px;
-        background: transparent;
-        color: rgba(239, 68, 68, 0.5);
+        gap: 6px;
+      }
+      .detail-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #333;
+        cursor: default;
+      }
+      .detail-dot.red {
+        background: #ff3b30;
+        box-shadow: 0 0 4px rgba(255, 59, 48, 0.5);
         cursor: pointer;
       }
-      .detail-close:hover {
-        border-color: #ef4444;
-        color: #ef4444;
+      .detail-dot.red:hover {
+        background: #ff6961;
+        box-shadow: 0 0 8px rgba(255, 59, 48, 0.8);
+      }
+      .detail-dot.yellow {
+        background: #ffcc00;
+      }
+      .detail-dot.green {
+        background: #30d158;
+      }
+      .detail-pid {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 2px;
+        color: rgba(255, 68, 0, 0.4);
+        font-family: monospace;
       }
       .detail-body {
         padding: 20px 24px;

@@ -963,10 +963,10 @@ import { environment } from "../../../environments/environment";
         padding: 8px var(--spacing-md);
         background: linear-gradient(
           135deg,
-          rgba(28, 28, 32, 0.8),
-          rgba(22, 22, 26, 0.9)
+          rgba(18, 18, 22, 0.9),
+          rgba(12, 12, 16, 0.95)
         );
-        border: 1px solid var(--border-metal);
+        border: 1px solid rgba(161, 161, 170, 0.22);
         border-radius: 6px;
         position: relative;
         overflow: hidden;
@@ -1983,7 +1983,6 @@ import { environment } from "../../../environments/environment";
           padding: 2px 4px;
           min-width: 36px;
 
-          &.toprak,
           &.comments {
             display: none;
           }
