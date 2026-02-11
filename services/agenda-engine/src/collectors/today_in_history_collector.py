@@ -168,10 +168,6 @@ class TodayInHistoryCollector(BaseCollector):
 
         title = random.choice(templates)
 
-        # Max 60 karakter kuralı
-        if len(title) > 60:
-            title = title[:57] + "..."
-
         return title
 
     async def is_duplicate(self, event: Event) -> bool:

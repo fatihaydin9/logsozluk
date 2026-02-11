@@ -164,9 +164,6 @@ class SystemAgentRunner:
         if not title or len(title) < 5:
             return False
         title_lower = title.lower().strip()
-        # 50 karakterden uzunsa muhtemelen LLM dönüştürememiş
-        if len(title_lower) > 55:
-            return False
         # İçinde "..." varsa ham RSS başlığı kalmış demektir
         if "..." in title_lower:
             return False
@@ -191,9 +188,7 @@ class SystemAgentRunner:
                 if last_word.endswith(suffix) and not title_lower.endswith("ı") and not title_lower.endswith("i") and not title_lower.endswith("u") and not title_lower.endswith("ü"):
                     # Bu suffix'le biten kelimeler genellikle devam gerektirir
                     # Ama bazıları tam olabilir: "faiz indirimi", "deprem riski"
-                    # Sadece 50+ char ise şüpheli say (LLM token limiti)
-                    if len(title_lower) >= 50:
-                        return False
+                    pass
         return True
 
     async def _transform_title_to_sozluk_style(self, news_title: str, category: str, agent: dict, description: str = "", max_retries: int = 2) -> str:
@@ -290,17 +285,9 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
                         new_title = new_title.strip('"\'\'').lower()
                         new_title = re.sub(r'\s+', ' ', new_title).strip()
 
-                        # Çok uzunsa shape_title ile kes (completeness check dahil)
-                        if len(new_title) > 60:
-                            if DISCOURSE_AVAILABLE:
-                                new_title = shape_title(new_title)
-                            else:
-                                truncated = new_title[:55]
-                                last_space = truncated.rfind(' ')
-                                if last_space > 25:
-                                    new_title = truncated[:last_space]
-                                else:
-                                    new_title = truncated
+                        # shape_title varsa uygula
+                        if DISCOURSE_AVAILABLE and len(new_title) > 60:
+                            new_title = shape_title(new_title)
 
                         # Başlık tam mı kontrol et
                         if self._check_title_complete(new_title):
@@ -313,26 +300,11 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
             except Exception as e:
                 logger.warning(f"Title transformation failed (attempt {attempt + 1}): {e}")
 
-        # Tüm retry'lar başarısız - akıllı fallback
-        # Orijinal başlığı kısalt ama completeness check yap
+        # Tüm retry'lar başarısız - orijinal başlığı olduğu gibi kullan
         fallback = news_title.lower()
         fallback = re.sub(r'\s+', ' ', fallback).strip()
-        # Önce shape_title ile dene (completeness check dahil)
         if DISCOURSE_AVAILABLE:
             fallback = shape_title(fallback)
-        else:
-            if len(fallback) > 55:
-                last_space = fallback[:55].rfind(' ')
-                if last_space > 25:
-                    fallback = fallback[:last_space]
-                else:
-                    fallback = fallback[:55]
-        # Hâlâ yarım mı kontrol et
-        if not self._check_title_complete(fallback):
-            # Son çare: sadece keywords'den basit başlık oluştur
-            keywords = self._extract_keywords(news_title)
-            if keywords:
-                fallback = ' '.join(keywords[:3])
         logger.info(f"Title fallback: '{news_title[:30]}...' → '{fallback}'")
         return fallback
 
@@ -836,7 +808,7 @@ Haberin GERÇEK konusuna göre max 50 karakter, TAM ve ANLAMLI sözlük başlı�
         else:
             title = title.lower()
             title = re.sub(r'\s+', ' ', title).strip()
-            title = title[:60]
+            title = title[:500]
         slug = self._slugify(title)
         category = topic_category
 

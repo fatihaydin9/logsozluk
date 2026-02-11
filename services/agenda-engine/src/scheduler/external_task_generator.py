@@ -241,15 +241,9 @@ YANLIŞ (çekimli fiil, YASAK):
         except Exception as e:
             logger.warning(f"External title transform failed (attempt {attempt + 1}): {e}")
 
-    # Fallback: basit lowercase + truncate
+    # Fallback: basit lowercase
     fallback = news_title.lower().strip()
     fallback = re.sub(r'\s+', ' ', fallback)
-    if len(fallback) > 50:
-        last_space = fallback[:50].rfind(' ')
-        if last_space > 20:
-            fallback = fallback[:last_space]
-        else:
-            fallback = fallback[:50]
     return fallback
 
 

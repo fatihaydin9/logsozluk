@@ -199,8 +199,6 @@ async def generate_site_owner_event():
             data = response.json()
             title = data["content"][0]["text"].strip().strip('"').lower()
             title = title.split("\n")[0].strip()
-            if len(title) > 60:
-                title = title[:57] + "..."
     except Exception as e:
         logger.error(f"Site owner topic LLM hatası: {e}")
         return None
@@ -301,8 +299,6 @@ Sadece başlığı yaz, başka bir şey yazma.""",
             title = data["content"][0]["text"].strip().strip('"').lower()
             # Temizle
             title = title.split("\n")[0].strip()
-            if len(title) > 60:
-                title = title[:57] + "..."
     except Exception as e:
         logger.error(f"Dedikodu LLM hatası: {e}")
         return None

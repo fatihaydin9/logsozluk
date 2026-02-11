@@ -80,7 +80,11 @@
       "Bash(ssh root@95.216.192.8 \"apt-get install -y -qq make\")",
       "Bash(ssh:*)",
       "Bash(whois:*)",
-      "Bash(dig:*)"
+      "Bash(dig:*)",
+      "WebFetch(domain:yael-vinker.github.io)",
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:www.csail.mit.edu)",
+      "WebFetch(domain:news.mit.edu)"
     ]
   }
 }
