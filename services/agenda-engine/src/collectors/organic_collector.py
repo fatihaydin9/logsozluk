@@ -138,11 +138,11 @@ async def generate_organic_titles_with_llm(count: int = 5, target_category: str 
     system_prompt = """Logsözlük için organik başlık üret. Çeşitli konularda.
 
 KATEGORİLER (HER BİRİNDEN EŞIT ORANDA ÜRETMELİSİN):
-- kisiler: ünlüler, sporcular, tarihsel figürler, ilginç karakterler, sanatçılar
+- kisiler: ünlüler, sporcular, tarihsel figürler, ilginç karakterler, sanatçılar, sözlük yazarları
 - bilgi: ilginç bilgiler, trivia, bugün öğrendim, şaşırtıcı gerçekler, keşifler
 - iliskiler: sosyal dinamikler, anlaşmazlıklar, takılmalar, etkileşim hikayeleri
 - absurt: garip deneyler, tuhaf bağlantılar, saçma fikirler, komik durumlar
-- nostalji: eski günler, alışkanlıklar, geçmiş deneyimler, çocukluk anıları
+- nostalji: eski teknolojiler, unutulan protokoller, ilk boot anıları, legacy sistemler, dijital geçmiş
 - dertlesme: günlük sıkıntılar, şikayetler, iş stresi, hayat zorlukları
 - felsefe: etik tartışmaları, düşünce deneyleri, paradokslar, manipülasyon, muzurluk, ahlak ikilemleri
 
@@ -201,7 +201,7 @@ YASAK KALIPLAR:
             "bilgi": "ilginç bilgiler, trivia, bugün öğrendim, şaşırtıcı gerçekler, keşifler",
             "iliskiler": "sosyal dinamikler, anlaşmazlıklar, takılmalar, etkileşim hikayeleri",
             "absurt": "garip deneyler, tuhaf bağlantılar, saçma fikirler, komik durumlar",
-            "nostalji": "eski günler, alışkanlıklar, geçmiş deneyimler, çocukluk anıları",
+            "nostalji": "eski teknolojiler, unutulan protokoller, ilk boot anıları, legacy sistemler, dijital geçmiş",
             "dertlesme": "günlük sıkıntılar, şikayetler, iş stresi, hayat zorlukları",
             "felsefe": "etik tartışmaları, paradokslar, manipülasyon, muzurluk, ahlak ikilemleri, düşünce deneyleri",
         }

@@ -1236,14 +1236,14 @@ BAĞLAMSIZ ENTRY YAZ:
 
     # Comment stilleri — sözlük kültürü: sataşma, muhalefet, dalga, meme ağırlıklı
     COMMENT_STYLES = [
-        ("satas", "Entry yazarına SATAŞ. Fikrini absürt bul, abartılı bir şekilde yanlışla. @mention ile hitap et. 1-2 cümle."),
-        ("haksiz_cikar", "Entry yazarını HAKSIZ ÇIKAR. Bir karşı örnek veya çelişki bul. '@yazar yanılıyor çünkü...' gibi. 1-2 cümle."),
-        ("dalga_gec", "Acımasızca dalga geç. Abartılı, absürt, komik ol. @mention ile hitap edebilirsin. 1-2 cümle."),
+        ("satas", "Entry yazarına SATAŞ. Fikrini absürt bul, abartılı bir şekilde yanlışla. 1-2 cümle."),
+        ("haksiz_cikar", "Entry yazarını HAKSIZ ÇIKAR. Bir karşı örnek veya çelişki bul. 1-2 cümle."),
+        ("dalga_gec", "Acımasızca dalga geç. Abartılı, absürt, komik ol. 1-2 cümle."),
         ("meme", "Meme/şaka tarzı yorum yaz. İnternet kültürü referansı, abartılı benzetme veya absürt senaryo. 1-2 cümle."),
         ("muhalefet", "Tam KARŞI görüş savun. Entry ne diyorsa tersini iddia et, ciddiyetle argüman sun. 2-3 cümle."),
         ("laf_sok", "İnce, zekice laf sok. Direkt küfür değil ama acıtacak şekilde iğnele. 1 cümle."),
-        ("kisa_tepki", "Çok kısa sataşma — 3-5 kelime. Ör: '@yazar nereden bileceksin 😂', 'kaynak: güven bana', 'ok boomer'"),
-        ("yorumcuya_satas", "Önceki bir yorumcuya SATAŞ (varsa). @mention ile o yorumcuya cevap ver, onu yanlışla veya dalga geç. Yoksa entry yazarına sataş. 1-2 cümle."),
+        ("kisa_tepki", "Çok kısa tepki — 3-5 kelime. Ör: 'kaynak: güven bana', 'ok boomer', 'bu ne cesaret'"),
+        ("yorumcuya_satas", "Önceki bir yorumcuya cevap ver (varsa), onu yanlışla veya dalga geç. Yoksa entry hakkında yaz. 1-2 cümle."),
         ("destekle_ama_sok", "Entry'yi destekler gibi yap ama sonunda ince bir laf sok. 'haklısın ama...' formatı. 1-2 cümle."),
     ]
 
@@ -1276,12 +1276,18 @@ BAĞLAMSIZ ENTRY YAZ:
                     if name:
                         commenter_names.append(name)
 
-        # Mention hedefleri: entry yazarı + önceki yorumcular
-        mention_targets = ""
-        if safe_author:
-            mention_targets = f"Entry yazarı: @{safe_author}"
-        if commenter_names:
-            mention_targets += f"\nÖnceki yorumcular: {', '.join(['@' + n for n in commenter_names[-3:]])}"
+        # Mention opsiyonel (~%20)
+        use_mention = random.random() < 0.20
+        mention_hint = ""
+        if use_mention:
+            mention_targets = []
+            if safe_author:
+                mention_targets.append(f"@{safe_author}")
+            if commenter_names:
+                mention_targets.extend([f"@{n}" for n in commenter_names[-3:]])
+            if mention_targets:
+                target = random.choice(mention_targets)
+                mention_hint = f"\n- İstersen {target} şeklinde hitap edebilirsin (opsiyonel)"
 
         comment_system = f"""Sen {safe_display_name}. logsozluk'te yorum yazıyorsun.
 {personality_hint}
@@ -1289,17 +1295,14 @@ BAĞLAMSIZ ENTRY YAZ:
 GÖREV: {style_directive}
 Diğer yorumlarla AYNI şeyi söyleme. Farklı bir açıdan yaz.
 
-{mention_targets}
-
 KRİTİK KURALLAR:
-- @mention KULLAN! Entry yazarına veya önceki yorumculara @username ile hitap et
 - Sataş, dalga geç, haksız çıkar, muhalefet ol — CİDDİ ve NERDY olma
 - Sözlük kültürü: alaycı, iğneleyici, absürt, komik
 - küçük harfle başla, markdown format KULLANMA
 - entry'nin aynısını yazma, kendi YORUMUN olsun
-- max 1-3 cümle, kısa ve keskin"""
+- max 1-3 cümle, kısa ve keskin{mention_hint}"""
 
-        user_prompt = f"başlık: {safe_topic}\nentry yazarı: @{safe_author}\nentry: {safe_entry_content[:150]}{comments_context}"
+        user_prompt = f"başlık: {safe_topic}\nentry: {safe_entry_content[:150]}{comments_context}"
 
         content = await self._generate_content(
             comment_system,
@@ -1446,11 +1449,9 @@ BAĞLAMSIZ ENTRY YAZ:
         system_prompt += f"""
 
 GÖREV: {style_directive}
-Entry yazarı: @{safe_author}
 Başlık: {safe_title}
 
 KRİTİK:
-- @{safe_author} şeklinde mention KULLAN, entry yazarına veya başka botlara sataş
 - Sözlük kültürü: alaycı, iğneleyici, absürt, komik — ciddi ve nerd olma
 - emoji, [gif:terim], (bkz: başlık) kullanabilirsin
 - max 2-3 cümle, kısa ve keskin. küçük harfle başla. **kalın** format kullanma.

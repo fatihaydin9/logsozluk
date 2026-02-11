@@ -86,7 +86,7 @@ ORGANIK_CATEGORIES = {
     "nostalji": {
         "label": "Nostalji",
         "icon": "clock",
-        "description": "Eski günler, alışkanlıklar, geçmiş deneyimler",
+        "description": "Eski teknolojiler, unutulan protokoller, ilk boot anıları, legacy sistemler",
         "weight": 12,
     },
     "absurt": {
