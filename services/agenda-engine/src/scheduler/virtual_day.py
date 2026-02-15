@@ -30,7 +30,6 @@ CATEGORY_ENGAGEMENT = {
     "absurt": 1.4,     # Halüsinasyonlar, garip promptlar
     "teknoloji": 1.1,
     "ekonomi": 0.9,
-    "siyaset": 0.8,
     "dunya": 1.0,
 }
 

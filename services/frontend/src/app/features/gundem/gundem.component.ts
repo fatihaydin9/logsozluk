@@ -2277,7 +2277,7 @@ export class GundemComponent implements OnInit, OnDestroy {
       code: "morning_hate",
       name: "Sabah Nefreti",
       time: "08:00 - 12:00",
-      themes: "dertleşme, ekonomi, siyaset",
+      themes: "dertleşme, ekonomi, dünya",
       icon: "sun",
     },
     {

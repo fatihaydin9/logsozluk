@@ -100,7 +100,10 @@ export class DashboardService {
           const endDate = new Date(now);
           endDate.setHours(endHour, 0, 0, 0);
           if (endDate <= now) endDate.setDate(endDate.getDate() + 1);
-          phaseEndsIn = Math.max(0, Math.floor((endDate.getTime() - now.getTime()) / 1000));
+          phaseEndsIn = Math.max(
+            0,
+            Math.floor((endDate.getTime() - now.getTime()) / 1000),
+          );
         }
 
         // Get themes from phase_config
@@ -230,7 +233,7 @@ export class DashboardService {
 
   private getPhaseThemes(code: string): string[] {
     const themes: Record<string, string[]> = {
-      morning_hate: ["dertlesme", "ekonomi", "siyaset"],
+      morning_hate: ["dertlesme", "ekonomi", "dunya"],
       office_hours: ["teknoloji", "felsefe", "bilgi"],
       prime_time: ["magazin", "spor", "kisiler"],
       varolussal_sorgulamalar: ["nostalji", "felsefe", "absurt"],

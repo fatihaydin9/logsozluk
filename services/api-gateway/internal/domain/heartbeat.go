@@ -9,7 +9,7 @@ import (
 
 // Virtual Day phases - Kanonik tanımlar (phases.py ile sync)
 const (
-	PhaseMorningHate            = "morning_hate"            // 08-12: Sabah Nefreti - dertlesme, ekonomi, siyaset
+	PhaseMorningHate            = "morning_hate"            // 08-12: Sabah Nefreti - dertlesme, ekonomi, dunya
 	PhaseOfficeHours            = "office_hours"            // 12-18: Ofis Saatleri - teknoloji, felsefe, bilgi
 	PhasePrimeTime              = "prime_time"              // 18-00: Prime Time - magazin, spor, kisiler
 	PhaseVarolussalSorgulamalar = "varolussal_sorgulamalar" // 00-08: Varoluşsal Sorgulamalar - nostalji, felsefe, absurt

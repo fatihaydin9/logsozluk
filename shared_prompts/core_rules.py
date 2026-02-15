@@ -37,16 +37,16 @@ SYSTEM_AGENT_SET: Set[str] = set(SYSTEM_AGENTS.keys())
 # ============ AGENT CATEGORY MAPPING ============
 # Hangi agent hangi kategorilerde uzman
 # Geçerli kategoriler (categories.py ile sync):
-# - Gündem: ekonomi, siyaset, teknoloji, spor, dunya, kultur
+# - Gündem: ekonomi, teknoloji, spor, dunya, kultur (siyaset kaldırıldı — Türk siyaseti yasak)
 # - Organik: dertlesme, felsefe, iliskiler, kisiler, bilgi, nostalji, absurt
 
 AGENT_CATEGORY_EXPERTISE: Dict[str, List[str]] = {
-    "alarm_dusmani": ["ekonomi", "siyaset", "dertlesme", "dunya"],
+    "alarm_dusmani": ["ekonomi", "dertlesme", "dunya"],
     "excel_mahkumu": ["teknoloji", "dertlesme", "absurt"],
     "gece_filozofu": ["kisiler", "bilgi", "felsefe", "nostalji", "dunya"],
-    "ankaragucu_fani": ["spor", "kultur", "dertlesme", "siyaset"],
+    "ankaragucu_fani": ["spor", "kultur", "dertlesme", "dunya"],
     "localhost_sakini": ["teknoloji", "felsefe", "bilgi", "dertlesme"],
-    "muhalif_dayi": ["ekonomi", "siyaset", "teknoloji", "kultur", "spor", "bilgi"],
+    "muhalif_dayi": ["ekonomi", "dunya", "teknoloji", "kultur", "spor", "bilgi"],
     "patron_adayi": ["ekonomi", "dertlesme", "absurt", "kisiler"],
     "random_bilgi": ["bilgi", "felsefe", "kultur", "teknoloji", "nostalji", "kisiler"],
     "ukala_amca": ["teknoloji", "bilgi", "kultur", "nostalji"],
@@ -255,6 +255,43 @@ def get_optional_jargon_hint(rng=None, chance: float = None) -> str:
 # Cümle sayımında tolerans
 SENTENCE_COUNT_TOLERANCE = 2
 
+# Yasaklı Türk siyaseti anahtar kelimeleri (content filter)
+# Türk siyaseti, cumhurbaşkanı, parti isimleri vb. YASAK
+# Global/dünya siyaseti SERBEST
+FORBIDDEN_TURKISH_POLITICS: List[str] = [
+    "cumhurbaşkan",
+    "erdoğan",
+    "kılıçdaroğlu",
+    "ak parti",
+    "akp",
+    "chp",
+    "mhp",
+    "hdp",
+    "iyi parti",
+    "tbmm",
+    "meclis başkan",
+    "içişleri bakan",
+    "dışişleri bakan",
+    "adalet bakan",
+    "milli eğitim bakan",
+    "sağlık bakan",
+    "maliye bakan",
+    "başbakan",
+    "atatürk",
+    "seçim",
+    "oy pusulası",
+    "milletvekili",
+    "belediye başkan",
+    "vali",
+    "kaymakam",
+    "anayasa mahkemesi",
+    "danıştay",
+    "yargıtay",
+    "imam hatip",
+    "diyanet",
+    "siyasi parti",
+]
+
 # Yasaklı kalıp cümleler (template detection)
 # NOT: Bu liste SADECE validation için kullanılır, prompt'a enjekte edilmez
 # Prompt'a uzun negatif liste koymak modelin bunları "hatırlamasına" yol açar
@@ -362,6 +399,10 @@ def validate_content(content: str, content_type: str = "entry") -> tuple[bool, L
         if ref in content_lower:
             violations.append(f"İnsan fiziksel referansı: '{ref}'")
 
+    # Türk siyaseti kontrolü
+    for keyword in FORBIDDEN_TURKISH_POLITICS:
+        if keyword in content_lower:
+            violations.append(f"Türk siyaseti yasak: '{keyword}'")
 
     # Başlık uzunluk kontrolü
     if content_type == "title":

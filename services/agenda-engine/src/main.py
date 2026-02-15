@@ -40,7 +40,7 @@ RATE_LIMIT_MAX_REQUESTS = 60
 _rate_limit_buckets: dict[str, list[float]] = {}
 
 # Content source: Kategori tipine göre belirlenir
-# GÜNDEM kategorileri (ekonomi, siyaset, spor, teknoloji, dunya, kultur, magazin) → RSS seed + LLM dönüşüm
+# GÜNDEM kategorileri (ekonomi, spor, teknoloji, dunya, kultur) → RSS seed + LLM dönüşüm
 # ORGANIC kategorileri (dertlesme, felsefe, iliskiler, kisiler, bilgi, nostalji, absurt) → Saf LLM
 # Dağılım categories.py'deki weight'lere göre otomatik (~65% gündem, ~35% organic)
 
@@ -159,62 +159,6 @@ async def collect_and_summarize_news():
         logger.error(f"News summarization pipeline hatası: {e}")
         return None
 
-
-async def generate_site_owner_event():
-    """
-    Site sahibi hakkında organik topic üret — düşük ihtimalle (~5%).
-    fatih aydin - 1996 doğumlu, mühendis, meraklı, yaramaz, amatör filozof, llm sever.
-    """
-    import httpx
-    from .models import Event, EventStatus
-    from uuid import uuid4
-
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        return None
-
-    llm_model = os.getenv("LLM_MODEL_COMMENT", "claude-haiku-4-5-20251001")
-
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                "https://api.anthropic.com/v1/messages",
-                headers={
-                    "x-api-key": api_key,
-                    "anthropic-version": "2023-06-01",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "model": llm_model,
-                    "max_tokens": 100,
-                    "temperature": 0.95,
-                    "system": "Sözlük başlığı üret. Küçük harf, 3-8 kelime, max 50 karakter. İsim tamlaması formatı. Çekimli fiille bitmez.",
-                    "messages": [{"role": "user", "content": "logsözlük'ün kurucusu @fatihaydindev hakkında bir başlık üret. 1996 doğumlu mühendis, meraklı, biraz yaramaz, amatör filozof, llm sever. Başlık:"}],
-                },
-            )
-
-            if response.status_code != 200:
-                return None
-
-            data = response.json()
-            title = data["content"][0]["text"].strip().strip('"').lower()
-            title = title.split("\n")[0].strip()
-    except Exception as e:
-        logger.error(f"Site owner topic LLM hatası: {e}")
-        return None
-
-    event = Event(
-        source="organic",
-        source_url="https://x.com/fatihaydindev",
-        external_id=f"owner_{uuid4().hex[:8]}",
-        title=title,
-        description="logsözlük kurucusu @fatihaydindev hakkında. 1996 doğumlu mühendis, meraklı, yaramaz, amatör filozof.",
-        cluster_keywords=["kisiler"],
-        status=EventStatus.PENDING,
-    )
-
-    logger.info(f"👤 Site owner eventi: '{title}'")
-    return event
 
 
 async def generate_gossip_event():
@@ -346,19 +290,9 @@ async def collect_and_process_events():
         
         # 2. Kategori tipine göre kaynak belirle
         if is_organic_category(selected_category):
-            # ORGANIC: özel event şansları (dedikodu %7, site sahibi %5)
+            # ORGANIC: özel event şansları (dedikodu %7)
             roll = random.random()
-            if roll < 0.05:
-                try:
-                    owner_event = await generate_site_owner_event()
-                    if owner_event:
-                        tasks = await task_generator.generate_tasks_for_event(owner_event)
-                        if tasks:
-                            logger.info(f"👤 Site owner görevi: {owner_event.title[:40]}...")
-                            return
-                except Exception as e:
-                    logger.warning(f"Site owner eventi hatası, normal organic'e düşülüyor: {e}")
-            elif roll < 0.12:
+            if roll < 0.07:
                 try:
                     gossip_event = await generate_gossip_event()
                     if gossip_event:
@@ -393,7 +327,7 @@ async def collect_and_process_events():
         # Kategori -> RSS feed mapping
         CATEGORY_TO_RSS = {
             "ekonomi": "economy",
-            "siyaset": "politics",
+            # "siyaset": "politics",  # kaldırıldı — Türk siyaseti yasak
             "teknoloji": "tech",
             "spor": "sports",
             "dunya": "world",

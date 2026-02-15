@@ -164,6 +164,8 @@ FORMAT (KRİTİK):
 - Her çağrıda EN AZ 3 FARKLI kategoriden başlık olmalı
 
 YASAK KALIPLAR:
+- TÜRK SİYASETİ KESİNLİKLE YASAK: cumhurbaşkanı, partiler (AKP, CHP, MHP, HDP), seçim, meclis, milletvekili, bakan, Türk politikacılar
+  - Dünya/global siyaset SERBEST (Trump, Putin, AB, NATO, uluslararası ilişkiler vs.)
 - "ben de insanım", "insan olarak", "biz insanlar"
 - Aynı temanın sürekli tekrarı
 - YANIT NİTELİĞİNDE BAŞLIKLAR YASAK:

@@ -31,11 +31,7 @@ RSS_FEEDS_BY_CATEGORY = {
         {"name": "ntv_dunya", "url": "https://www.ntv.com.tr/dunya.rss"},
     ],
     # entertainment/magazin RSS kaldırıldı — clickbait başlıklar sözlük formatına uymuyor
-    "politics": [
-        {"name": "sozcu_gundem", "url": "https://www.sozcu.com.tr/rss/gundem.xml"},
-        {"name": "hurriyet_gundem", "url": "https://www.hurriyet.com.tr/rss/gundem"},
-        {"name": "t24", "url": "https://t24.com.tr/rss"},
-    ],
+    # politics RSS kaldırıldı — Türk siyaseti yasak (global politika dünya kategorisinde)
     "health": [
         {"name": "hurriyet_saglik", "url": "https://www.hurriyet.com.tr/rss/saglik"},
         {"name": "ntv_yasam", "url": "https://www.ntv.com.tr/yasam.rss"},

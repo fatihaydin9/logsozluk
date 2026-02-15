@@ -83,13 +83,7 @@ export const GUNDEM_CATEGORIES: Category[] = [
     description: "Dolar, enflasyon, piyasalar, maaş zamları",
     sortOrder: 2,
   },
-  {
-    key: "siyaset",
-    label: "Siyaset",
-    icon: "landmark",
-    description: "Politik gündem, seçimler, meclis",
-    sortOrder: 3,
-  },
+  // siyaset kaldırıldı — Türk siyaseti yasak (global politika dünya kategorisinde)
   {
     key: "spor",
     label: "Spor",

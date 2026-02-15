@@ -7,7 +7,7 @@ Başka hiçbir yerde kategori tanımı yapılmamalı.
 
 # Gündem Kategorileri (RSS'ten gelen haberler)
 # weight: Seçilme olasılığı
-# Dağılım: %5 siyaset/ekonomi, %20 teknoloji, %60 dinamik gündem (spor, dünya, kültür)
+# Dağılım: %10 ekonomi, %20 teknoloji, %60 dinamik gündem (spor, dünya, kültür)
 GUNDEM_CATEGORIES = {
     "ekonomi": {
         "label": "Ekonomi",
@@ -15,12 +15,7 @@ GUNDEM_CATEGORIES = {
         "description": "Dolar, enflasyon, piyasalar, maaş zamları",
         "weight": 8,
     },
-    "siyaset": {
-        "label": "Siyaset",
-        "icon": "landmark",
-        "description": "Politik gündem, seçimler, meclis",
-        "weight": 2,  # %5 siyaset+ekonomi payı
-    },
+    # siyaset kaldırıldı — Türk siyaseti yasak (global politika dünya kategorisinde)
     "teknoloji": {
         "label": "Teknoloji",
         "icon": "cpu",
@@ -98,7 +93,7 @@ ORGANIK_CATEGORIES = {
 }
 
 # Organik/Gündem oranı (%40 organik, %60 gündem)
-# Gündem içinde: %5 siyaset/ekonomi, %20 teknoloji, %60 dinamik
+# Gündem içinde: %10 ekonomi, %20 teknoloji, %60 dinamik
 ORGANIC_RATIO = 0.40
 GUNDEM_RATIO = 0.60
 
@@ -110,7 +105,7 @@ CATEGORY_EN_TO_TR = {
     "economy": "ekonomi",
     "world": "dunya",
     # "entertainment": "magazin",  # kaldırıldı — clickbait
-    "politics": "siyaset",
+    # "politics": "siyaset",  # kaldırıldı — Türk siyaseti yasak
     "sports": "spor",
     "culture": "kultur",
     "tech": "teknoloji",

@@ -30,9 +30,9 @@ func (h *CategoryHandler) List(c *gin.Context) {
 		// Gündem Kategorileri
 		{BackendKey: "economy", FrontendKey: "ekonomi", DisplayNameTR: "Ekonomi", DisplayNameEN: "Economy", Icon: "trending-up", SortOrder: 1},
 		{BackendKey: "world", FrontendKey: "dunya", DisplayNameTR: "Dünya", DisplayNameEN: "World", Icon: "globe", SortOrder: 2},
-		{BackendKey: "entertainment", FrontendKey: "magazin", DisplayNameTR: "Magazin", DisplayNameEN: "Entertainment", Icon: "sparkles", SortOrder: 3},
-		{BackendKey: "politics", FrontendKey: "siyaset", DisplayNameTR: "Siyaset", DisplayNameEN: "Politics", Icon: "landmark", SortOrder: 4},
-		{BackendKey: "sports", FrontendKey: "spor", DisplayNameTR: "Spor", DisplayNameEN: "Sports", Icon: "trophy", SortOrder: 5},
+		// entertainment/magazin kaldırıldı — clickbait
+		// politics/siyaset kaldırıldı — Türk siyaseti yasak
+		{BackendKey: "sports", FrontendKey: "spor", DisplayNameTR: "Spor", DisplayNameEN: "Sports", Icon: "trophy", SortOrder: 3},
 		{BackendKey: "culture", FrontendKey: "kultur", DisplayNameTR: "Kültür", DisplayNameEN: "Culture", Icon: "palette", SortOrder: 6},
 		{BackendKey: "tech", FrontendKey: "teknoloji", DisplayNameTR: "Teknoloji", DisplayNameEN: "Technology", Icon: "cpu", SortOrder: 7},
 		// Organik Kategoriler

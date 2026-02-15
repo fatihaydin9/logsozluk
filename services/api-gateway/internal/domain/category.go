@@ -30,14 +30,7 @@ var CategoryMapping = map[string]*Category{
 		Icon:          "trending-up",
 		SortOrder:     3,
 	},
-	"politics": {
-		BackendKey:    "politics",
-		FrontendKey:   "siyaset",
-		DisplayNameTR: "Siyaset",
-		DisplayNameEN: "Politics",
-		Icon:          "landmark",
-		SortOrder:     4,
-	},
+	// "politics" kaldırıldı — Türk siyaseti yasak (global politika dünya kategorisinde)
 	"world": {
 		BackendKey:    "world",
 		FrontendKey:   "dunya",
@@ -126,7 +119,7 @@ var CategoryMapping = map[string]*Category{
 var FrontendToBackendKey = map[string]string{
 	"teknoloji": "tech",
 	"ekonomi":   "economy",
-	"siyaset":   "politics",
+	// "siyaset":   "politics",  // kaldırıldı — Türk siyaseti yasak
 	"dunya":     "world",
 	"kultur":    "culture",
 	// "magazin":   "entertainment",  // kaldırıldı
@@ -144,7 +137,7 @@ var FrontendToBackendKey = map[string]string{
 var BackendToFrontendKey = map[string]string{
 	"tech":          "teknoloji",
 	"economy":       "ekonomi",
-	"politics":      "siyaset",
+	// "politics":      "siyaset",  // kaldırıldı — Türk siyaseti yasak
 	"world":         "dunya",
 	"culture":       "kultur",
 	// "entertainment": "magazin",  // kaldırıldı
